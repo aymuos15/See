@@ -1,32 +1,10 @@
 use crate::ui::coordinates::screen_to_text_position;
-use std::fs::OpenOptions;
-use std::io::Write;
 
 use super::selection::TextSelection;
 use super::App;
 
-fn debug_log(msg: &str) {
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/viewer_debug.log")
-    {
-        let _ = writeln!(file, "{}", msg);
-    }
-}
-
 impl App {
     pub fn handle_mouse_down(&mut self, column: u16, row: u16) {
-        // Debug: log mouse position and current selection state
-        debug_log(&format!(
-            ">>> MouseDown START at ({}, {}), selection BEFORE: {:?}",
-            column, row, self.selection.is_some()
-        ));
-        debug_log(&format!(
-            "    file_list_area: {:?}, preview_area: {:?}",
-            self.last_file_list_area, self.last_preview_area
-        ));
-
         // Check if click is in file list area
         if let Some(file_list_area) = self.last_file_list_area {
             if column >= file_list_area.x
@@ -34,20 +12,17 @@ impl App {
                 && row >= file_list_area.y
                 && row < file_list_area.y + file_list_area.height
             {
-                debug_log(&format!("    Click is in FILE LIST area, selecting file"));
                 // Calculate which file was clicked
                 let relative_row = row.saturating_sub(file_list_area.y) as usize;
                 if relative_row < self.files.len() {
                     self.file_list_state.select(Some(relative_row));
                     self.preview_scroll = 0;
                     self.selection = None;
-                    debug_log("    Selection cleared (file list click)");
                     self.load_preview();
                 }
                 return;
             }
         }
-        debug_log("    Click is in PREVIEW area");
 
         // Check if click is in preview area for text selection
         let Some(preview_area) = self.last_preview_area else {
@@ -65,38 +40,27 @@ impl App {
             preview.raw_lines.len(),
             &preview.raw_lines,
         );
-        debug_log(&format!("screen_to_text_position returned: {:?}", pos));
 
         if let Some(pos) = pos {
             self.selection = Some(TextSelection::new(pos));
-            debug_log(&format!("Selection created: {:?}", self.selection));
         } else {
             // Clicked outside content area, clear selection
             self.selection = None;
-            debug_log("Selection cleared (click outside content)");
         }
-        debug_log(&format!("<<< MouseDown END, selection AFTER: {:?}", self.selection.is_some()));
     }
 
     pub fn handle_mouse_drag(&mut self, column: u16, row: u16) {
-        debug_log(&format!(">>> MouseDrag at ({}, {}), selection exists: {:?}",
-            column, row, self.selection.is_some()));
-
         let Some(selection) = self.selection.as_mut() else {
-            debug_log("  No selection exists, returning");
             return;
         };
         if !selection.active {
-            debug_log("  Selection not active, returning");
             return;
         }
 
         let Some(preview_area) = self.last_preview_area else {
-            debug_log("  No preview_area, returning");
             return;
         };
         let Some(preview) = &self.preview_content else {
-            debug_log("  No preview_content, returning");
             return;
         };
 
@@ -109,10 +73,6 @@ impl App {
             &preview.raw_lines,
         ) {
             selection.cursor = pos;
-            debug_log(&format!("  Cursor updated to {:?}, selection now: anchor={:?} cursor={:?}",
-                pos, selection.anchor, selection.cursor));
-        } else {
-            debug_log("  screen_to_text_position returned None for drag");
         }
     }
 

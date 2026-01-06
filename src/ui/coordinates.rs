@@ -1,19 +1,7 @@
 use crate::app::selection::TextPosition;
 use ratatui::prelude::Rect;
-use std::fs::OpenOptions;
-use std::io::Write;
 
 pub const LINE_NUMBER_WIDTH: u16 = 5;
-
-fn debug_log(msg: &str) {
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/viewer_debug.log")
-    {
-        let _ = writeln!(file, "{}", msg);
-    }
-}
 
 /// Maps screen coordinates to a text position in the document
 pub fn screen_to_text_position(
@@ -24,38 +12,27 @@ pub fn screen_to_text_position(
     total_lines: usize,
     raw_lines: &[String],
 ) -> Option<TextPosition> {
-    debug_log(&format!(
-        "  [COORD] screen=({}, {}), preview_area=({}, {}, w={}, h={}), scroll={}, total_lines={}",
-        screen_col, screen_row, preview_area.x, preview_area.y, preview_area.width, preview_area.height, scroll_offset, total_lines
-    ));
-
     // Check if click is within preview area
     if screen_col < preview_area.x || screen_col >= preview_area.x + preview_area.width {
-        debug_log("  [COORD] FAIL: outside preview area horizontally");
         return None;
     }
     if screen_row < preview_area.y || screen_row >= preview_area.y + preview_area.height {
-        debug_log("  [COORD] FAIL: outside preview area vertically");
         return None;
     }
 
-    // Calculate content area (excluding block border)
+    // Calculate content area (excluding line number column)
     let content_start_x = preview_area.x + LINE_NUMBER_WIDTH;
-    debug_log(&format!("  [COORD] content_start_x={}", content_start_x));
 
     // Check if click is in line number area (ignore those clicks)
     if screen_col < content_start_x {
-        debug_log("  [COORD] FAIL: click in line number area");
         return None;
     }
 
     // Calculate line index
     let relative_row = screen_row.saturating_sub(preview_area.y);
     let line_index = scroll_offset as usize + relative_row as usize;
-    debug_log(&format!("  [COORD] relative_row={}, line_index={}", relative_row, line_index));
 
     if line_index >= total_lines {
-        debug_log(&format!("  [COORD] FAIL: line_index {} >= total_lines {}", line_index, total_lines));
         return None;
     }
 
@@ -65,7 +42,6 @@ pub fn screen_to_text_position(
 
     // Clamp column to line length
     let column = (relative_col as usize).min(line_content.len());
-    debug_log(&format!("  [COORD] SUCCESS: line={}, col={}", line_index, column));
 
     Some(TextPosition::new(line_index, column))
 }

@@ -52,18 +52,6 @@ pub struct App {
 }
 
 impl App {
-    fn debug_log(msg: &str) {
-        use std::fs::OpenOptions;
-        use std::io::Write;
-        if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("/tmp/viewer_debug.log")
-        {
-            let _ = writeln!(file, "{}", msg);
-        }
-    }
-
     pub const fn root_dir(&self) -> &PathBuf {
         &self.root_dir
     }
@@ -140,15 +128,7 @@ impl App {
 
     pub fn run(&mut self, terminal: &mut crate::tui::Tui) -> anyhow::Result<()> {
         while !self.should_quit {
-            // Debug: track selection changes
-            let sel_before = self.selection.is_some();
-
             terminal.draw(|frame| crate::ui::render(frame, self))?;
-
-            let sel_after_draw = self.selection.is_some();
-            if sel_before != sel_after_draw {
-                Self::debug_log(&format!("[LOOP] Selection CHANGED during draw! {} -> {}", sel_before, sel_after_draw));
-            }
 
             match poll_event(
                 Duration::from_millis(16),
@@ -164,11 +144,9 @@ impl App {
                     }
                 }
                 AppEvent::DirectoryChanged => {
-                    Self::debug_log("[EVENT] DirectoryChanged - refreshing directory");
                     self.refresh_current_directory();
                 }
                 AppEvent::PreviewFileChanged => {
-                    Self::debug_log("[EVENT] PreviewFileChanged - refreshing preview");
                     self.refresh_preview();
                 }
                 AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
