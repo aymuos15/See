@@ -1,7 +1,7 @@
 //! UI and behavior constants
 
 /// Initial split between file list and preview pane (percentage)
-pub const INITIAL_SPLIT_PERCENT: u16 = 30;
+pub const INITIAL_SPLIT_PERCENT: u16 = 10;
 
 /// Minimum split percentage for file list pane
 pub const MIN_SPLIT_PERCENT: u16 = 10;
