@@ -5,17 +5,13 @@ use ratatui::widgets::{Block, Paragraph};
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let theme = &app.theme;
 
-    let block = Block::default()
-        .style(Style::default().bg(theme.bg_main));
+    let block = Block::default().style(Style::default().bg(theme.bg_main));
 
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
     if let Some(preview) = &app.preview_content {
-        let horizontal = Layout::horizontal([
-            Constraint::Length(5),
-            Constraint::Min(1),
-        ]);
+        let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(1)]);
         let [line_num_area, content_area] = horizontal.areas(inner_area);
 
         let visible_height = content_area.height as usize;
@@ -25,11 +21,13 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         // Line numbers
         let line_numbers: Vec<Line> = (start + 1..=end)
             .map(|n| {
-                Line::from(format!("{:>4} ", n)).style(Style::default().fg(theme.line_num).bg(theme.bg_main))
+                Line::from(format!("{:>4} ", n))
+                    .style(Style::default().fg(theme.line_num).bg(theme.bg_main))
             })
             .collect();
 
-        let line_num_paragraph = Paragraph::new(line_numbers).style(Style::default().bg(theme.bg_main));
+        let line_num_paragraph =
+            Paragraph::new(line_numbers).style(Style::default().bg(theme.bg_main));
         frame.render_widget(line_num_paragraph, line_num_area);
 
         // Content

@@ -21,11 +21,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let list = List::new(items)
         .block(Block::default().style(Style::default().bg(theme.bg_darker)))
-        .highlight_style(
-            Style::default()
-                .bg(theme.bg_selected)
-                .fg(theme.fg_selected),
-        )
+        .highlight_style(Style::default().bg(theme.bg_selected).fg(theme.fg_selected))
         .highlight_symbol("> ");
 
     frame.render_stateful_widget(list, area, &mut app.file_list_state);

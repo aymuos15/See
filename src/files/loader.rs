@@ -32,14 +32,14 @@ mod tests {
     fn test_read_file_content() {
         let temp_file = "/tmp/test_viewer_content.txt";
         let content = "Hello, world!";
-        
+
         let mut file = File::create(temp_file).unwrap();
         file.write_all(content.as_bytes()).unwrap();
         drop(file);
-        
+
         let result = read_file_content(Path::new(temp_file)).unwrap();
         assert_eq!(result, content);
-        
+
         std::fs::remove_file(temp_file).unwrap();
     }
 
@@ -55,10 +55,10 @@ mod tests {
         let mut file = File::create(temp_file).unwrap();
         file.write_all(&[0u8, 1, 2, 3]).unwrap();
         drop(file);
-        
+
         let result = read_file_content(Path::new(temp_file)).unwrap();
         assert_eq!(result, "[Binary file - cannot preview]");
-        
+
         std::fs::remove_file(temp_file).unwrap();
     }
 }

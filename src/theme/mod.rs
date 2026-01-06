@@ -20,14 +20,14 @@ impl Default for Theme {
     fn default() -> Self {
         // Default Helix purple theme
         Self {
-            bg_main: Color::Rgb(0x3b, 0x22, 0x4c),      // midnight
-            bg_darker: Color::Rgb(0x28, 0x17, 0x33),    // revolver
-            bg_selected: Color::Rgb(0x45, 0x28, 0x59),  // bossanova
-            fg_text: Color::Rgb(0xa4, 0xa0, 0xe8),      // lavender
-            fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f),  // mint
-            fg_dim: Color::Rgb(0x69, 0x7c, 0x81),       // sirocco
-            border: Color::Rgb(0x5a, 0x59, 0x77),       // comet
-            line_num: Color::Rgb(0x5a, 0x59, 0x77),     // comet
+            bg_main: Color::Rgb(0x3b, 0x22, 0x4c),     // midnight
+            bg_darker: Color::Rgb(0x28, 0x17, 0x33),   // revolver
+            bg_selected: Color::Rgb(0x45, 0x28, 0x59), // bossanova
+            fg_text: Color::Rgb(0xa4, 0xa0, 0xe8),     // lavender
+            fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f), // mint
+            fg_dim: Color::Rgb(0x69, 0x7c, 0x81),      // sirocco
+            border: Color::Rgb(0x5a, 0x59, 0x77),      // comet
+            line_num: Color::Rgb(0x5a, 0x59, 0x77),    // comet
         }
     }
 }
@@ -65,7 +65,10 @@ impl Theme {
         let theme_paths = [
             dirs::home_dir()?.join(format!(".config/helix/themes/{}.toml", theme_name)),
             PathBuf::from(format!("/usr/lib/helix/runtime/themes/{}.toml", theme_name)),
-            PathBuf::from(format!("/usr/share/helix/runtime/themes/{}.toml", theme_name)),
+            PathBuf::from(format!(
+                "/usr/share/helix/runtime/themes/{}.toml",
+                theme_name
+            )),
         ];
 
         for path in &theme_paths {
@@ -116,13 +119,21 @@ impl Theme {
         }
 
         // Try to get colors from palette directly for common names
-        if let Some(c) = resolve_color("background", palette) { theme.bg_main = c; }
-        if let Some(c) = resolve_color("foreground", palette) { theme.fg_text = c; }
+        if let Some(c) = resolve_color("background", palette) {
+            theme.bg_main = c;
+        }
+        if let Some(c) = resolve_color("foreground", palette) {
+            theme.fg_text = c;
+        }
 
         Ok(theme)
     }
 
-    fn get_style_bg(styles: &HashMap<String, toml::Value>, key: &str, palette: &HashMap<String, String>) -> Option<Color> {
+    fn get_style_bg(
+        styles: &HashMap<String, toml::Value>,
+        key: &str,
+        palette: &HashMap<String, String>,
+    ) -> Option<Color> {
         let style = styles.get(key)?;
         match style {
             toml::Value::Table(t) => {
@@ -134,7 +145,11 @@ impl Theme {
         }
     }
 
-    fn get_style_fg(styles: &HashMap<String, toml::Value>, key: &str, palette: &HashMap<String, String>) -> Option<Color> {
+    fn get_style_fg(
+        styles: &HashMap<String, toml::Value>,
+        key: &str,
+        palette: &HashMap<String, String>,
+    ) -> Option<Color> {
         let style = styles.get(key)?;
         match style {
             toml::Value::Table(t) => {
@@ -143,7 +158,10 @@ impl Theme {
                 parse_hex_color(resolved)
             }
             toml::Value::String(s) => {
-                let resolved = palette.get(s.as_str()).map(|s| s.as_str()).unwrap_or(s.as_str());
+                let resolved = palette
+                    .get(s.as_str())
+                    .map(|s| s.as_str())
+                    .unwrap_or(s.as_str());
                 parse_hex_color(resolved)
             }
             _ => None,

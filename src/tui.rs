@@ -1,7 +1,10 @@
 use crossterm::{
-    cursor::{Hide, Show, MoveTo},
+    cursor::{Hide, MoveTo, Show},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use ratatui::prelude::*;
 use std::io::{stdout, Stdout};

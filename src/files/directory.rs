@@ -8,12 +8,10 @@ pub fn read_directory(path: &Path) -> anyhow::Result<Vec<FileEntry>> {
         .map(|entry| FileEntry::new(entry.path()))
         .collect();
 
-    entries.sort_by(|a, b| {
-        match (a.is_file, b.is_file) {
-            (false, true) => std::cmp::Ordering::Less,
-            (true, false) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
+    entries.sort_by(|a, b| match (a.is_file, b.is_file) {
+        (false, true) => std::cmp::Ordering::Less,
+        (true, false) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
     });
 
     Ok(entries)
