@@ -1,6 +1,7 @@
 use crossterm::{
+    cursor::{Hide, Show, MoveTo},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
 };
 use ratatui::prelude::*;
 use std::io::{stdout, Stdout};
@@ -16,16 +17,23 @@ pub fn init() -> anyhow::Result<Tui> {
     }));
 
     enable_raw_mode()?;
-    execute!(stdout(), EnterAlternateScreen)?;
+    execute!(
+        stdout(),
+        EnterAlternateScreen,
+        Clear(ClearType::All),
+        MoveTo(0, 0),
+        Hide
+    )?;
 
     let backend = CrosstermBackend::new(stdout());
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
 
     Ok(terminal)
 }
 
 pub fn restore() -> anyhow::Result<()> {
     disable_raw_mode()?;
-    execute!(stdout(), LeaveAlternateScreen)?;
+    execute!(stdout(), Show, LeaveAlternateScreen)?;
     Ok(())
 }

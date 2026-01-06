@@ -6,7 +6,6 @@ pub fn read_directory(path: &Path) -> anyhow::Result<Vec<FileEntry>> {
     let mut entries: Vec<FileEntry> = fs::read_dir(path)?
         .filter_map(|entry| entry.ok())
         .map(|entry| FileEntry::new(entry.path()))
-        .filter(|entry| !entry.name.starts_with('.'))
         .collect();
 
     entries.sort_by(|a, b| {

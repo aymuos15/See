@@ -7,6 +7,10 @@ pub enum AppEvent {
     NavigateDown,
     ScrollPreviewUp,
     ScrollPreviewDown,
+    ShrinkFileList,
+    GrowFileList,
+    Enter,
+    GoBack,
     None,
 }
 
@@ -29,6 +33,10 @@ fn handle_key(code: KeyCode) -> AppEvent {
         KeyCode::Char('k') | KeyCode::Up => AppEvent::NavigateUp,
         KeyCode::Char('J') | KeyCode::PageDown => AppEvent::ScrollPreviewDown,
         KeyCode::Char('K') | KeyCode::PageUp => AppEvent::ScrollPreviewUp,
+        KeyCode::Char('H') => AppEvent::ShrinkFileList,
+        KeyCode::Char('L') => AppEvent::GrowFileList,
+        KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => AppEvent::Enter,
+        KeyCode::Backspace | KeyCode::Char('h') | KeyCode::Left => AppEvent::GoBack,
         _ => AppEvent::None,
     }
 }

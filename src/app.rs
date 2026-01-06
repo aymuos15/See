@@ -19,6 +19,7 @@ pub struct App {
     pub preview_scroll: u16,
     pub highlighter: SyntaxHighlighter,
     pub should_quit: bool,
+    pub split_percent: u16,
 }
 
 impl App {
@@ -42,6 +43,7 @@ impl App {
             preview_scroll: 0,
             highlighter,
             should_quit: false,
+            split_percent: 30,
         };
 
         if !app.files.is_empty() {
@@ -62,6 +64,10 @@ impl App {
                 AppEvent::NavigateUp => self.navigate_up(),
                 AppEvent::ScrollPreviewDown => self.scroll_preview_down(),
                 AppEvent::ScrollPreviewUp => self.scroll_preview_up(),
+                AppEvent::ShrinkFileList => self.shrink_file_list(),
+                AppEvent::GrowFileList => self.grow_file_list(),
+                AppEvent::Enter => self.enter_directory(),
+                AppEvent::GoBack => self.go_back(),
                 AppEvent::None => {}
             }
         }
@@ -112,6 +118,43 @@ impl App {
 
     fn scroll_preview_up(&mut self) {
         self.preview_scroll = self.preview_scroll.saturating_sub(5);
+    }
+
+    fn shrink_file_list(&mut self) {
+        self.split_percent = self.split_percent.saturating_sub(5).max(10);
+    }
+
+    fn grow_file_list(&mut self) {
+        self.split_percent = (self.split_percent + 5).min(80);
+    }
+
+    fn enter_directory(&mut self) {
+        if let Some(idx) = self.file_list_state.selected() {
+            if let Some(entry) = self.files.get(idx) {
+                if !entry.is_file {
+                    if let Ok(files) = read_directory(&entry.path) {
+                        self.current_dir = entry.path.clone();
+                        self.files = files;
+                        self.file_list_state.select(Some(0));
+                        self.preview_scroll = 0;
+                        self.load_preview();
+                    }
+                }
+            }
+        }
+    }
+
+    fn go_back(&mut self) {
+        if let Some(parent) = self.current_dir.parent() {
+            let parent_path = parent.to_path_buf();
+            if let Ok(files) = read_directory(&parent_path) {
+                self.current_dir = parent_path;
+                self.files = files;
+                self.file_list_state.select(Some(0));
+                self.preview_scroll = 0;
+                self.load_preview();
+            }
+        }
     }
 
     fn load_preview(&mut self) {
