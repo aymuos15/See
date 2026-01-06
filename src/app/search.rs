@@ -1,6 +1,7 @@
 use crate::files::{find_all_files_recursive, read_directory};
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher};
+use std::collections::HashMap;
 
 use super::App;
 
@@ -105,11 +106,19 @@ impl App {
         let names: Vec<&str> = self.search_index.iter().map(|f| f.name.as_str()).collect();
         let matched_names = pattern.match_list(&names, &mut matcher);
 
+        // Build index map for O(1) lookup instead of O(n) position search
+        let name_to_idx: HashMap<&str, usize> = self
+            .search_index
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (f.name.as_str(), i))
+            .collect();
+
         // matched_names is Vec<(&str, u32)> sorted by score descending
-        // We need to map back to indices
+        // Map back to indices using HashMap for O(n) instead of O(n*m)
         self.search_results = matched_names
             .into_iter()
-            .filter_map(|(name, _score)| self.search_index.iter().position(|f| f.name == *name))
+            .filter_map(|(name, _score)| name_to_idx.get(name).copied())
             .collect();
     }
 

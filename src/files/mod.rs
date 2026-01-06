@@ -17,7 +17,7 @@ impl FileEntry {
     pub fn new(path: PathBuf) -> Self {
         let name = path
             .file_name()
-            .map(|n| n.to_string_lossy().to_string())
+            .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
         let is_file = path.is_file();
 

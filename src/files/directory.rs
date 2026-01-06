@@ -44,6 +44,9 @@ fn collect_files_recursive(
     results: &mut Vec<FileEntry>,
 ) {
     if let Ok(entries) = fs::read_dir(path) {
+        // Pre-allocate to reduce reallocations for directories with many files
+        results.reserve(128);
+
         for entry in entries.filter_map(std::result::Result::ok) {
             let entry_path = entry.path();
 
