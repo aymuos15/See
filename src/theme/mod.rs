@@ -131,7 +131,7 @@ impl Theme {
         theme
     }
 
-    fn has_any_color(cfg: &ThemeConfig) -> bool {
+    const fn has_any_color(cfg: &ThemeConfig) -> bool {
         cfg.bg_main.is_some()
             || cfg.bg_darker.is_some()
             || cfg.bg_selected.is_some()

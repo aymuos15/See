@@ -62,8 +62,7 @@ pub fn poll_event(
                     return Ok(AppEvent::None);
                 }
                 // Handle Ctrl+c for copy selection
-                if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c')
-                {
+                if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
                     return Ok(AppEvent::CopySelection);
                 }
                 return Ok(handle_key(key.code, search_mode));

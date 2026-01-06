@@ -103,11 +103,11 @@ impl App {
         );
 
         let names: Vec<&str> = self.search_index.iter().map(|f| f.name.as_str()).collect();
-        let matches = pattern.match_list(&names, &mut matcher);
+        let matched_names = pattern.match_list(&names, &mut matcher);
 
-        // matches is Vec<(&str, u32)> sorted by score descending
+        // matched_names is Vec<(&str, u32)> sorted by score descending
         // We need to map back to indices
-        self.search_results = matches
+        self.search_results = matched_names
             .into_iter()
             .filter_map(|(name, _score)| self.search_index.iter().position(|f| f.name == *name))
             .collect();

@@ -127,7 +127,8 @@ mod tests {
         let raw_lines = vec!["Hi".to_string()]; // Short line
 
         // Click way past end of line
-        let pos = screen_to_text_position(LINE_NUMBER_WIDTH + 50, 0, preview_area, 0, 1, &raw_lines);
+        let pos =
+            screen_to_text_position(LINE_NUMBER_WIDTH + 50, 0, preview_area, 0, 1, &raw_lines);
 
         assert!(pos.is_some());
         let pos = pos.expect("position should exist");

@@ -113,7 +113,7 @@ impl App {
                         let content_changed = self
                             .preview_content
                             .as_ref()
-                            .map_or(true, |prev| prev.raw_lines != raw_lines);
+                            .is_none_or(|prev| prev.raw_lines != raw_lines);
 
                         if content_changed {
                             let lines = self.highlighter.highlight(&entry.path, &content);

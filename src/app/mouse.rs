@@ -76,6 +76,7 @@ impl App {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn handle_mouse_up(&mut self, _column: u16, _row: u16) {
         if let Some(selection) = self.selection.as_mut() {
             selection.active = false;

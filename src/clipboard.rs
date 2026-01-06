@@ -14,7 +14,7 @@ impl ClipboardManager {
     pub fn copy_text(&mut self, text: &str) -> bool {
         self.clipboard
             .as_mut()
-            .map_or(false, |clipboard| clipboard.set_text(text).is_ok())
+            .is_some_and(|clipboard| clipboard.set_text(text).is_ok())
     }
 }
 

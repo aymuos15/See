@@ -36,17 +36,18 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         frame.render_widget(line_num_paragraph, line_num_area);
 
         // Content with selection highlighting
-        let visible_lines: Vec<Line> = if let Some(selection) = &app.selection {
-            apply_selection_to_lines(
-                &preview.lines[start..end],
-                &preview.raw_lines[start..end],
-                selection,
-                start,
-                theme,
-            )
-        } else {
-            preview.lines[start..end].to_vec()
-        };
+        let visible_lines: Vec<Line> = app.selection.as_ref().map_or_else(
+            || preview.lines[start..end].to_vec(),
+            |selection| {
+                apply_selection_to_lines(
+                    &preview.lines[start..end],
+                    &preview.raw_lines[start..end],
+                    selection,
+                    start,
+                    theme,
+                )
+            },
+        );
 
         let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
         frame.render_widget(content, content_area);
@@ -103,7 +104,12 @@ fn apply_selection_to_lines<'a>(
 }
 
 /// Apply selection style to a single line's spans
-fn apply_selection_to_line(line: &Line<'_>, start_col: usize, end_col: usize, selection_style: Style) -> Line<'static> {
+fn apply_selection_to_line(
+    line: &Line<'_>,
+    start_col: usize,
+    end_col: usize,
+    selection_style: Style,
+) -> Line<'static> {
     let mut new_spans: Vec<Span<'static>> = Vec::new();
     let mut current_col = 0;
 

@@ -2,7 +2,7 @@ use crate::constants::{FILE_EVENT_DEBOUNCE_MS, SEARCH_INDEX_REFRESH_SECS};
 use notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, Debouncer};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
 use super::AppEvent;
@@ -16,9 +16,9 @@ pub struct FileWatcher {
     receiver: Receiver<Vec<DebouncedEvent>>,
     current_dir: PathBuf,
     preview_file: Option<PathBuf>,
-    /// Last time we emitted a PreviewFileChanged event
+    /// Last time we emitted a `PreviewFileChanged` event
     last_preview_event: Instant,
-    /// Last time we emitted a DirectoryChanged event
+    /// Last time we emitted a `DirectoryChanged` event
     last_directory_event: Instant,
 }
 
@@ -38,6 +38,7 @@ impl FileWatcher {
         )?;
 
         // Use a past time so first event always fires
+        #[allow(clippy::unchecked_duration_subtraction)]
         let past = Instant::now() - Duration::from_secs(10);
 
         let mut fw = Self {
@@ -99,18 +100,13 @@ impl FileWatcher {
         let mut has_preview_event = false;
         let mut has_directory_event = false;
 
-        loop {
-            match self.receiver.try_recv() {
-                Ok(events) => {
-                    for event in events {
-                        match self.classify_event(&event) {
-                            Some(AppEvent::PreviewFileChanged) => has_preview_event = true,
-                            Some(AppEvent::DirectoryChanged) => has_directory_event = true,
-                            _ => {}
-                        }
-                    }
+        while let Ok(events) = self.receiver.try_recv() {
+            for event in events {
+                match self.classify_event(&event) {
+                    Some(AppEvent::PreviewFileChanged) => has_preview_event = true,
+                    Some(AppEvent::DirectoryChanged) => has_directory_event = true,
+                    _ => {}
                 }
-                Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
             }
         }
 
