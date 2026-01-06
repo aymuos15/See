@@ -1,5 +1,5 @@
 use crate::constants::{FILE_EVENT_DEBOUNCE_MS, SEARCH_INDEX_REFRESH_SECS};
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind};
 use notify::{Event as NotifyEvent, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -46,13 +46,23 @@ pub fn poll_event(
         return Ok(AppEvent::SearchIndexRefreshTimer);
     }
 
-    // Check for keyboard events
+    // Check for keyboard and mouse events
     if event::poll(timeout)? {
-        if let Event::Key(key) = event::read()? {
-            if key.kind != KeyEventKind::Press {
-                return Ok(AppEvent::None);
+        match event::read()? {
+            Event::Key(key) => {
+                if key.kind != KeyEventKind::Press {
+                    return Ok(AppEvent::None);
+                }
+                return Ok(handle_key(key.code, search_mode));
             }
-            return Ok(handle_key(key.code, search_mode));
+            Event::Mouse(mouse) => {
+                return Ok(match mouse.kind {
+                    MouseEventKind::ScrollDown => AppEvent::ScrollPreviewDown,
+                    MouseEventKind::ScrollUp => AppEvent::ScrollPreviewUp,
+                    _ => AppEvent::None,
+                });
+            }
+            _ => {}
         }
     }
     Ok(AppEvent::None)

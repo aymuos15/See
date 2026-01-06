@@ -1,5 +1,6 @@
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
@@ -23,6 +24,7 @@ pub fn init() -> anyhow::Result<Tui> {
     execute!(
         stdout(),
         EnterAlternateScreen,
+        EnableMouseCapture,
         Clear(ClearType::All),
         MoveTo(0, 0),
         Hide
@@ -37,6 +39,6 @@ pub fn init() -> anyhow::Result<Tui> {
 
 pub fn restore() -> anyhow::Result<()> {
     disable_raw_mode()?;
-    execute!(stdout(), Show, LeaveAlternateScreen)?;
+    execute!(stdout(), DisableMouseCapture, Show, LeaveAlternateScreen)?;
     Ok(())
 }

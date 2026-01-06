@@ -17,6 +17,7 @@ cargo run [FILE_PATH]
 ## Controls
 
 - `q` - Quit
+- `j`/`k` or mouse scroll - Scroll preview (hold `Shift` to select text)
 - `Shift+H` / `Shift+L` - Shrink/grow file list pane
 - `/` - Open search (searches entire directory tree from root)
   - Type to filter files by name
