@@ -18,3 +18,8 @@ cargo run [FILE_PATH]
 
 - `q` - Quit
 - `Shift+H` / `Shift+L` - Shrink/grow file list pane
+- `/` - Open search (searches entire directory tree from root)
+  - Type to filter files by name
+  - `Up`/`Down` - Navigate results
+  - `Enter` - Go to file and close search
+  - `Esc` / `q` - Close search

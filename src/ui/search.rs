@@ -56,9 +56,16 @@ pub fn render(frame: &mut Frame, app: &App) {
         let items: Vec<ListItem> = app
             .search_results
             .iter()
-            .map(|&idx| {
-                let file = &app.files[idx];
-                ListItem::new(file.name.clone()).style(Style::default().fg(app.theme.fg_text))
+            .filter_map(|&idx| {
+                app.search_index().get(idx).map(|file| {
+                    // Display relative path from root
+                    let display_path = file.path
+                        .strip_prefix(app.root_dir())
+                        .ok()
+                        .and_then(|p| p.to_str())
+                        .unwrap_or(&file.name);
+                    ListItem::new(display_path).style(Style::default().fg(app.theme.fg_text))
+                })
             })
             .collect();
 

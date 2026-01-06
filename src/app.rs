@@ -1,5 +1,5 @@
 use crate::event::{poll_event, AppEvent};
-use crate::files::{read_directory, read_file_content, FileEntry};
+use crate::files::{read_directory, read_file_content, find_all_files_recursive, FileEntry};
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -29,9 +29,19 @@ pub struct App {
     pub search_query: String,
     pub search_results: Vec<usize>,
     pub search_selected: usize,
+    // All files under root for searching
+    search_index: Vec<FileEntry>,
 }
 
 impl App {
+    pub fn root_dir(&self) -> &PathBuf {
+        &self.root_dir
+    }
+
+    pub fn search_index(&self) -> &Vec<FileEntry> {
+        &self.search_index
+    }
+
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
         // Validate the path exists
         if !path.exists() {
@@ -74,6 +84,7 @@ impl App {
             search_query: String::new(),
             search_results: Vec::new(),
             search_selected: 0,
+            search_index: Vec::new(),
         };
 
         if !app.files.is_empty() {
@@ -289,6 +300,14 @@ impl App {
         self.search_mode = true;
         self.search_query.clear();
         self.search_selected = 0;
+        
+        // Build search index on first entry
+        if self.search_index.is_empty() {
+            if let Ok(all_files) = find_all_files_recursive(&self.root_dir) {
+                self.search_index = all_files;
+            }
+        }
+        
         self.apply_fuzzy_filter();
     }
 
@@ -332,22 +351,42 @@ impl App {
     pub fn search_confirm(&mut self) {
         if !self.search_results.is_empty() {
             let file_idx = self.search_results[self.search_selected];
-            self.file_list_state.select(Some(file_idx));
-            self.preview_scroll = 0;
-            self.load_preview();
+            if let Some(entry) = self.search_index.get(file_idx) {
+                let target_dir = if entry.is_file {
+                    entry.path.parent().unwrap_or(&self.root_dir).to_path_buf()
+                } else {
+                    entry.path.clone()
+                };
+                
+                // Navigate to the target directory
+                if let Ok(files) = read_directory(&target_dir) {
+                    self.current_dir = target_dir;
+                    self.files = files;
+                    
+                    // Select the file/directory in the new listing
+                    if let Some(pos) = self.files.iter().position(|f| f.path == entry.path) {
+                        self.file_list_state.select(Some(pos));
+                    } else {
+                        self.file_list_state.select(Some(0));
+                    }
+                    
+                    self.preview_scroll = 0;
+                    self.load_preview();
+                }
+            }
         }
         self.exit_search_mode();
     }
 
     fn apply_fuzzy_filter(&mut self) {
         if self.search_query.is_empty() {
-            self.search_results = (0..self.files.len()).collect();
+            self.search_results = (0..self.search_index.len()).collect();
             return;
         }
 
         let matcher = SkimMatcherV2::default();
         let mut scored: Vec<(usize, i64)> = self
-            .files
+            .search_index
             .iter()
             .enumerate()
             .filter_map(|(idx, file)| {

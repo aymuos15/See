@@ -1,7 +1,7 @@
 pub mod directory;
 pub mod loader;
 
-pub use directory::read_directory;
+pub use directory::{read_directory, find_all_files_recursive};
 pub use loader::read_file_content;
 
 use std::path::PathBuf;
