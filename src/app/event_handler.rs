@@ -16,7 +16,7 @@ impl App {
     fn handle_next_event(&mut self) -> anyhow::Result<()> {
         let event = poll_event(
             Duration::from_millis(16),
-            self.search_mode,
+            self.search_mode || self.symbol_search_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
         )?;
@@ -31,74 +31,117 @@ impl App {
             }
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
-            AppEvent::CloseSearch => self.exit_search_mode(),
-            AppEvent::SearchInput(c) => self.search_input(c),
-            AppEvent::SearchBackspace => self.search_backspace(),
-            AppEvent::SearchNavigateUp => self.search_navigate_up(),
-            AppEvent::SearchNavigateDown => self.search_navigate_down(),
-            AppEvent::SearchConfirm => self.search_confirm(),
+            AppEvent::CloseSearch => {
+                if self.symbol_search_mode {
+                    self.exit_symbol_search_mode();
+                } else {
+                    self.exit_search_mode();
+                }
+            }
+            AppEvent::SearchInput(c) => {
+                if self.symbol_search_mode {
+                    self.symbol_search_input(c);
+                } else {
+                    self.search_input(c);
+                }
+            }
+            AppEvent::SearchBackspace => {
+                if self.symbol_search_mode {
+                    self.symbol_search_backspace();
+                } else {
+                    self.search_backspace();
+                }
+            }
+            AppEvent::SearchNavigateUp => {
+                if self.symbol_search_mode {
+                    self.symbol_search_navigate_up();
+                } else {
+                    self.search_navigate_up();
+                }
+            }
+            AppEvent::SearchNavigateDown => {
+                if self.symbol_search_mode {
+                    self.symbol_search_navigate_down();
+                } else {
+                    self.search_navigate_down();
+                }
+            }
+            AppEvent::SearchConfirm => {
+                if self.symbol_search_mode {
+                    self.symbol_search_confirm();
+                } else {
+                    self.search_confirm();
+                }
+            }
+            AppEvent::OpenSymbolSearch => self.enter_symbol_search_mode(),
+            AppEvent::CloseSymbolSearch => self.exit_symbol_search_mode(),
+            AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),
+            AppEvent::SymbolSearchBackspace => self.symbol_search_backspace(),
+            AppEvent::SymbolSearchNavigateUp => self.symbol_search_navigate_up(),
+            AppEvent::SymbolSearchNavigateDown => self.symbol_search_navigate_down(),
+            AppEvent::SymbolSearchConfirm => self.symbol_search_confirm(),
             AppEvent::NavigateDown => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.navigate_down();
                 }
             }
             AppEvent::NavigateUp => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.navigate_up();
                 }
             }
             AppEvent::ScrollPreviewDown => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.scroll_preview_down();
                 }
             }
             AppEvent::ScrollPreviewUp => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.scroll_preview_up();
                 }
             }
             AppEvent::ScrollPreviewPageDown => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.scroll_preview_page_down();
                 }
             }
             AppEvent::ScrollPreviewPageUp => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.scroll_preview_page_up();
                 }
             }
             AppEvent::ShrinkFileList => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.shrink_file_list();
                 }
             }
             AppEvent::GrowFileList => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.grow_file_list();
                 }
             }
             AppEvent::Enter => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.enter_directory();
                 }
             }
             AppEvent::GoBack => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.go_back();
                 }
             }
             AppEvent::MouseDown { column, row } => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.handle_mouse_down(column, row);
                 }
             }
             AppEvent::MouseDrag { column, row } => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.handle_mouse_drag(column, row);
                 }
             }
             AppEvent::MouseUp { column, row } => {
-                if !self.search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.handle_mouse_up(column, row);
                 }
             }
@@ -114,6 +157,8 @@ impl App {
     fn handle_quit(&mut self) {
         if self.search_mode {
             self.exit_search_mode();
+        } else if self.symbol_search_mode {
+            self.exit_symbol_search_mode();
         } else {
             self.should_quit = true;
         }

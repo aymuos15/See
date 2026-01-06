@@ -13,8 +13,8 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     file_list::render(frame, app, layout.file_list_area);
     preview::render(frame, app, layout.preview_area);
 
-    // Render search popup overlay if active
-    if app.search_mode {
+    // Render search popup overlay if active (file or symbol search)
+    if app.search_mode || app.symbol_search_mode {
         search::render(frame, app);
     }
 }

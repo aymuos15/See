@@ -8,6 +8,7 @@ use crossterm::event::{
 use std::time::Duration;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum AppEvent {
     Quit,
     NavigateUp,
@@ -27,6 +28,13 @@ pub enum AppEvent {
     SearchNavigateUp,
     SearchNavigateDown,
     SearchConfirm,
+    OpenSymbolSearch,
+    CloseSymbolSearch,
+    SymbolSearchInput(char),
+    SymbolSearchBackspace,
+    SymbolSearchNavigateUp,
+    SymbolSearchNavigateDown,
+    SymbolSearchConfirm,
     DirectoryChanged,
     PreviewFileChanged,
     SearchIndexRefreshTimer,
@@ -40,7 +48,7 @@ pub enum AppEvent {
 
 pub fn poll_event(
     timeout: Duration,
-    search_mode: bool,
+    any_search_mode: bool,
     watcher: &mut FileWatcher,
     timer: &mut RefreshTimer,
 ) -> anyhow::Result<AppEvent> {
@@ -65,7 +73,7 @@ pub fn poll_event(
                 if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
                     return Ok(AppEvent::CopySelection);
                 }
-                return Ok(handle_key(key.code, search_mode));
+                return Ok(handle_key(key.code, any_search_mode));
             }
             Event::Mouse(mouse) => {
                 return Ok(match mouse.kind {
@@ -92,21 +100,22 @@ pub fn poll_event(
     Ok(AppEvent::None)
 }
 
-const fn handle_key(code: KeyCode, search_mode: bool) -> AppEvent {
-    if search_mode {
+fn handle_key(code: KeyCode, any_search_mode: bool) -> AppEvent {
+    if any_search_mode {
         match code {
-            KeyCode::Esc => AppEvent::CloseSearch,
-            KeyCode::Enter => AppEvent::SearchConfirm,
-            KeyCode::Backspace => AppEvent::SearchBackspace,
-            KeyCode::Up => AppEvent::SearchNavigateUp,
-            KeyCode::Down => AppEvent::SearchNavigateDown,
-            KeyCode::Char(c) => AppEvent::SearchInput(c),
+            KeyCode::Esc => AppEvent::CloseSearch,  // Works for both file and symbol search
+            KeyCode::Enter => AppEvent::SearchConfirm,  // Routes to correct handler in app
+            KeyCode::Backspace => AppEvent::SearchBackspace,  // Routes to correct handler in app
+            KeyCode::Up => AppEvent::SearchNavigateUp,  // Routes to correct handler in app
+            KeyCode::Down => AppEvent::SearchNavigateDown,  // Routes to correct handler in app
+            KeyCode::Char(c) => AppEvent::SearchInput(c),  // Routes to correct handler in app
             _ => AppEvent::None,
         }
     } else {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => AppEvent::Quit,
             KeyCode::Char('/') => AppEvent::OpenSearch,
+            KeyCode::Char('f') => AppEvent::OpenSymbolSearch,
             KeyCode::Char('j') => AppEvent::ScrollPreviewDown,
             KeyCode::Char('k') => AppEvent::ScrollPreviewUp,
             KeyCode::Down => AppEvent::NavigateDown,

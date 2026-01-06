@@ -3,13 +3,14 @@ mod event_handler;
 mod mouse;
 mod navigation;
 mod search;
+mod symbol_search;
 pub mod selection;
 
 use crate::clipboard::ClipboardManager;
 use crate::config::Config;
 use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{FileWatcher, RefreshTimer};
-use crate::files::{read_directory, FileEntry};
+use crate::files::{read_directory, FileEntry, Symbol};
 use crate::highlight::SyntaxHighlighter;
 use ratatui::prelude::Rect;
 use ratatui::text::Line;
@@ -41,6 +42,12 @@ pub struct App {
     pub search_selected: usize,
     // All files under root for searching
     search_index: Vec<FileEntry>,
+    // Symbol search mode state
+    pub symbol_search_mode: bool,
+    pub symbol_search_query: String,
+    pub symbol_index: Vec<Symbol>,
+    pub symbol_search_results: Vec<usize>,
+    pub symbol_search_selected: usize,
     // File watching
     file_watcher: FileWatcher,
     search_index_timer: RefreshTimer,
@@ -110,6 +117,11 @@ impl App {
             search_results: Vec::new(),
             search_selected: 0,
             search_index: Vec::new(),
+            symbol_search_mode: false,
+            symbol_search_query: String::new(),
+            symbol_index: Vec::new(),
+            symbol_search_results: Vec::new(),
+            symbol_search_selected: 0,
             file_watcher,
             search_index_timer,
             selection: None,
