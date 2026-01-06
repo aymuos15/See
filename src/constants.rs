@@ -20,3 +20,9 @@ pub const MAX_FILE_SIZE: u64 = 1024 * 1024;
 
 /// Number of bytes to check for binary file detection
 pub const BINARY_DETECTION_BYTES: usize = 8000;
+
+/// Debounce duration for file watcher events (milliseconds)
+pub const FILE_EVENT_DEBOUNCE_MS: u64 = 100;
+
+/// Interval for search index refresh (seconds)
+pub const SEARCH_INDEX_REFRESH_SECS: u64 = 30;

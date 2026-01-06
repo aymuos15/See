@@ -3,7 +3,7 @@ use crate::constants::{
     INITIAL_SPLIT_PERCENT, MAX_SPLIT_PERCENT, MIN_SPLIT_PERCENT, PREVIEW_PAGE_SCROLL_LINES,
     SPLIT_RESIZE_STEP,
 };
-use crate::event::{poll_event, AppEvent};
+use crate::event::{poll_event, AppEvent, FileWatcher, RefreshTimer};
 use crate::files::{read_directory, read_file_content, find_all_files_recursive, FileEntry};
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
@@ -37,6 +37,9 @@ pub struct App {
     pub search_selected: usize,
     // All files under root for searching
     search_index: Vec<FileEntry>,
+    // File watching
+    file_watcher: FileWatcher,
+    search_index_timer: RefreshTimer,
 }
 
 impl App {
@@ -78,6 +81,10 @@ impl App {
         let files = read_directory(&current_dir, &root_dir, &config)?;
         let highlighter = SyntaxHighlighter::new();
 
+        // Initialize file watcher
+        let file_watcher = FileWatcher::new(&current_dir)?;
+        let search_index_timer = RefreshTimer::new();
+
         let mut app = Self {
             root_dir,
             current_dir,
@@ -95,6 +102,8 @@ impl App {
             search_results: Vec::new(),
             search_selected: 0,
             search_index: Vec::new(),
+            file_watcher,
+            search_index_timer,
         };
 
         if !app.files.is_empty() {
@@ -109,7 +118,12 @@ impl App {
         while !self.should_quit {
             terminal.draw(|frame| crate::ui::render(frame, self))?;
 
-            match poll_event(Duration::from_millis(16), self.search_mode)? {
+            match poll_event(
+                Duration::from_millis(16),
+                self.search_mode,
+                &mut self.file_watcher,
+                &mut self.search_index_timer,
+            )? {
                 AppEvent::Quit => {
                     if self.search_mode {
                         self.exit_search_mode();
@@ -117,6 +131,9 @@ impl App {
                         self.should_quit = true;
                     }
                 }
+                AppEvent::DirectoryChanged => self.refresh_current_directory(),
+                AppEvent::PreviewFileChanged => self.refresh_preview(),
+                AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
                 AppEvent::OpenSearch => self.enter_search_mode(),
                 AppEvent::CloseSearch => self.exit_search_mode(),
                 AppEvent::SearchInput(c) => self.search_input(c),
@@ -266,6 +283,8 @@ impl App {
                         self.file_list_state.select(Some(0));
                         self.preview_scroll = 0;
                         self.load_preview();
+                        // Update watcher for new directory
+                        let _ = self.file_watcher.watch_directory(&self.current_dir);
                     }
                 }
             }
@@ -290,6 +309,8 @@ impl App {
                     self.file_list_state.select(Some(0));
                     self.preview_scroll = 0;
                     self.load_preview();
+                    // Update watcher for new directory
+                    let _ = self.file_watcher.watch_directory(&self.current_dir);
                 }
             }
             // else: Silent ignore, parent is outside root boundary
@@ -303,12 +324,64 @@ impl App {
                     if let Ok(content) = read_file_content(&entry.path) {
                         let lines = self.highlighter.highlight(&entry.path, &content);
                         self.preview_content = Some(PreviewContent { lines });
+                        // Watch this file for changes
+                        let _ = self.file_watcher.watch_preview_file(Some(&entry.path));
                         return;
                     }
                 }
             }
         }
+        // No preview, stop watching preview file
+        let _ = self.file_watcher.watch_preview_file(None);
         self.preview_content = None;
+    }
+
+    /// Refresh the file list for the current directory
+    fn refresh_current_directory(&mut self) {
+        if let Ok(files) = read_directory(&self.current_dir, &self.root_dir, &self.config) {
+            // Preserve selection if possible
+            let selected_path = self
+                .file_list_state
+                .selected()
+                .and_then(|idx| self.files.get(idx))
+                .map(|e| e.path.clone());
+
+            self.files = files;
+
+            // Try to re-select the same file
+            if let Some(path) = selected_path {
+                if let Some(new_idx) = self.files.iter().position(|f| f.path == path) {
+                    self.file_list_state.select(Some(new_idx));
+                } else if !self.files.is_empty() {
+                    // File was deleted, select first item
+                    self.file_list_state.select(Some(0));
+                } else {
+                    self.file_list_state.select(None);
+                }
+            } else if !self.files.is_empty() {
+                self.file_list_state.select(Some(0));
+            }
+
+            // Refresh preview for current selection
+            self.load_preview();
+        }
+    }
+
+    /// Refresh the preview content for the currently viewed file
+    fn refresh_preview(&mut self) {
+        self.load_preview();
+    }
+
+    /// Refresh the search index with all files under root
+    fn refresh_search_index(&mut self) {
+        if let Ok(all_files) = find_all_files_recursive(&self.root_dir, &self.config) {
+            self.search_index = all_files;
+
+            // If currently in search mode, re-apply filter
+            if self.search_mode {
+                self.apply_fuzzy_filter();
+            }
+        }
     }
 
     pub fn enter_search_mode(&mut self) {
@@ -387,6 +460,8 @@ impl App {
 
                     self.preview_scroll = 0;
                     self.load_preview();
+                    // Update watcher for new directory
+                    let _ = self.file_watcher.watch_directory(&self.current_dir);
                 }
             }
         }

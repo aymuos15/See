@@ -31,3 +31,11 @@ Exclude files using glob patterns in `~/.config/viewer/config.toml`:
 ```toml
 exclude = ["*.pyc", "target/**", "node_modules/**"]
 ```
+
+## Auto-Refresh
+
+The viewer automatically watches for file changes:
+
+- **Current directory**: Refreshes file list when files are added/deleted
+- **Preview file**: Refreshes preview when the viewed file is modified
+- **Search index**: Refreshes every 30 seconds to pick up new files
