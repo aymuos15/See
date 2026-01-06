@@ -35,7 +35,7 @@ pub fn poll_event(timeout: Duration, search_mode: bool) -> anyhow::Result<AppEve
     Ok(AppEvent::None)
 }
 
-fn handle_key(code: KeyCode, search_mode: bool) -> AppEvent {
+const fn handle_key(code: KeyCode, search_mode: bool) -> AppEvent {
     if search_mode {
         match code {
             KeyCode::Esc => AppEvent::CloseSearch,

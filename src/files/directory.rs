@@ -4,7 +4,7 @@ use std::path::Path;
 
 pub fn read_directory(path: &Path) -> anyhow::Result<Vec<FileEntry>> {
     let mut entries: Vec<FileEntry> = fs::read_dir(path)?
-        .filter_map(|entry| entry.ok())
+        .filter_map(std::result::Result::ok)
         .map(|entry| FileEntry::new(entry.path()))
         .collect();
 

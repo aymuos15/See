@@ -10,8 +10,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub struct PreviewContent {
-    #[allow(dead_code)]
-    pub path: PathBuf,
     pub lines: Vec<Line<'static>>,
 }
 
@@ -52,7 +50,7 @@ impl App {
         // Canonicalize to get absolute, resolved path (symlinks resolved)
         let root_dir = initial_dir
             .canonicalize()
-            .map_err(|e| anyhow::anyhow!("Cannot access directory: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Cannot access directory: {e}"))?;
 
         // Use the canonicalized path as current_dir
         let current_dir = root_dir.clone();
@@ -199,12 +197,13 @@ impl App {
     fn scroll_preview_down(&mut self) {
         if let Some(preview) = &self.preview_content {
             if !preview.lines.is_empty() {
-                self.preview_scroll =
-                    (self.preview_scroll + 1).min((preview.lines.len() - 1) as u16);
+                self.preview_scroll = (self.preview_scroll + 1)
+                    .min(u16::try_from(preview.lines.len() - 1).unwrap_or(u16::MAX));
             }
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn scroll_preview_up(&mut self) {
         self.preview_scroll = self.preview_scroll.saturating_sub(1);
     }
@@ -212,12 +211,13 @@ impl App {
     fn scroll_preview_page_down(&mut self) {
         if let Some(preview) = &self.preview_content {
             if !preview.lines.is_empty() {
-                self.preview_scroll =
-                    (self.preview_scroll + 10).min((preview.lines.len() - 1) as u16);
+                self.preview_scroll = (self.preview_scroll + 10)
+                    .min(u16::try_from(preview.lines.len() - 1).unwrap_or(u16::MAX));
             }
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn scroll_preview_page_up(&mut self) {
         self.preview_scroll = self.preview_scroll.saturating_sub(10);
     }
@@ -276,10 +276,7 @@ impl App {
                 if entry.is_file {
                     if let Ok(content) = read_file_content(&entry.path) {
                         let lines = self.highlighter.highlight(&entry.path, &content);
-                        self.preview_content = Some(PreviewContent {
-                            path: entry.path.clone(),
-                            lines,
-                        });
+                        self.preview_content = Some(PreviewContent { lines });
                         return;
                     }
                 }
@@ -314,6 +311,7 @@ impl App {
         self.apply_fuzzy_filter();
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn search_navigate_up(&mut self) {
         if !self.search_results.is_empty() {
             self.search_selected = if self.search_selected == 0 {
@@ -324,6 +322,7 @@ impl App {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn search_navigate_down(&mut self) {
         if !self.search_results.is_empty() {
             self.search_selected = (self.search_selected + 1) % self.search_results.len();

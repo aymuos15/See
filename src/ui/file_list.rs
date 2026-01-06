@@ -14,7 +14,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         .map(|entry| {
             let text = format!(" {}", entry.name);
             // Pad to full width so background color fills the entire line
-            let padded = format!("{:<width$}", text, width = inner_width);
+            let padded = format!("{text:<inner_width$}");
             ListItem::new(padded).style(Style::default().fg(theme.fg_text))
         })
         .collect();

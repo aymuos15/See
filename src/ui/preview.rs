@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         // Line numbers
         let line_numbers: Vec<Line> = (start + 1..=end)
             .map(|n| {
-                Line::from(format!("{:>4} ", n))
+                Line::from(format!("{n:>4} "))
                     .style(Style::default().fg(theme.line_num).bg(theme.bg_main))
             })
             .collect();

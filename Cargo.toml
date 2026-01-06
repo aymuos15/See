@@ -14,5 +14,19 @@ serde = { version = "1.0", features = ["derive"] }
 dirs = "5.0"
 fuzzy-matcher = "0.3"
 
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+suspicious = "warn"
+complexity = "warn"
+style = "warn"
+perf = "warn"
+correctness = "warn"
+unwrap_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+
 [dev-dependencies]
 tempfile = "3.8"

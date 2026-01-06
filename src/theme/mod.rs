@@ -63,12 +63,9 @@ impl Theme {
 
         // Try loading theme from various locations
         let theme_paths = [
-            dirs::home_dir()?.join(format!(".config/helix/themes/{}.toml", theme_name)),
-            PathBuf::from(format!("/usr/lib/helix/runtime/themes/{}.toml", theme_name)),
-            PathBuf::from(format!(
-                "/usr/share/helix/runtime/themes/{}.toml",
-                theme_name
-            )),
+            dirs::home_dir()?.join(format!(".config/helix/themes/{theme_name}.toml")),
+            PathBuf::from(format!("/usr/lib/helix/runtime/themes/{theme_name}.toml")),
+            PathBuf::from(format!("/usr/share/helix/runtime/themes/{theme_name}.toml")),
         ];
 
         for path in &theme_paths {
@@ -91,7 +88,7 @@ impl Theme {
 
         // Helper to resolve color from palette or hex
         let resolve_color = |name: &str, palette: &HashMap<String, String>| -> Option<Color> {
-            let color_str = palette.get(name).map(|s| s.as_str()).unwrap_or(name);
+            let color_str = palette.get(name).map_or(name, |s| s.as_str());
             parse_hex_color(color_str)
         };
 
@@ -138,7 +135,7 @@ impl Theme {
         match style {
             toml::Value::Table(t) => {
                 let bg = t.get("bg")?.as_str()?;
-                let resolved = palette.get(bg).map(|s| s.as_str()).unwrap_or(bg);
+                let resolved = palette.get(bg).map_or(bg, |s| s.as_str());
                 parse_hex_color(resolved)
             }
             _ => None,
@@ -154,14 +151,11 @@ impl Theme {
         match style {
             toml::Value::Table(t) => {
                 let fg = t.get("fg")?.as_str()?;
-                let resolved = palette.get(fg).map(|s| s.as_str()).unwrap_or(fg);
+                let resolved = palette.get(fg).map_or(fg, |s| s.as_str());
                 parse_hex_color(resolved)
             }
             toml::Value::String(s) => {
-                let resolved = palette
-                    .get(s.as_str())
-                    .map(|s| s.as_str())
-                    .unwrap_or(s.as_str());
+                let resolved = palette.get(s.as_str()).map_or(s.as_str(), |s| s.as_str());
                 parse_hex_color(resolved)
             }
             _ => None,
