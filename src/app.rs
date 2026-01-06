@@ -4,7 +4,7 @@ use crate::constants::{
     SPLIT_RESIZE_STEP,
 };
 use crate::event::{poll_event, AppEvent, FileWatcher, RefreshTimer};
-use crate::files::{read_directory, read_file_content, find_all_files_recursive, FileEntry};
+use crate::files::{find_all_files_recursive, read_directory, read_file_content, FileEntry};
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -259,7 +259,9 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     fn scroll_preview_page_up(&mut self) {
-        self.preview_scroll = self.preview_scroll.saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
+        self.preview_scroll = self
+            .preview_scroll
+            .saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
     }
 
     fn shrink_file_list(&mut self) {

@@ -1,13 +1,17 @@
 use crate::app::App;
+use crate::constants::{
+    SEARCH_INPUT_HEIGHT, SEARCH_POPUP_HEIGHT_PERCENT, SEARCH_POPUP_MARGIN,
+    SEARCH_POPUP_WIDTH_PERCENT,
+};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Clear, List, ListItem, Paragraph};
 
 pub fn render(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
-    // Calculate centered popup size (60% width, 70% height)
-    let popup_width = (area.width * 60) / 100;
-    let popup_height = (area.height * 70) / 100;
+    // Calculate centered popup size
+    let popup_width = (area.width * SEARCH_POPUP_WIDTH_PERCENT) / 100;
+    let popup_height = (area.height * SEARCH_POPUP_HEIGHT_PERCENT) / 100;
     let popup_x = (area.width - popup_width) / 2;
     let popup_y = (area.height - popup_height) / 2;
 
@@ -20,29 +24,33 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     // Clear area and render opaque popup block
     frame.render_widget(Clear, popup_area);
-    let block = Block::default()
-        .style(Style::default().bg(app.theme.bg_search));
+    let block = Block::default().style(Style::default().bg(app.theme.bg_search));
 
     frame.render_widget(block, popup_area);
 
     // Calculate inner areas (input + results list)
-    let inner = popup_area.inner(Margin::new(1, 1));
-    let [input_area, results_area] = Layout::vertical([
-        Constraint::Length(3), // Input field
-        Constraint::Min(0),    // Results list
-    ])
-    .areas(inner);
+    let inner = popup_area.inner(Margin::new(SEARCH_POPUP_MARGIN, SEARCH_POPUP_MARGIN));
+    let [input_area, results_area] =
+        Layout::vertical([Constraint::Length(SEARCH_INPUT_HEIGHT), Constraint::Min(0)])
+            .areas(inner);
 
     // Render search input
     let input_text = format!("/ {}", app.search_query);
-    let input = Paragraph::new(input_text)
-        .style(Style::default().fg(app.theme.fg_text).bg(app.theme.bg_search));
+    let input = Paragraph::new(input_text).style(
+        Style::default()
+            .fg(app.theme.fg_text)
+            .bg(app.theme.bg_search),
+    );
     frame.render_widget(input, input_area);
 
     // Render filtered results
     if app.search_results.is_empty() {
         let no_results = Paragraph::new("No matches")
-            .style(Style::default().fg(app.theme.fg_dim).bg(app.theme.bg_search))
+            .style(
+                Style::default()
+                    .fg(app.theme.fg_dim)
+                    .bg(app.theme.bg_search),
+            )
             .alignment(Alignment::Center);
         frame.render_widget(no_results, results_area);
     } else {
@@ -52,13 +60,17 @@ pub fn render(frame: &mut Frame, app: &App) {
             .filter_map(|&idx| {
                 app.search_index().get(idx).map(|file| {
                     // Display relative path from root
-                    let display_path = file.path
+                    let display_path = file
+                        .path
                         .strip_prefix(app.root_dir())
                         .ok()
                         .and_then(|p| p.to_str())
                         .unwrap_or(&file.name);
-                    ListItem::new(display_path)
-                        .style(Style::default().fg(app.theme.fg_text).bg(app.theme.bg_search))
+                    ListItem::new(display_path).style(
+                        Style::default()
+                            .fg(app.theme.fg_text)
+                            .bg(app.theme.bg_search),
+                    )
                 })
             })
             .collect();

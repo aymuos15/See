@@ -1,3 +1,4 @@
+use crate::constants::DEFAULT_SYNTAX_THEME;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use std::path::Path;
@@ -27,7 +28,7 @@ impl SyntaxHighlighter {
             .find_syntax_by_extension(extension)
             .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text());
 
-        let theme = &self.theme_set.themes["base16-eighties.dark"];
+        let theme = &self.theme_set.themes[DEFAULT_SYNTAX_THEME];
         let mut highlighter = HighlightLines::new(syntax, theme);
 
         let mut lines = Vec::new();

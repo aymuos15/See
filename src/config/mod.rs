@@ -87,7 +87,11 @@ mod tests {
 
     #[test]
     fn test_is_excluded_with_multiple_patterns() {
-        let patterns = vec!["*.log".to_string(), "*.tmp".to_string(), "node_modules".to_string()];
+        let patterns = vec![
+            "*.log".to_string(),
+            "*.tmp".to_string(),
+            "node_modules".to_string(),
+        ];
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
         let config = Config { exclude_set };
 

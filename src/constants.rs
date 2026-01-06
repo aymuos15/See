@@ -26,3 +26,18 @@ pub const FILE_EVENT_DEBOUNCE_MS: u64 = 100;
 
 /// Interval for search index refresh (seconds)
 pub const SEARCH_INDEX_REFRESH_SECS: u64 = 30;
+
+/// Search popup width as percentage of screen width
+pub const SEARCH_POPUP_WIDTH_PERCENT: u16 = 60;
+
+/// Search popup height as percentage of screen height
+pub const SEARCH_POPUP_HEIGHT_PERCENT: u16 = 70;
+
+/// Height of search input field in lines
+pub const SEARCH_INPUT_HEIGHT: u16 = 3;
+
+/// Inner margin for search popup (horizontal, vertical)
+pub const SEARCH_POPUP_MARGIN: u16 = 1;
+
+/// Default syntax highlighting theme name
+pub const DEFAULT_SYNTAX_THEME: &str = "base16-eighties.dark";

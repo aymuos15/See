@@ -246,7 +246,10 @@ mod tests {
 
     #[test]
     fn test_handle_key_normal_mode_quit() {
-        assert!(matches!(handle_key(KeyCode::Char('q'), false), AppEvent::Quit));
+        assert!(matches!(
+            handle_key(KeyCode::Char('q'), false),
+            AppEvent::Quit
+        ));
         assert!(matches!(handle_key(KeyCode::Esc, false), AppEvent::Quit));
     }
 
@@ -256,7 +259,10 @@ mod tests {
             handle_key(KeyCode::Down, false),
             AppEvent::NavigateDown
         ));
-        assert!(matches!(handle_key(KeyCode::Up, false), AppEvent::NavigateUp));
+        assert!(matches!(
+            handle_key(KeyCode::Up, false),
+            AppEvent::NavigateUp
+        ));
         assert!(matches!(handle_key(KeyCode::Enter, false), AppEvent::Enter));
         assert!(matches!(
             handle_key(KeyCode::Backspace, false),
@@ -298,7 +304,10 @@ mod tests {
 
     #[test]
     fn test_handle_key_normal_mode_search() {
-        assert!(matches!(handle_key(KeyCode::Char('/'), false), AppEvent::OpenSearch));
+        assert!(matches!(
+            handle_key(KeyCode::Char('/'), false),
+            AppEvent::OpenSearch
+        ));
     }
 
     #[test]
@@ -327,17 +336,26 @@ mod tests {
 
     #[test]
     fn test_handle_key_search_mode_confirm() {
-        assert!(matches!(handle_key(KeyCode::Enter, true), AppEvent::SearchConfirm));
+        assert!(matches!(
+            handle_key(KeyCode::Enter, true),
+            AppEvent::SearchConfirm
+        ));
     }
 
     #[test]
     fn test_handle_key_search_mode_close() {
-        assert!(matches!(handle_key(KeyCode::Esc, true), AppEvent::CloseSearch));
+        assert!(matches!(
+            handle_key(KeyCode::Esc, true),
+            AppEvent::CloseSearch
+        ));
     }
 
     #[test]
     fn test_handle_key_search_mode_backspace() {
-        assert!(matches!(handle_key(KeyCode::Backspace, true), AppEvent::SearchBackspace));
+        assert!(matches!(
+            handle_key(KeyCode::Backspace, true),
+            AppEvent::SearchBackspace
+        ));
     }
 
     #[test]
