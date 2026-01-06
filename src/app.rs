@@ -117,7 +117,7 @@ impl App {
 
     fn scroll_preview_down(&mut self) {
         if let Some(preview) = &self.preview_content {
-            if preview.lines.len() > 0 {
+            if !preview.lines.is_empty() {
                 self.preview_scroll = (self.preview_scroll + 1).min((preview.lines.len() - 1) as u16);
             }
         }
@@ -129,7 +129,7 @@ impl App {
 
     fn scroll_preview_page_down(&mut self) {
         if let Some(preview) = &self.preview_content {
-            if preview.lines.len() > 0 {
+            if !preview.lines.is_empty() {
                 self.preview_scroll = (self.preview_scroll + 10).min((preview.lines.len() - 1) as u16);
             }
         }
