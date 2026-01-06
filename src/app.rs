@@ -1,4 +1,8 @@
 use crate::config::Config;
+use crate::constants::{
+    INITIAL_SPLIT_PERCENT, MAX_SPLIT_PERCENT, MIN_SPLIT_PERCENT, PREVIEW_PAGE_SCROLL_LINES,
+    SPLIT_RESIZE_STEP,
+};
 use crate::event::{poll_event, AppEvent};
 use crate::files::{read_directory, read_file_content, find_all_files_recursive, FileEntry};
 use crate::highlight::SyntaxHighlighter;
@@ -83,7 +87,7 @@ impl App {
             preview_scroll: 0,
             highlighter,
             should_quit: false,
-            split_percent: 30,
+            split_percent: INITIAL_SPLIT_PERCENT,
             theme: Theme::load(),
             config,
             search_mode: false,
@@ -214,8 +218,9 @@ impl App {
     fn scroll_preview_down(&mut self) {
         if let Some(preview) = &self.preview_content {
             if !preview.lines.is_empty() {
-                self.preview_scroll = (self.preview_scroll + 1)
-                    .min(u16::try_from(preview.lines.len() - 1).unwrap_or(u16::MAX));
+                let max_scroll = preview.lines.len().saturating_sub(1);
+                self.preview_scroll =
+                    (self.preview_scroll + 1).min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
             }
         }
     }
@@ -228,23 +233,27 @@ impl App {
     fn scroll_preview_page_down(&mut self) {
         if let Some(preview) = &self.preview_content {
             if !preview.lines.is_empty() {
-                self.preview_scroll = (self.preview_scroll + 10)
-                    .min(u16::try_from(preview.lines.len() - 1).unwrap_or(u16::MAX));
+                let max_scroll = preview.lines.len().saturating_sub(1);
+                self.preview_scroll = (self.preview_scroll + PREVIEW_PAGE_SCROLL_LINES)
+                    .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
             }
         }
     }
 
     #[allow(clippy::missing_const_for_fn)]
     fn scroll_preview_page_up(&mut self) {
-        self.preview_scroll = self.preview_scroll.saturating_sub(10);
+        self.preview_scroll = self.preview_scroll.saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
     }
 
     fn shrink_file_list(&mut self) {
-        self.split_percent = self.split_percent.saturating_sub(5).max(10);
+        self.split_percent = self
+            .split_percent
+            .saturating_sub(SPLIT_RESIZE_STEP)
+            .max(MIN_SPLIT_PERCENT);
     }
 
     fn grow_file_list(&mut self) {
-        self.split_percent = (self.split_percent + 5).min(80);
+        self.split_percent = (self.split_percent + SPLIT_RESIZE_STEP).min(MAX_SPLIT_PERCENT);
     }
 
     fn enter_directory(&mut self) {
@@ -642,5 +651,147 @@ mod tests {
             app.current_dir, nested_canonical,
             "Should not be able to navigate above the specified root"
         );
+    }
+
+    #[test]
+    fn test_search_mode_entry_exit() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        assert!(!app.search_mode);
+        assert!(app.search_query.is_empty());
+
+        app.enter_search_mode();
+        assert!(app.search_mode);
+
+        app.exit_search_mode();
+        assert!(!app.search_mode);
+    }
+
+    #[test]
+    fn test_search_input() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        app.enter_search_mode();
+        app.search_input('f');
+        app.search_input('i');
+        app.search_input('l');
+        app.search_input('e');
+
+        assert_eq!(app.search_query, "file");
+    }
+
+    #[test]
+    fn test_search_backspace() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        app.enter_search_mode();
+        app.search_input('t');
+        app.search_input('e');
+        app.search_input('s');
+        app.search_input('t');
+
+        assert_eq!(app.search_query, "test");
+
+        app.search_backspace();
+        assert_eq!(app.search_query, "tes");
+
+        app.search_backspace();
+        assert_eq!(app.search_query, "te");
+    }
+
+    #[test]
+    fn test_fuzzy_filter() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        // Build search index
+        app.search_index = vec![
+            FileEntry::new(temp_dir.path().join("root/file1.txt")),
+            FileEntry::new(temp_dir.path().join("root/file2.txt")),
+            FileEntry::new(temp_dir.path().join("root/config.toml")),
+        ];
+
+        app.search_query = "file".to_string();
+        app.apply_fuzzy_filter();
+
+        // Should match both file entries
+        assert!(app.search_results.len() >= 2);
+    }
+
+    #[test]
+    fn test_fuzzy_filter_no_matches() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        app.search_index = vec![
+            FileEntry::new(temp_dir.path().join("root/file1.txt")),
+            FileEntry::new(temp_dir.path().join("root/file2.txt")),
+        ];
+
+        app.search_query = "xyz123".to_string();
+        app.apply_fuzzy_filter();
+
+        // Should have no results
+        assert!(app.search_results.is_empty());
+    }
+
+    #[test]
+    fn test_navigate_up_wraps_around() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        // Start at first item
+        app.file_list_state.select(Some(0));
+
+        // Navigate up should wrap to last
+        app.navigate_up();
+        let selected = app.file_list_state.selected().unwrap_or(0);
+        assert_eq!(selected, app.files.len() - 1);
+    }
+
+    #[test]
+    fn test_navigate_down_wraps_around() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        // Set to last item
+        let last_idx = app.files.len() - 1;
+        app.file_list_state.select(Some(last_idx));
+
+        // Navigate down should wrap to first
+        app.navigate_down();
+        let selected = app.file_list_state.selected().unwrap_or(0);
+        assert_eq!(selected, 0);
+    }
+
+    #[test]
+    fn test_load_preview_for_file() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+        let mut app = App::new(root_path).unwrap();
+
+        // Select first file
+        if let Some(first) = app.files.first() {
+            if first.is_file {
+                app.file_list_state.select(Some(0));
+                app.load_preview();
+
+                // Should have loaded preview content
+                assert!(app.preview_content.is_some());
+                if let Some(content) = &app.preview_content {
+                    assert!(!content.lines.is_empty());
+                }
+            }
+        }
     }
 }

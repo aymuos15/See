@@ -52,3 +52,76 @@ fn build_globset(patterns: &[String]) -> Option<GlobSet> {
 
     builder.build().ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_default() {
+        let config = Config::default();
+        assert!(!config.is_excluded(Path::new("any/path")));
+    }
+
+    #[test]
+    fn test_is_excluded_with_simple_glob() {
+        let patterns = vec!["*.log".to_string()];
+        let exclude_set = build_globset(&patterns).expect("Failed to build globset");
+        let config = Config { exclude_set };
+
+        assert!(config.is_excluded(Path::new("debug.log")));
+        assert!(config.is_excluded(Path::new("build.log")));
+        assert!(!config.is_excluded(Path::new("file.txt")));
+    }
+
+    #[test]
+    fn test_is_excluded_with_directory_glob() {
+        let patterns = vec!["target/**".to_string()];
+        let exclude_set = build_globset(&patterns).expect("Failed to build globset");
+        let config = Config { exclude_set };
+
+        assert!(config.is_excluded(Path::new("target/debug/app")));
+        assert!(config.is_excluded(Path::new("target/release")));
+        assert!(!config.is_excluded(Path::new("src/main.rs")));
+    }
+
+    #[test]
+    fn test_is_excluded_with_multiple_patterns() {
+        let patterns = vec!["*.log".to_string(), "*.tmp".to_string(), "node_modules".to_string()];
+        let exclude_set = build_globset(&patterns).expect("Failed to build globset");
+        let config = Config { exclude_set };
+
+        assert!(config.is_excluded(Path::new("app.log")));
+        assert!(config.is_excluded(Path::new("temp.tmp")));
+        assert!(config.is_excluded(Path::new("node_modules")));
+        assert!(!config.is_excluded(Path::new("main.rs")));
+    }
+
+    #[test]
+    fn test_is_excluded_with_invalid_patterns() {
+        // Invalid glob patterns are silently ignored
+        let patterns = vec!["[invalid".to_string(), "*.valid".to_string()];
+        let exclude_set = build_globset(&patterns).expect("Failed to build globset");
+        let config = Config { exclude_set };
+
+        // Valid pattern works
+        assert!(config.is_excluded(Path::new("file.valid")));
+        // Invalid pattern doesn't match anything
+        assert!(!config.is_excluded(Path::new("[invalid")));
+    }
+
+    #[test]
+    fn test_build_globset_empty() {
+        let patterns: Vec<String> = vec![];
+        let exclude_set = build_globset(&patterns).expect("Failed to build globset");
+        assert!(!exclude_set.is_match(Path::new("anything")));
+    }
+
+    #[test]
+    fn test_build_globset_all_invalid() {
+        let patterns = vec!["[invalid".to_string(), "{bad".to_string()];
+        let result = build_globset(&patterns);
+        // build_globset returns Some even with all invalid patterns
+        assert!(result.is_some());
+    }
+}

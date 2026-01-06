@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 mod app;
 mod config;
+mod constants;
 mod event;
 mod files;
 mod highlight;

@@ -173,3 +173,119 @@ fn parse_hex_color(s: &str) -> Option<Color> {
     let b = u8::from_str_radix(&s[4..6], 16).ok()?;
     Some(Color::Rgb(r, g, b))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_hex_color_valid() {
+        let color = parse_hex_color("#FF00AA");
+        assert!(color.is_some());
+        match color.unwrap() {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 255);
+                assert_eq!(g, 0);
+                assert_eq!(b, 170);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_color_lowercase() {
+        let color = parse_hex_color("#ff00aa");
+        assert!(color.is_some());
+        match color.unwrap() {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 255);
+                assert_eq!(g, 0);
+                assert_eq!(b, 170);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_color_no_hash() {
+        let color = parse_hex_color("FF00AA");
+        assert!(color.is_some());
+        match color.unwrap() {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 255);
+                assert_eq!(g, 0);
+                assert_eq!(b, 170);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_color_black() {
+        let color = parse_hex_color("#000000");
+        assert!(color.is_some());
+        match color.unwrap() {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 0);
+                assert_eq!(g, 0);
+                assert_eq!(b, 0);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_color_white() {
+        let color = parse_hex_color("#FFFFFF");
+        assert!(color.is_some());
+        match color.unwrap() {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 255);
+                assert_eq!(g, 255);
+                assert_eq!(b, 255);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_parse_hex_color_invalid_length() {
+        assert!(parse_hex_color("#FFF").is_none());
+        assert!(parse_hex_color("#FF00AA00").is_none());
+        assert!(parse_hex_color("#").is_none());
+    }
+
+    #[test]
+    fn test_parse_hex_color_invalid_chars() {
+        assert!(parse_hex_color("#GGGGGG").is_none());
+        assert!(parse_hex_color("#ZZ00AA").is_none());
+    }
+
+    #[test]
+    fn test_theme_default() {
+        let theme = Theme::default();
+        // Just verify it has non-default color values
+        assert!(!matches!(theme.bg_main, Color::Reset));
+        assert!(!matches!(theme.fg_text, Color::Reset));
+    }
+
+    #[test]
+    fn test_parse_theme_empty() {
+        let result = Theme::parse_theme("");
+        assert!(result.is_ok());
+        // Should return default theme on empty input
+        let theme = result.unwrap();
+        assert!(!matches!(theme.bg_main, Color::Reset));
+    }
+
+    #[test]
+    fn test_parse_theme_minimal() {
+        let toml_content = "\
+[palette]\n\
+background = \"#1e1e1e\"\n\
+foreground = \"#ffffff\"\n\
+";
+        let result = Theme::parse_theme(toml_content);
+        assert!(result.is_ok());
+    }
+}

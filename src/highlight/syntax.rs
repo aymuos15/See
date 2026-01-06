@@ -78,3 +78,84 @@ impl Default for SyntaxHighlighter {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_syntax_highlighter_new() {
+        let highlighter = SyntaxHighlighter::new();
+        // Just verify it doesn't panic
+        assert!(!highlighter.syntax_set.syntaxes().is_empty());
+    }
+
+    #[test]
+    fn test_syntax_highlighter_default() {
+        let highlighter = SyntaxHighlighter::default();
+        assert!(!highlighter.syntax_set.syntaxes().is_empty());
+    }
+
+    #[test]
+    fn test_highlight_rust_code() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = r#"
+fn main() {
+    println!("Hello, world!");
+}
+"#;
+
+        let lines = highlighter.highlight(Path::new("main.rs"), code);
+        assert!(!lines.is_empty());
+        // Should produce highlighted output
+        assert!(lines.len() > 1);
+    }
+
+    #[test]
+    fn test_highlight_plain_text() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = "Plain text content";
+
+        let lines = highlighter.highlight(Path::new("file.txt"), code);
+        assert_eq!(lines.len(), 1);
+    }
+
+    #[test]
+    fn test_highlight_unknown_extension() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = "Some content";
+
+        // Unknown extension should fall back to plain text
+        let lines = highlighter.highlight(Path::new("file.unknown"), code);
+        assert!(!lines.is_empty());
+    }
+
+    #[test]
+    fn test_highlight_multiline() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = "line 1\nline 2\nline 3";
+
+        let lines = highlighter.highlight(Path::new("file.txt"), code);
+        // Should preserve line structure
+        assert!(lines.len() >= 3);
+    }
+
+    #[test]
+    fn test_highlight_empty_content() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = "";
+
+        let lines = highlighter.highlight(Path::new("file.txt"), code);
+        assert!(lines.is_empty() || lines.len() == 1);
+    }
+
+    #[test]
+    fn test_highlight_with_special_chars() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = "Special chars: !@#$%^&*()";
+
+        let lines = highlighter.highlight(Path::new("file.txt"), code);
+        assert!(!lines.is_empty());
+    }
+}
