@@ -1,6 +1,6 @@
 use crate::files::{find_all_files_recursive, read_directory};
-use fuzzy_matcher::skim::SkimMatcherV2;
-use fuzzy_matcher::FuzzyMatcher;
+use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
+use nucleo_matcher::{Config, Matcher};
 
 use super::App;
 
@@ -95,21 +95,22 @@ impl App {
             return;
         }
 
-        let matcher = SkimMatcherV2::default();
-        let mut scored: Vec<(usize, i64)> = self
-            .search_index
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, file)| {
-                matcher
-                    .fuzzy_match(&file.name, &self.search_query)
-                    .map(|score| (idx, score))
-            })
+        let mut matcher = Matcher::new(Config::DEFAULT);
+        let pattern = Pattern::parse(
+            &self.search_query,
+            CaseMatching::Ignore,
+            Normalization::Smart,
+        );
+
+        let names: Vec<&str> = self.search_index.iter().map(|f| f.name.as_str()).collect();
+        let matches = pattern.match_list(&names, &mut matcher);
+
+        // matches is Vec<(&str, u32)> sorted by score descending
+        // We need to map back to indices
+        self.search_results = matches
+            .into_iter()
+            .filter_map(|(name, _score)| self.search_index.iter().position(|f| f.name == *name))
             .collect();
-
-        scored.sort_by(|a, b| b.1.cmp(&a.1));
-
-        self.search_results = scored.into_iter().map(|(idx, _)| idx).collect();
     }
 
     /// Refresh the search index with all files under root
