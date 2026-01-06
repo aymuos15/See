@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::event::{poll_event, AppEvent};
 use crate::files::{read_directory, read_file_content, find_all_files_recursive, FileEntry};
 use crate::highlight::SyntaxHighlighter;
@@ -24,6 +25,7 @@ pub struct App {
     pub should_quit: bool,
     pub split_percent: u16,
     pub theme: Theme,
+    pub config: Config,
     // Search mode state
     pub search_mode: bool,
     pub search_query: String,
@@ -34,11 +36,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn root_dir(&self) -> &PathBuf {
+    pub const fn root_dir(&self) -> &PathBuf {
         &self.root_dir
     }
 
-    pub fn search_index(&self) -> &Vec<FileEntry> {
+    pub const fn search_index(&self) -> &Vec<FileEntry> {
         &self.search_index
     }
 
@@ -65,8 +67,11 @@ impl App {
         // Use the canonicalized path as current_dir
         let current_dir = root_dir.clone();
 
+        // Load config
+        let config = Config::load();
+
         // Read directory contents
-        let files = read_directory(&current_dir)?;
+        let files = read_directory(&current_dir, &root_dir, &config)?;
         let highlighter = SyntaxHighlighter::new();
 
         let mut app = Self {
@@ -80,6 +85,7 @@ impl App {
             should_quit: false,
             split_percent: 30,
             theme: Theme::load(),
+            config,
             search_mode: false,
             search_query: String::new(),
             search_results: Vec::new(),
@@ -245,7 +251,7 @@ impl App {
         if let Some(idx) = self.file_list_state.selected() {
             if let Some(entry) = self.files.get(idx) {
                 if !entry.is_file {
-                    if let Ok(files) = read_directory(&entry.path) {
+                    if let Ok(files) = read_directory(&entry.path, &self.root_dir, &self.config) {
                         self.current_dir = entry.path.clone();
                         self.files = files;
                         self.file_list_state.select(Some(0));
@@ -269,7 +275,7 @@ impl App {
 
             // Ensure parent is within or equal to root_dir
             if parent_path.starts_with(&self.root_dir) {
-                if let Ok(files) = read_directory(&parent_path) {
+                if let Ok(files) = read_directory(&parent_path, &self.root_dir, &self.config) {
                     self.current_dir = parent_path;
                     self.files = files;
                     self.file_list_state.select(Some(0));
@@ -300,14 +306,14 @@ impl App {
         self.search_mode = true;
         self.search_query.clear();
         self.search_selected = 0;
-        
+
         // Build search index on first entry
         if self.search_index.is_empty() {
-            if let Ok(all_files) = find_all_files_recursive(&self.root_dir) {
+            if let Ok(all_files) = find_all_files_recursive(&self.root_dir, &self.config) {
                 self.search_index = all_files;
             }
         }
-        
+
         self.apply_fuzzy_filter();
     }
 
@@ -357,19 +363,19 @@ impl App {
                 } else {
                     entry.path.clone()
                 };
-                
+
                 // Navigate to the target directory
-                if let Ok(files) = read_directory(&target_dir) {
+                if let Ok(files) = read_directory(&target_dir, &self.root_dir, &self.config) {
                     self.current_dir = target_dir;
                     self.files = files;
-                    
+
                     // Select the file/directory in the new listing
                     if let Some(pos) = self.files.iter().position(|f| f.path == entry.path) {
                         self.file_list_state.select(Some(pos));
                     } else {
                         self.file_list_state.select(Some(0));
                     }
-                    
+
                     self.preview_scroll = 0;
                     self.load_preview();
                 }
