@@ -1,5 +1,6 @@
 use crate::constants::{FILE_EVENT_DEBOUNCE_MS, SEARCH_INDEX_REFRESH_SECS};
-use notify::{Event as NotifyEvent, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{RecommendedWatcher, RecursiveMode};
+use notify_debouncer_mini::{new_debouncer, DebouncedEvent, Debouncer};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::{Duration, Instant};
@@ -8,25 +9,32 @@ use super::AppEvent;
 
 /// File watcher for current directory and preview file
 pub struct FileWatcher {
-    watcher: RecommendedWatcher,
-    receiver: Receiver<Result<NotifyEvent, notify::Error>>,
+    debouncer: Debouncer<RecommendedWatcher>,
+    receiver: Receiver<Vec<DebouncedEvent>>,
     current_dir: PathBuf,
     preview_file: Option<PathBuf>,
-    last_event_time: Instant,
 }
 
 impl FileWatcher {
     /// Create a new file watcher for the given directory
     pub fn new(current_dir: &Path) -> anyhow::Result<Self> {
         let (tx, rx) = mpsc::channel();
-        let watcher = notify::recommended_watcher(tx)?;
+
+        // Create debouncer with our timeout
+        let debouncer = new_debouncer(
+            Duration::from_millis(FILE_EVENT_DEBOUNCE_MS),
+            move |result| {
+                if let Ok(events) = result {
+                    let _ = tx.send(events);
+                }
+            },
+        )?;
 
         let mut fw = Self {
-            watcher,
+            debouncer,
             receiver: rx,
             current_dir: PathBuf::new(),
             preview_file: None,
-            last_event_time: Instant::now(),
         };
 
         fw.watch_directory(current_dir)?;
@@ -38,11 +46,13 @@ impl FileWatcher {
     pub fn watch_directory(&mut self, dir: &Path) -> anyhow::Result<()> {
         // Unwatch previous directory
         if self.current_dir.exists() {
-            let _ = self.watcher.unwatch(&self.current_dir);
+            let _ = self.debouncer.watcher().unwatch(&self.current_dir);
         }
 
         // Watch new directory (non-recursive for current dir)
-        self.watcher.watch(dir, RecursiveMode::NonRecursive)?;
+        self.debouncer
+            .watcher()
+            .watch(dir, RecursiveMode::NonRecursive)?;
         self.current_dir = dir.to_path_buf();
 
         Ok(())
@@ -52,12 +62,14 @@ impl FileWatcher {
     pub fn watch_preview_file(&mut self, file: Option<&PathBuf>) -> anyhow::Result<()> {
         // Unwatch previous preview file
         if let Some(prev) = &self.preview_file {
-            let _ = self.watcher.unwatch(prev);
+            let _ = self.debouncer.watcher().unwatch(prev);
         }
 
         // Watch new preview file
         if let Some(path) = file {
-            self.watcher.watch(path, RecursiveMode::NonRecursive)?;
+            self.debouncer
+                .watcher()
+                .watch(path, RecursiveMode::NonRecursive)?;
             self.preview_file = Some(path.clone());
         } else {
             self.preview_file = None;
@@ -66,58 +78,37 @@ impl FileWatcher {
         Ok(())
     }
 
-    /// Non-blocking check for file events with debouncing
+    /// Non-blocking check for file events (debouncing handled by debouncer)
     pub fn poll_events(&mut self) -> Option<AppEvent> {
         match self.receiver.try_recv() {
-            Ok(Ok(event)) => {
-                // First, check if this event is relevant at all
-                // Don't update debounce timer for irrelevant events
-                let classification = self.classify_event(&event);
-
-                if classification.is_none() {
-                    return None;
+            Ok(events) => {
+                // Process debounced events and classify them
+                for event in events {
+                    if let Some(app_event) = self.classify_event(&event) {
+                        return Some(app_event);
+                    }
                 }
-
-                // Event is relevant, now check debouncing
-                let now = Instant::now();
-                let elapsed = now.duration_since(self.last_event_time);
-
-                if elapsed < Duration::from_millis(FILE_EVENT_DEBOUNCE_MS) {
-                    // Drain any additional pending events during debounce window
-                    while self.receiver.try_recv().is_ok() {}
-                    return None;
-                }
-
-                // Update debounce timer only for relevant, non-debounced events
-                self.last_event_time = now;
-                classification
+                None
             }
-            Ok(Err(_)) => None,
             Err(TryRecvError::Empty) => None,
             Err(TryRecvError::Disconnected) => None,
         }
     }
 
-    fn classify_event(&self, event: &NotifyEvent) -> Option<AppEvent> {
-        // Filter to relevant event kinds
-        match event.kind {
-            EventKind::Create(_) | EventKind::Remove(_) | EventKind::Modify(_) => {}
-            _ => return None,
+    fn classify_event(&self, event: &DebouncedEvent) -> Option<AppEvent> {
+        let path = &event.path;
+
+        // Check if preview file changed
+        if let Some(preview) = &self.preview_file {
+            if path == preview {
+                return Some(AppEvent::PreviewFileChanged);
+            }
         }
 
-        for path in &event.paths {
-            // Check if preview file changed
-            if let Some(preview) = &self.preview_file {
-                if path == preview {
-                    return Some(AppEvent::PreviewFileChanged);
-                }
-            }
-
-            // Check if it's in current directory
-            if let Some(parent) = path.parent() {
-                if parent == self.current_dir {
-                    return Some(AppEvent::DirectoryChanged);
-                }
+        // Check if it's in current directory
+        if let Some(parent) = path.parent() {
+            if parent == self.current_dir {
+                return Some(AppEvent::DirectoryChanged);
             }
         }
 
