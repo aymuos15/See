@@ -21,9 +21,12 @@ struct Cli {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
+    // Create the app first (which validates the path) before initializing the terminal
+    let mut app = app::App::new(cli.path)?;
+
     let mut terminal = tui::init()?;
 
-    let result = app::App::new(cli.path)?.run(&mut terminal);
+    let result = app.run(&mut terminal);
 
     tui::restore()?;
 

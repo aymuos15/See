@@ -16,6 +16,7 @@ pub struct PreviewContent {
 }
 
 pub struct App {
+    root_dir: PathBuf,
     pub current_dir: PathBuf,
     pub files: Vec<FileEntry>,
     pub file_list_state: ListState,
@@ -34,16 +35,34 @@ pub struct App {
 
 impl App {
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
-        let current_dir = if path.is_dir() {
+        // Validate the path exists
+        if !path.exists() {
+            anyhow::bail!("Path does not exist: {}", path.display());
+        }
+
+        // Determine the initial directory
+        let initial_dir = if path.is_dir() {
             path
         } else {
-            path.parent().unwrap_or(&PathBuf::from(".")).to_path_buf()
+            path.parent()
+                .ok_or_else(|| anyhow::anyhow!("Cannot determine parent directory"))?
+                .to_path_buf()
         };
 
+        // Canonicalize to get absolute, resolved path (symlinks resolved)
+        let root_dir = initial_dir
+            .canonicalize()
+            .map_err(|e| anyhow::anyhow!("Cannot access directory: {}", e))?;
+
+        // Use the canonicalized path as current_dir
+        let current_dir = root_dir.clone();
+
+        // Read directory contents
         let files = read_directory(&current_dir)?;
         let highlighter = SyntaxHighlighter::new();
 
         let mut app = Self {
+            root_dir,
             current_dir,
             files,
             file_list_state: ListState::default(),
@@ -228,15 +247,26 @@ impl App {
     }
 
     fn go_back(&mut self) {
+        // Check if we're already at the root boundary
+        if self.current_dir == self.root_dir {
+            // Silent ignore: already at root, cannot go back further
+            return;
+        }
+
         if let Some(parent) = self.current_dir.parent() {
             let parent_path = parent.to_path_buf();
-            if let Ok(files) = read_directory(&parent_path) {
-                self.current_dir = parent_path;
-                self.files = files;
-                self.file_list_state.select(Some(0));
-                self.preview_scroll = 0;
-                self.load_preview();
+
+            // Ensure parent is within or equal to root_dir
+            if parent_path.starts_with(&self.root_dir) {
+                if let Ok(files) = read_directory(&parent_path) {
+                    self.current_dir = parent_path;
+                    self.files = files;
+                    self.file_list_state.select(Some(0));
+                    self.preview_scroll = 0;
+                    self.load_preview();
+                }
             }
+            // else: Silent ignore, parent is outside root boundary
         }
     }
 
@@ -331,5 +361,242 @@ impl App {
         scored.sort_by(|a, b| b.1.cmp(&a.1));
 
         self.search_results = scored.into_iter().map(|(idx, _)| idx).collect();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    /// Helper function to create a test directory structure
+    fn create_test_dir_structure() -> anyhow::Result<TempDir> {
+        let temp_dir = TempDir::new()?;
+        let base = temp_dir.path();
+
+        // Create directory structure:
+        // temp_dir/
+        //   ├── root/
+        //   │   ├── file1.txt
+        //   │   ├── subdir1/
+        //   │   │   ├── file2.txt
+        //   │   │   └── subdir2/
+        //   │   │       └── file3.txt
+        //   │   └── subdir3/
+        //   │       └── file4.txt
+
+        fs::create_dir(base.join("root"))?;
+        fs::write(base.join("root/file1.txt"), "content1")?;
+
+        fs::create_dir(base.join("root/subdir1"))?;
+        fs::write(base.join("root/subdir1/file2.txt"), "content2")?;
+
+        fs::create_dir(base.join("root/subdir1/subdir2"))?;
+        fs::write(base.join("root/subdir1/subdir2/file3.txt"), "content3")?;
+
+        fs::create_dir(base.join("root/subdir3"))?;
+        fs::write(base.join("root/subdir3/file4.txt"), "content4")?;
+
+        Ok(temp_dir)
+    }
+
+    #[test]
+    fn test_app_new_with_valid_directory() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+
+        let app = App::new(root_path.clone()).unwrap();
+
+        assert_eq!(
+            app.root_dir,
+            root_path.canonicalize().unwrap(),
+            "Root dir should be canonicalized path"
+        );
+        assert_eq!(
+            app.current_dir,
+            root_path.canonicalize().unwrap(),
+            "Current dir should start at root"
+        );
+        assert!(!app.files.is_empty(), "Files should be loaded");
+    }
+
+    #[test]
+    fn test_app_new_with_nonexistent_path() {
+        let result = App::new(PathBuf::from("/nonexistent/path/that/does/not/exist"));
+
+        assert!(result.is_err(), "Should fail with nonexistent path");
+        let err_msg = result.err().unwrap().to_string();
+        assert!(
+            err_msg.contains("Path does not exist"),
+            "Error message should mention path doesn't exist"
+        );
+    }
+
+    #[test]
+    fn test_app_new_with_file_path() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let file_path = temp_dir.path().join("root/file1.txt");
+
+        let app = App::new(file_path).unwrap();
+
+        // Should use parent directory (root) as the root_dir
+        let expected_root = temp_dir.path().join("root").canonicalize().unwrap();
+        assert_eq!(
+            app.root_dir, expected_root,
+            "Should use parent directory as root"
+        );
+        assert_eq!(
+            app.current_dir, expected_root,
+            "Should start at parent directory"
+        );
+    }
+
+    #[test]
+    fn test_go_back_at_root_boundary() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+
+        let mut app = App::new(root_path.clone()).unwrap();
+        let initial_dir = app.current_dir.clone();
+
+        // Try to go back when already at root
+        app.go_back();
+
+        assert_eq!(
+            app.current_dir, initial_dir,
+            "Should stay at root when trying to go back"
+        );
+    }
+
+    #[test]
+    fn test_navigation_within_root_boundary() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+
+        let mut app = App::new(root_path.clone()).unwrap();
+        let root_canonical = root_path.canonicalize().unwrap();
+
+        // Navigate into subdir1
+        let subdir1_idx = app
+            .files
+            .iter()
+            .position(|f| f.name == "subdir1")
+            .expect("subdir1 should exist");
+
+        app.file_list_state.select(Some(subdir1_idx));
+        app.enter_directory();
+
+        let expected_subdir1 = root_canonical.join("subdir1");
+        assert_eq!(
+            app.current_dir, expected_subdir1,
+            "Should navigate into subdir1"
+        );
+
+        // Navigate into subdir2
+        let subdir2_idx = app
+            .files
+            .iter()
+            .position(|f| f.name == "subdir2")
+            .expect("subdir2 should exist");
+
+        app.file_list_state.select(Some(subdir2_idx));
+        app.enter_directory();
+
+        let expected_subdir2 = expected_subdir1.join("subdir2");
+        assert_eq!(
+            app.current_dir, expected_subdir2,
+            "Should navigate into subdir2"
+        );
+
+        // Go back to subdir1
+        app.go_back();
+        assert_eq!(
+            app.current_dir, expected_subdir1,
+            "Should go back to subdir1"
+        );
+
+        // Go back to root
+        app.go_back();
+        assert_eq!(app.current_dir, root_canonical, "Should go back to root");
+
+        // Try to go back past root - should stay at root
+        app.go_back();
+        assert_eq!(
+            app.current_dir, root_canonical,
+            "Should not go past root boundary"
+        );
+    }
+
+    #[test]
+    fn test_root_dir_immutable() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+
+        let mut app = App::new(root_path.clone()).unwrap();
+        let initial_root = app.root_dir.clone();
+
+        // Navigate around
+        let subdir1_idx = app
+            .files
+            .iter()
+            .position(|f| f.name == "subdir1")
+            .expect("subdir1 should exist");
+
+        app.file_list_state.select(Some(subdir1_idx));
+        app.enter_directory();
+
+        // Root should never change
+        assert_eq!(
+            app.root_dir, initial_root,
+            "Root dir should remain unchanged after navigation"
+        );
+
+        app.go_back();
+
+        assert_eq!(
+            app.root_dir, initial_root,
+            "Root dir should remain unchanged after going back"
+        );
+    }
+
+    #[test]
+    fn test_relative_path_canonicalization() {
+        // Create temp dir and navigate to it
+        let temp_dir = create_test_dir_structure().unwrap();
+        let root_path = temp_dir.path().join("root");
+
+        // Get the canonical path first
+        let canonical_root = root_path.canonicalize().unwrap();
+
+        // Create app with absolute path
+        let app = App::new(root_path).unwrap();
+
+        assert_eq!(
+            app.root_dir, canonical_root,
+            "Should canonicalize paths to absolute"
+        );
+    }
+
+    #[test]
+    fn test_starting_from_nested_directory() {
+        let temp_dir = create_test_dir_structure().unwrap();
+        let nested_path = temp_dir.path().join("root/subdir1/subdir2");
+
+        let mut app = App::new(nested_path.clone()).unwrap();
+        let nested_canonical = nested_path.canonicalize().unwrap();
+
+        // Root should be the nested directory, not the top-level root
+        assert_eq!(
+            app.root_dir, nested_canonical,
+            "Root should be the specified nested directory"
+        );
+
+        // Try to go back - should not be able to
+        app.go_back();
+        assert_eq!(
+            app.current_dir, nested_canonical,
+            "Should not be able to navigate above the specified root"
+        );
     }
 }
