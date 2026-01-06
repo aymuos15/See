@@ -19,6 +19,7 @@ pub struct ThemeConfig {
     pub bg_darker: Option<String>,
     pub bg_selected: Option<String>,
     pub bg_search: Option<String>,
+    pub bg_selection: Option<String>,
     pub fg_text: Option<String>,
     pub fg_selected: Option<String>,
     pub fg_dim: Option<String>,

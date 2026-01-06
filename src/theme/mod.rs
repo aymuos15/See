@@ -12,6 +12,7 @@ pub struct Theme {
     pub bg_darker: Color,
     pub bg_selected: Color,
     pub bg_search: Color,
+    pub bg_selection: Color,
     pub fg_text: Color,
     pub fg_selected: Color,
     pub fg_dim: Color,
@@ -28,6 +29,7 @@ impl Default for Theme {
             bg_darker: Color::Rgb(0x28, 0x17, 0x33),   // revolver
             bg_selected: Color::Rgb(0x45, 0x28, 0x59), // bossanova
             bg_search: Color::Rgb(0xd9, 0x73, 0x0d),   // orange
+            bg_selection: Color::Yellow,               // yellow for text selection
             fg_text: Color::Rgb(0xa4, 0xa0, 0xe8),     // lavender
             fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f), // mint
             fg_dim: Color::Rgb(0x69, 0x7c, 0x81),      // sirocco
@@ -90,6 +92,11 @@ impl Theme {
                 theme.bg_search = color;
             }
         }
+        if let Some(hex) = &cfg.bg_selection {
+            if let Some(color) = parser::parse_hex_color(hex) {
+                theme.bg_selection = color;
+            }
+        }
         if let Some(hex) = &cfg.fg_text {
             if let Some(color) = parser::parse_hex_color(hex) {
                 theme.fg_text = color;
@@ -129,6 +136,7 @@ impl Theme {
             || cfg.bg_darker.is_some()
             || cfg.bg_selected.is_some()
             || cfg.bg_search.is_some()
+            || cfg.bg_selection.is_some()
             || cfg.fg_text.is_some()
             || cfg.fg_selected.is_some()
             || cfg.fg_dim.is_some()
@@ -299,6 +307,7 @@ foreground = \"#ffffff\"\n\
             bg_darker: Some("#0f0f0f".to_string()),
             bg_selected: Some("#2a2a2a".to_string()),
             bg_search: Some("#ff6600".to_string()),
+            bg_selection: Some("#ffff00".to_string()),
             fg_text: Some("#e0e0e0".to_string()),
             fg_selected: Some("#00ff00".to_string()),
             fg_dim: Some("#808080".to_string()),
@@ -330,6 +339,7 @@ foreground = \"#ffffff\"\n\
             bg_darker: None,
             bg_selected: None,
             bg_search: None,
+            bg_selection: None,
             fg_text: Some("#e0e0e0".to_string()),
             fg_selected: None,
             fg_dim: None,

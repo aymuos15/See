@@ -68,7 +68,7 @@ fn apply_selection_to_lines<'a>(
     theme: &Theme,
 ) -> Vec<Line<'a>> {
     let (sel_start, sel_end) = selection.ordered();
-    let selection_style = Style::default().bg(theme.bg_search);
+    let selection_style = Style::default().bg(theme.bg_selection);
 
     highlighted_lines
         .iter()
