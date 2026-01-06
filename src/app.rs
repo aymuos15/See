@@ -2,6 +2,8 @@ use crate::event::{poll_event, AppEvent};
 use crate::files::{read_directory, read_file_content, FileEntry};
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use std::path::PathBuf;
@@ -23,6 +25,11 @@ pub struct App {
     pub should_quit: bool,
     pub split_percent: u16,
     pub theme: Theme,
+    // Search mode state
+    pub search_mode: bool,
+    pub search_query: String,
+    pub search_results: Vec<usize>,
+    pub search_selected: usize,
 }
 
 impl App {
@@ -30,9 +37,7 @@ impl App {
         let current_dir = if path.is_dir() {
             path
         } else {
-            path.parent()
-                .unwrap_or(&PathBuf::from("."))
-                .to_path_buf()
+            path.parent().unwrap_or(&PathBuf::from(".")).to_path_buf()
         };
 
         let files = read_directory(&current_dir)?;
@@ -48,6 +53,10 @@ impl App {
             should_quit: false,
             split_percent: 30,
             theme: Theme::load(),
+            search_mode: false,
+            search_query: String::new(),
+            search_results: Vec::new(),
+            search_selected: 0,
         };
 
         if !app.files.is_empty() {
@@ -62,18 +71,71 @@ impl App {
         while !self.should_quit {
             terminal.draw(|frame| crate::ui::render(frame, self))?;
 
-            match poll_event(Duration::from_millis(16))? {
-                AppEvent::Quit => self.should_quit = true,
-                AppEvent::NavigateDown => self.navigate_down(),
-                AppEvent::NavigateUp => self.navigate_up(),
-                AppEvent::ScrollPreviewDown => self.scroll_preview_down(),
-                AppEvent::ScrollPreviewUp => self.scroll_preview_up(),
-                AppEvent::ScrollPreviewPageDown => self.scroll_preview_page_down(),
-                AppEvent::ScrollPreviewPageUp => self.scroll_preview_page_up(),
-                AppEvent::ShrinkFileList => self.shrink_file_list(),
-                AppEvent::GrowFileList => self.grow_file_list(),
-                AppEvent::Enter => self.enter_directory(),
-                AppEvent::GoBack => self.go_back(),
+            match poll_event(Duration::from_millis(16), self.search_mode)? {
+                AppEvent::Quit => {
+                    if self.search_mode {
+                        self.exit_search_mode();
+                    } else {
+                        self.should_quit = true;
+                    }
+                }
+                AppEvent::OpenSearch => self.enter_search_mode(),
+                AppEvent::CloseSearch => self.exit_search_mode(),
+                AppEvent::SearchInput(c) => self.search_input(c),
+                AppEvent::SearchBackspace => self.search_backspace(),
+                AppEvent::SearchNavigateUp => self.search_navigate_up(),
+                AppEvent::SearchNavigateDown => self.search_navigate_down(),
+                AppEvent::SearchConfirm => self.search_confirm(),
+                AppEvent::NavigateDown => {
+                    if !self.search_mode {
+                        self.navigate_down();
+                    }
+                }
+                AppEvent::NavigateUp => {
+                    if !self.search_mode {
+                        self.navigate_up();
+                    }
+                }
+                AppEvent::ScrollPreviewDown => {
+                    if !self.search_mode {
+                        self.scroll_preview_down();
+                    }
+                }
+                AppEvent::ScrollPreviewUp => {
+                    if !self.search_mode {
+                        self.scroll_preview_up();
+                    }
+                }
+                AppEvent::ScrollPreviewPageDown => {
+                    if !self.search_mode {
+                        self.scroll_preview_page_down();
+                    }
+                }
+                AppEvent::ScrollPreviewPageUp => {
+                    if !self.search_mode {
+                        self.scroll_preview_page_up();
+                    }
+                }
+                AppEvent::ShrinkFileList => {
+                    if !self.search_mode {
+                        self.shrink_file_list();
+                    }
+                }
+                AppEvent::GrowFileList => {
+                    if !self.search_mode {
+                        self.grow_file_list();
+                    }
+                }
+                AppEvent::Enter => {
+                    if !self.search_mode {
+                        self.enter_directory();
+                    }
+                }
+                AppEvent::GoBack => {
+                    if !self.search_mode {
+                        self.go_back();
+                    }
+                }
                 AppEvent::None => {}
             }
         }
@@ -118,7 +180,8 @@ impl App {
     fn scroll_preview_down(&mut self) {
         if let Some(preview) = &self.preview_content {
             if !preview.lines.is_empty() {
-                self.preview_scroll = (self.preview_scroll + 1).min((preview.lines.len() - 1) as u16);
+                self.preview_scroll =
+                    (self.preview_scroll + 1).min((preview.lines.len() - 1) as u16);
             }
         }
     }
@@ -130,7 +193,8 @@ impl App {
     fn scroll_preview_page_down(&mut self) {
         if let Some(preview) = &self.preview_content {
             if !preview.lines.is_empty() {
-                self.preview_scroll = (self.preview_scroll + 10).min((preview.lines.len() - 1) as u16);
+                self.preview_scroll =
+                    (self.preview_scroll + 10).min((preview.lines.len() - 1) as u16);
             }
         }
     }
@@ -192,5 +256,80 @@ impl App {
             }
         }
         self.preview_content = None;
+    }
+
+    pub fn enter_search_mode(&mut self) {
+        self.search_mode = true;
+        self.search_query.clear();
+        self.search_selected = 0;
+        self.apply_fuzzy_filter();
+    }
+
+    pub fn exit_search_mode(&mut self) {
+        self.search_mode = false;
+        self.search_query.clear();
+        self.search_results.clear();
+        self.search_selected = 0;
+    }
+
+    pub fn search_input(&mut self, c: char) {
+        self.search_query.push(c);
+        self.search_selected = 0;
+        self.apply_fuzzy_filter();
+    }
+
+    pub fn search_backspace(&mut self) {
+        self.search_query.pop();
+        self.search_selected = 0;
+        self.apply_fuzzy_filter();
+    }
+
+    pub fn search_navigate_up(&mut self) {
+        if !self.search_results.is_empty() {
+            self.search_selected = if self.search_selected == 0 {
+                self.search_results.len() - 1
+            } else {
+                self.search_selected - 1
+            };
+        }
+    }
+
+    pub fn search_navigate_down(&mut self) {
+        if !self.search_results.is_empty() {
+            self.search_selected = (self.search_selected + 1) % self.search_results.len();
+        }
+    }
+
+    pub fn search_confirm(&mut self) {
+        if !self.search_results.is_empty() {
+            let file_idx = self.search_results[self.search_selected];
+            self.file_list_state.select(Some(file_idx));
+            self.preview_scroll = 0;
+            self.load_preview();
+        }
+        self.exit_search_mode();
+    }
+
+    fn apply_fuzzy_filter(&mut self) {
+        if self.search_query.is_empty() {
+            self.search_results = (0..self.files.len()).collect();
+            return;
+        }
+
+        let matcher = SkimMatcherV2::default();
+        let mut scored: Vec<(usize, i64)> = self
+            .files
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, file)| {
+                matcher
+                    .fuzzy_match(&file.name, &self.search_query)
+                    .map(|score| (idx, score))
+            })
+            .collect();
+
+        scored.sort_by(|a, b| b.1.cmp(&a.1));
+
+        self.search_results = scored.into_iter().map(|(idx, _)| idx).collect();
     }
 }
