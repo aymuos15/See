@@ -1,13 +1,11 @@
 use crate::app::App;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Paragraph};
 
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let theme = &app.theme;
 
     let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.border))
         .style(Style::default().bg(theme.bg_main));
 
     let inner_area = block.inner(area);

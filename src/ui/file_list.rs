@@ -1,25 +1,26 @@
 use crate::app::App;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem};
+use ratatui::widgets::{Block, List, ListItem};
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = &app.theme;
+
+    // Calculate inner width: area width minus highlight symbol width (2)
+    let inner_width = area.width.saturating_sub(2) as usize;
 
     let items: Vec<ListItem> = app
         .files
         .iter()
         .map(|entry| {
-            ListItem::new(format!(" {}", entry.name)).style(Style::default().fg(theme.fg_text))
+            let text = format!(" {}", entry.name);
+            // Pad to full width so background color fills the entire line
+            let padded = format!("{:<width$}", text, width = inner_width);
+            ListItem::new(padded).style(Style::default().fg(theme.fg_text))
         })
         .collect();
 
     let list = List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.border))
-                .style(Style::default().bg(theme.bg_darker)),
-        )
+        .block(Block::default().style(Style::default().bg(theme.bg_darker)))
         .highlight_style(
             Style::default()
                 .bg(theme.bg_selected)
