@@ -67,6 +67,8 @@ impl App {
                 AppEvent::NavigateUp => self.navigate_up(),
                 AppEvent::ScrollPreviewDown => self.scroll_preview_down(),
                 AppEvent::ScrollPreviewUp => self.scroll_preview_up(),
+                AppEvent::ScrollPreviewPageDown => self.scroll_preview_page_down(),
+                AppEvent::ScrollPreviewPageUp => self.scroll_preview_page_up(),
                 AppEvent::ShrinkFileList => self.shrink_file_list(),
                 AppEvent::GrowFileList => self.grow_file_list(),
                 AppEvent::Enter => self.enter_directory(),
@@ -114,13 +116,26 @@ impl App {
 
     fn scroll_preview_down(&mut self) {
         if let Some(preview) = &self.preview_content {
-            let max_scroll = preview.lines.len().saturating_sub(10) as u16;
-            self.preview_scroll = (self.preview_scroll + 5).min(max_scroll);
+            if preview.lines.len() > 0 {
+                self.preview_scroll = (self.preview_scroll + 1).min((preview.lines.len() - 1) as u16);
+            }
         }
     }
 
     fn scroll_preview_up(&mut self) {
-        self.preview_scroll = self.preview_scroll.saturating_sub(5);
+        self.preview_scroll = self.preview_scroll.saturating_sub(1);
+    }
+
+    fn scroll_preview_page_down(&mut self) {
+        if let Some(preview) = &self.preview_content {
+            if preview.lines.len() > 0 {
+                self.preview_scroll = (self.preview_scroll + 10).min((preview.lines.len() - 1) as u16);
+            }
+        }
+    }
+
+    fn scroll_preview_page_up(&mut self) {
+        self.preview_scroll = self.preview_scroll.saturating_sub(10);
     }
 
     fn shrink_file_list(&mut self) {
