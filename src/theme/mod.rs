@@ -12,6 +12,7 @@ pub struct Theme {
     pub fg_text: Color,
     pub fg_selected: Color,
     pub fg_dim: Color,
+    pub fg_folder: Color,
     pub border: Color,
     pub line_num: Color,
 }
@@ -26,6 +27,7 @@ impl Default for Theme {
             fg_text: Color::Rgb(0xa4, 0xa0, 0xe8),     // lavender
             fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f), // mint
             fg_dim: Color::Rgb(0x69, 0x7c, 0x81),      // sirocco
+            fg_folder: Color::Rgb(0x5c, 0xc9, 0xf5),   // bright cyan
             border: Color::Rgb(0x5a, 0x59, 0x77),      // comet
             line_num: Color::Rgb(0x5a, 0x59, 0x77),    // comet
         }
