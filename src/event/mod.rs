@@ -5,6 +5,7 @@ pub use watcher::{FileWatcher, RefreshTimer};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind};
 use std::time::Duration;
 
+#[derive(Debug)]
 pub enum AppEvent {
     Quit,
     NavigateUp,

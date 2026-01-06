@@ -70,20 +70,31 @@ impl FileWatcher {
     pub fn poll_events(&mut self) -> Option<AppEvent> {
         match self.receiver.try_recv() {
             Ok(Ok(event)) => {
-                // Debounce: ignore events too close together
+                // First, check if this event is relevant at all
+                // Don't update debounce timer for irrelevant events
+                let classification = self.classify_event(&event);
+
+                if classification.is_none() {
+                    return None;
+                }
+
+                // Event is relevant, now check debouncing
                 let now = Instant::now();
-                if now.duration_since(self.last_event_time)
-                    < Duration::from_millis(FILE_EVENT_DEBOUNCE_MS)
-                {
+                let elapsed = now.duration_since(self.last_event_time);
+
+                if elapsed < Duration::from_millis(FILE_EVENT_DEBOUNCE_MS) {
                     // Drain any additional pending events during debounce window
                     while self.receiver.try_recv().is_ok() {}
                     return None;
                 }
-                self.last_event_time = now;
 
-                self.classify_event(&event)
+                // Update debounce timer only for relevant, non-debounced events
+                self.last_event_time = now;
+                classification
             }
-            Ok(Err(_)) | Err(TryRecvError::Empty | TryRecvError::Disconnected) => None,
+            Ok(Err(_)) => None,
+            Err(TryRecvError::Empty) => None,
+            Err(TryRecvError::Disconnected) => None,
         }
     }
 
