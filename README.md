@@ -37,9 +37,6 @@ Configure in `~/.config/viewer/config.toml`:
 
 ```toml
 exclude = ["*.pyc", "target/**", "node_modules/**"]
-
-[theme]
-bg_selection = "#ffff00"  # text selection color (default: yellow)
 ```
 
 ## Auto-Refresh
