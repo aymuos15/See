@@ -1,5 +1,3 @@
-# Viewer
-
 A TUI file viewer built with Ratatui.
 
 ![Main view](assests/main.png)
