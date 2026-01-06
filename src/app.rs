@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub struct PreviewContent {
+    #[allow(dead_code)]
     pub path: PathBuf,
     pub lines: Vec<Line<'static>>,
 }

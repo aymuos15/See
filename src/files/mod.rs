@@ -24,3 +24,25 @@ impl FileEntry {
         Self { path, name, is_file }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_file_entry_creation() {
+        let path = PathBuf::from("/tmp/test.txt");
+        let entry = FileEntry::new(path.clone());
+        
+        assert_eq!(entry.name, "test.txt");
+        assert_eq!(entry.path, path);
+    }
+
+    #[test]
+    fn test_file_entry_with_no_extension() {
+        let path = PathBuf::from("/tmp/testfile");
+        let entry = FileEntry::new(path);
+        
+        assert_eq!(entry.name, "testfile");
+    }
+}
