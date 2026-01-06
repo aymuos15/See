@@ -7,7 +7,6 @@ use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{poll_event, AppEvent, FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry};
 use crate::highlight::SyntaxHighlighter;
-use crate::theme::Theme;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use std::path::PathBuf;
@@ -27,7 +26,6 @@ pub struct App {
     pub highlighter: SyntaxHighlighter,
     pub should_quit: bool,
     pub split_percent: u16,
-    pub theme: Theme,
     pub config: Config,
     // Search mode state
     pub search_mode: bool,
@@ -94,7 +92,6 @@ impl App {
             highlighter,
             should_quit: false,
             split_percent: INITIAL_SPLIT_PERCENT,
-            theme: Theme::load(),
             config,
             search_mode: false,
             search_query: String::new(),

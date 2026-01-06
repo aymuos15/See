@@ -3,7 +3,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph};
 
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
-    let theme = &app.theme;
+    let theme = &app.config.theme;
 
     let block = Block::default().style(Style::default().bg(theme.bg_main));
 

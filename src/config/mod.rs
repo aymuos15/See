@@ -1,3 +1,4 @@
+use crate::theme::Theme;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::Deserialize;
 use std::fs;
@@ -7,16 +8,35 @@ use std::path::Path;
 struct ConfigFile {
     #[serde(default)]
     exclude: Vec<String>,
+    #[serde(default)]
+    theme: Option<ThemeConfig>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ThemeConfig {
+    pub helix_theme: Option<String>,
+    pub bg_main: Option<String>,
+    pub bg_darker: Option<String>,
+    pub bg_selected: Option<String>,
+    pub bg_search: Option<String>,
+    pub fg_text: Option<String>,
+    pub fg_selected: Option<String>,
+    pub fg_dim: Option<String>,
+    pub fg_folder: Option<String>,
+    pub border: Option<String>,
+    pub line_num: Option<String>,
 }
 
 pub struct Config {
     pub exclude_set: GlobSet,
+    pub theme: Theme,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             exclude_set: GlobSet::empty(),
+            theme: Theme::default(),
         }
     }
 }
@@ -32,8 +52,9 @@ impl Config {
         let config_file: ConfigFile = toml::from_str(&content).ok()?;
 
         let exclude_set = build_globset(&config_file.exclude)?;
+        let theme = Theme::from_config(config_file.theme);
 
-        Some(Self { exclude_set })
+        Some(Self { exclude_set, theme })
     }
 
     pub fn is_excluded(&self, path: &Path) -> bool {
@@ -67,7 +88,10 @@ mod tests {
     fn test_is_excluded_with_simple_glob() {
         let patterns = vec!["*.log".to_string()];
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
-        let config = Config { exclude_set };
+        let config = Config {
+            exclude_set,
+            theme: crate::theme::Theme::default(),
+        };
 
         assert!(config.is_excluded(Path::new("debug.log")));
         assert!(config.is_excluded(Path::new("build.log")));
@@ -78,7 +102,10 @@ mod tests {
     fn test_is_excluded_with_directory_glob() {
         let patterns = vec!["target/**".to_string()];
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
-        let config = Config { exclude_set };
+        let config = Config {
+            exclude_set,
+            theme: crate::theme::Theme::default(),
+        };
 
         assert!(config.is_excluded(Path::new("target/debug/app")));
         assert!(config.is_excluded(Path::new("target/release")));
@@ -93,7 +120,10 @@ mod tests {
             "node_modules".to_string(),
         ];
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
-        let config = Config { exclude_set };
+        let config = Config {
+            exclude_set,
+            theme: crate::theme::Theme::default(),
+        };
 
         assert!(config.is_excluded(Path::new("app.log")));
         assert!(config.is_excluded(Path::new("temp.tmp")));
@@ -106,7 +136,10 @@ mod tests {
         // Invalid glob patterns are silently ignored
         let patterns = vec!["[invalid".to_string(), "*.valid".to_string()];
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
-        let config = Config { exclude_set };
+        let config = Config {
+            exclude_set,
+            theme: crate::theme::Theme::default(),
+        };
 
         // Valid pattern works
         assert!(config.is_excluded(Path::new("file.valid")));

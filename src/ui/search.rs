@@ -24,7 +24,7 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     // Clear area and render opaque popup block
     frame.render_widget(Clear, popup_area);
-    let block = Block::default().style(Style::default().bg(app.theme.bg_search));
+    let block = Block::default().style(Style::default().bg(app.config.theme.bg_search));
 
     frame.render_widget(block, popup_area);
 
@@ -38,8 +38,8 @@ pub fn render(frame: &mut Frame, app: &App) {
     let input_text = format!("/ {}", app.search_query);
     let input = Paragraph::new(input_text).style(
         Style::default()
-            .fg(app.theme.fg_text)
-            .bg(app.theme.bg_search),
+            .fg(app.config.theme.fg_text)
+            .bg(app.config.theme.bg_search),
     );
     frame.render_widget(input, input_area);
 
@@ -48,8 +48,8 @@ pub fn render(frame: &mut Frame, app: &App) {
         let no_results = Paragraph::new("No matches")
             .style(
                 Style::default()
-                    .fg(app.theme.fg_dim)
-                    .bg(app.theme.bg_search),
+                    .fg(app.config.theme.fg_dim)
+                    .bg(app.config.theme.bg_search),
             )
             .alignment(Alignment::Center);
         frame.render_widget(no_results, results_area);
@@ -68,19 +68,19 @@ pub fn render(frame: &mut Frame, app: &App) {
                         .unwrap_or(&file.name);
                     ListItem::new(display_path).style(
                         Style::default()
-                            .fg(app.theme.fg_text)
-                            .bg(app.theme.bg_search),
+                            .fg(app.config.theme.fg_text)
+                            .bg(app.config.theme.bg_search),
                     )
                 })
             })
             .collect();
 
         let results_list = List::new(items)
-            .style(Style::default().bg(app.theme.bg_search))
+            .style(Style::default().bg(app.config.theme.bg_search))
             .highlight_style(
                 Style::default()
-                    .bg(app.theme.bg_selected)
-                    .fg(app.theme.fg_selected),
+                    .bg(app.config.theme.bg_selected)
+                    .fg(app.config.theme.fg_selected),
             )
             .highlight_symbol("> ");
 

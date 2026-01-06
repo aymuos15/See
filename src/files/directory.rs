@@ -135,7 +135,10 @@ mod tests {
             }
         }
         let exclude_set = builder.build().unwrap();
-        let config = Config { exclude_set };
+        let config = Config {
+            exclude_set,
+            theme: crate::theme::Theme::default(),
+        };
 
         let entries = read_directory(temp.path(), temp.path(), &config).unwrap();
 
