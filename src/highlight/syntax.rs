@@ -27,7 +27,7 @@ impl SyntaxHighlighter {
             .find_syntax_by_extension(extension)
             .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text());
 
-        let theme = &self.theme_set.themes["base16-ocean.dark"];
+        let theme = &self.theme_set.themes["base16-eighties.dark"];
         let mut highlighter = HighlightLines::new(syntax, theme);
 
         let mut lines = Vec::new();

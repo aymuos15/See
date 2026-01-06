@@ -1,6 +1,7 @@
 use crate::event::{poll_event, AppEvent};
 use crate::files::{read_directory, read_file_content, FileEntry};
 use crate::highlight::SyntaxHighlighter;
+use crate::theme::Theme;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use std::path::PathBuf;
@@ -20,6 +21,7 @@ pub struct App {
     pub highlighter: SyntaxHighlighter,
     pub should_quit: bool,
     pub split_percent: u16,
+    pub theme: Theme,
 }
 
 impl App {
@@ -44,6 +46,7 @@ impl App {
             highlighter,
             should_quit: false,
             split_percent: 30,
+            theme: Theme::load(),
         };
 
         if !app.files.is_empty() {

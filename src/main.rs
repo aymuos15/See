@@ -5,6 +5,7 @@ mod app;
 mod event;
 mod files;
 mod highlight;
+mod theme;
 mod tui;
 mod ui;
 

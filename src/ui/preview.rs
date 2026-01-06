@@ -3,28 +3,19 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph};
 
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
-    let title = app
-        .preview_content
-        .as_ref()
-        .map(|p| {
-            p.path
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_default()
-        })
-        .unwrap_or_else(|| "No file selected".to_string());
+    let theme = &app.theme;
 
     let block = Block::default()
-        .title(format!(" Preview: {} ", title))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Gray));
+        .border_style(Style::default().fg(theme.border))
+        .style(Style::default().bg(theme.bg_main));
 
     let inner_area = block.inner(area);
     frame.render_widget(block, area);
 
     if let Some(preview) = &app.preview_content {
         let horizontal = Layout::horizontal([
-            Constraint::Length(6),
+            Constraint::Length(5),
             Constraint::Min(1),
         ]);
         let [line_num_area, content_area] = horizontal.areas(inner_area);
@@ -36,20 +27,20 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         // Line numbers
         let line_numbers: Vec<Line> = (start + 1..=end)
             .map(|n| {
-                Line::from(format!("{:>4} ", n)).style(Style::default().fg(Color::DarkGray))
+                Line::from(format!("{:>4} ", n)).style(Style::default().fg(theme.line_num).bg(theme.bg_main))
             })
             .collect();
 
-        let line_num_paragraph = Paragraph::new(line_numbers);
+        let line_num_paragraph = Paragraph::new(line_numbers).style(Style::default().bg(theme.bg_main));
         frame.render_widget(line_num_paragraph, line_num_area);
 
         // Content
         let visible_lines: Vec<Line> = preview.lines[start..end].to_vec();
-        let content = Paragraph::new(visible_lines);
+        let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
         frame.render_widget(content, content_area);
     } else {
         let placeholder = Paragraph::new("Select a file to preview")
-            .style(Style::default().fg(Color::DarkGray))
+            .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
             .alignment(Alignment::Center);
 
         frame.render_widget(placeholder, inner_area);
