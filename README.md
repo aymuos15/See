@@ -28,11 +28,12 @@ cargo run [FILE_PATH]
 - Click and drag - Select text in preview
 - `Ctrl+c` - Copy selected text
 - `Shift+H` / `Shift+L` - Shrink/grow file list pane
-- `/` - Open search (searches entire directory tree from root)
+- `/` - Open file search (searches entire directory tree from root)
   - Type to filter files by name
   - `Up`/`Down` - Navigate results
   - `Enter` - Go to file and close search
   - `Esc` / `q` - Close search
+- `f` - Symbol search (tree-sitter powered, supports Rust/Python/JS/TS/Go/HTML/CSS)
 
 ## Config
 

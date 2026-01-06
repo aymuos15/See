@@ -1,8 +1,12 @@
 pub mod directory;
 pub mod loader;
+pub mod symbol;
+pub mod symbol_extractor;
 
 pub use directory::{find_all_files_recursive, read_directory};
 pub use loader::read_file_content;
+pub use symbol::{Symbol, SymbolKind};
+pub use symbol_extractor::extract_symbols;
 
 use std::path::PathBuf;
 
