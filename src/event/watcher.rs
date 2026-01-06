@@ -7,12 +7,19 @@ use std::time::{Duration, Instant};
 
 use super::AppEvent;
 
+/// Minimum interval between emitting the same event type (ms)
+const EVENT_COOLDOWN_MS: u64 = 250;
+
 /// File watcher for current directory and preview file
 pub struct FileWatcher {
     debouncer: Debouncer<RecommendedWatcher>,
     receiver: Receiver<Vec<DebouncedEvent>>,
     current_dir: PathBuf,
     preview_file: Option<PathBuf>,
+    /// Last time we emitted a PreviewFileChanged event
+    last_preview_event: Instant,
+    /// Last time we emitted a DirectoryChanged event
+    last_directory_event: Instant,
 }
 
 impl FileWatcher {
@@ -30,11 +37,16 @@ impl FileWatcher {
             },
         )?;
 
+        // Use a past time so first event always fires
+        let past = Instant::now() - Duration::from_secs(10);
+
         let mut fw = Self {
             debouncer,
             receiver: rx,
             current_dir: PathBuf::new(),
             preview_file: None,
+            last_preview_event: past,
+            last_directory_event: past,
         };
 
         fw.watch_directory(current_dir)?;
@@ -78,21 +90,42 @@ impl FileWatcher {
         Ok(())
     }
 
-    /// Non-blocking check for file events (debouncing handled by debouncer)
+    /// Non-blocking check for file events with cooldown to prevent event storms
     pub fn poll_events(&mut self) -> Option<AppEvent> {
-        match self.receiver.try_recv() {
-            Ok(events) => {
-                // Process debounced events and classify them
-                for event in events {
-                    if let Some(app_event) = self.classify_event(&event) {
-                        return Some(app_event);
+        let cooldown = Duration::from_millis(EVENT_COOLDOWN_MS);
+        let now = Instant::now();
+
+        // Drain all pending batches
+        let mut has_preview_event = false;
+        let mut has_directory_event = false;
+
+        loop {
+            match self.receiver.try_recv() {
+                Ok(events) => {
+                    for event in events {
+                        match self.classify_event(&event) {
+                            Some(AppEvent::PreviewFileChanged) => has_preview_event = true,
+                            Some(AppEvent::DirectoryChanged) => has_directory_event = true,
+                            _ => {}
+                        }
                     }
                 }
-                None
+                Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
             }
-            Err(TryRecvError::Empty) => None,
-            Err(TryRecvError::Disconnected) => None,
         }
+
+        // Return at most one event, respecting cooldown
+        if has_directory_event && now.duration_since(self.last_directory_event) >= cooldown {
+            self.last_directory_event = now;
+            return Some(AppEvent::DirectoryChanged);
+        }
+
+        if has_preview_event && now.duration_since(self.last_preview_event) >= cooldown {
+            self.last_preview_event = now;
+            return Some(AppEvent::PreviewFileChanged);
+        }
+
+        None
     }
 
     fn classify_event(&self, event: &DebouncedEvent) -> Option<AppEvent> {
