@@ -1,3 +1,4 @@
+pub mod coordinates;
 pub mod file_list;
 pub mod layout;
 pub mod preview;

@@ -5,6 +5,9 @@ use ratatui::widgets::{Block, List, ListItem};
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = &app.config.theme;
 
+    // Store area for mouse click handling
+    app.last_file_list_area = Some(area);
+
     // Calculate inner width: area width minus highlight symbol width (2)
     let inner_width = area.width.saturating_sub(2) as usize;
 

@@ -16,6 +16,7 @@ nucleo-matcher = "0.3"
 globset = "0.4"
 notify = "7.0"
 notify-debouncer-mini = "0.5"
+arboard = "3.4"
 
 [lints.clippy]
 all = "warn"

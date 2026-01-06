@@ -1,19 +1,26 @@
 mod directory;
+mod mouse;
 mod navigation;
 mod search;
+pub mod selection;
 
+use crate::clipboard::ClipboardManager;
 use crate::config::Config;
 use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{poll_event, AppEvent, FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry};
 use crate::highlight::SyntaxHighlighter;
+use ratatui::prelude::Rect;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use selection::TextSelection;
+
 pub struct PreviewContent {
     pub lines: Vec<Line<'static>>,
+    pub raw_lines: Vec<String>,
 }
 
 pub struct App {
@@ -37,9 +44,26 @@ pub struct App {
     // File watching
     file_watcher: FileWatcher,
     search_index_timer: RefreshTimer,
+    // Text selection
+    pub selection: Option<TextSelection>,
+    pub last_preview_area: Option<Rect>,
+    pub last_file_list_area: Option<Rect>,
+    clipboard: ClipboardManager,
 }
 
 impl App {
+    fn debug_log(msg: &str) {
+        use std::fs::OpenOptions;
+        use std::io::Write;
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("/tmp/viewer_debug.log")
+        {
+            let _ = writeln!(file, "{}", msg);
+        }
+    }
+
     pub const fn root_dir(&self) -> &PathBuf {
         &self.root_dir
     }
@@ -100,6 +124,10 @@ impl App {
             search_index: Vec::new(),
             file_watcher,
             search_index_timer,
+            selection: None,
+            last_preview_area: None,
+            last_file_list_area: None,
+            clipboard: ClipboardManager::new(),
         };
 
         if !app.files.is_empty() {
@@ -112,7 +140,15 @@ impl App {
 
     pub fn run(&mut self, terminal: &mut crate::tui::Tui) -> anyhow::Result<()> {
         while !self.should_quit {
+            // Debug: track selection changes
+            let sel_before = self.selection.is_some();
+
             terminal.draw(|frame| crate::ui::render(frame, self))?;
+
+            let sel_after_draw = self.selection.is_some();
+            if sel_before != sel_after_draw {
+                Self::debug_log(&format!("[LOOP] Selection CHANGED during draw! {} -> {}", sel_before, sel_after_draw));
+            }
 
             match poll_event(
                 Duration::from_millis(16),
@@ -127,8 +163,14 @@ impl App {
                         self.should_quit = true;
                     }
                 }
-                AppEvent::DirectoryChanged => self.refresh_current_directory(),
-                AppEvent::PreviewFileChanged => self.refresh_preview(),
+                AppEvent::DirectoryChanged => {
+                    Self::debug_log("[EVENT] DirectoryChanged - refreshing directory");
+                    self.refresh_current_directory();
+                }
+                AppEvent::PreviewFileChanged => {
+                    Self::debug_log("[EVENT] PreviewFileChanged - refreshing preview");
+                    self.refresh_preview();
+                }
                 AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
                 AppEvent::OpenSearch => self.enter_search_mode(),
                 AppEvent::CloseSearch => self.exit_search_mode(),
@@ -186,6 +228,24 @@ impl App {
                     if !self.search_mode {
                         self.go_back();
                     }
+                }
+                AppEvent::MouseDown { column, row } => {
+                    if !self.search_mode {
+                        self.handle_mouse_down(column, row);
+                    }
+                }
+                AppEvent::MouseDrag { column, row } => {
+                    if !self.search_mode {
+                        self.handle_mouse_drag(column, row);
+                    }
+                }
+                AppEvent::MouseUp { column, row } => {
+                    if !self.search_mode {
+                        self.handle_mouse_up(column, row);
+                    }
+                }
+                AppEvent::CopySelection => {
+                    self.copy_selection();
                 }
                 AppEvent::None => {}
             }

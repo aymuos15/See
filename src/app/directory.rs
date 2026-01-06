@@ -53,9 +53,12 @@ impl App {
                 if entry.is_file {
                     if let Ok(content) = read_file_content(&entry.path) {
                         let lines = self.highlighter.highlight(&entry.path, &content);
-                        self.preview_content = Some(PreviewContent { lines });
+                        let raw_lines: Vec<String> = content.lines().map(String::from).collect();
+                        self.preview_content = Some(PreviewContent { lines, raw_lines });
                         // Watch this file for changes
                         let _ = self.file_watcher.watch_preview_file(Some(&entry.path));
+                        // Clear selection when loading new file
+                        self.selection = None;
                         return;
                     }
                 }
@@ -98,7 +101,33 @@ impl App {
     }
 
     /// Refresh the preview content for the currently viewed file
+    /// Preserves selection if content hasn't changed
     pub(super) fn refresh_preview(&mut self) {
-        self.load_preview();
+        if let Some(idx) = self.file_list_state.selected() {
+            if let Some(entry) = self.files.get(idx) {
+                if entry.is_file {
+                    if let Ok(content) = read_file_content(&entry.path) {
+                        let raw_lines: Vec<String> = content.lines().map(String::from).collect();
+
+                        // Check if content actually changed
+                        let content_changed = self
+                            .preview_content
+                            .as_ref()
+                            .map_or(true, |prev| prev.raw_lines != raw_lines);
+
+                        if content_changed {
+                            let lines = self.highlighter.highlight(&entry.path, &content);
+                            self.preview_content = Some(PreviewContent { lines, raw_lines });
+                            // Only clear selection if content changed
+                            self.selection = None;
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+        // No valid preview
+        self.preview_content = None;
+        self.selection = None;
     }
 }

@@ -2,7 +2,9 @@ mod watcher;
 
 pub use watcher::{FileWatcher, RefreshTimer};
 
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind};
+use crossterm::event::{
+    self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
+};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -28,6 +30,11 @@ pub enum AppEvent {
     DirectoryChanged,
     PreviewFileChanged,
     SearchIndexRefreshTimer,
+    // Mouse selection events
+    MouseDown { column: u16, row: u16 },
+    MouseDrag { column: u16, row: u16 },
+    MouseUp { column: u16, row: u16 },
+    CopySelection,
     None,
 }
 
@@ -54,12 +61,29 @@ pub fn poll_event(
                 if key.kind != KeyEventKind::Press {
                     return Ok(AppEvent::None);
                 }
+                // Handle Ctrl+c for copy selection
+                if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c')
+                {
+                    return Ok(AppEvent::CopySelection);
+                }
                 return Ok(handle_key(key.code, search_mode));
             }
             Event::Mouse(mouse) => {
                 return Ok(match mouse.kind {
                     MouseEventKind::ScrollDown => AppEvent::ScrollPreviewDown,
                     MouseEventKind::ScrollUp => AppEvent::ScrollPreviewUp,
+                    MouseEventKind::Down(MouseButton::Left) => AppEvent::MouseDown {
+                        column: mouse.column,
+                        row: mouse.row,
+                    },
+                    MouseEventKind::Drag(MouseButton::Left) => AppEvent::MouseDrag {
+                        column: mouse.column,
+                        row: mouse.row,
+                    },
+                    MouseEventKind::Up(MouseButton::Left) => AppEvent::MouseUp {
+                        column: mouse.column,
+                        row: mouse.row,
+                    },
                     _ => AppEvent::None,
                 });
             }
