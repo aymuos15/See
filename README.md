@@ -23,3 +23,11 @@ cargo run [FILE_PATH]
   - `Up`/`Down` - Navigate results
   - `Enter` - Go to file and close search
   - `Esc` / `q` - Close search
+
+## Config
+
+Exclude files using glob patterns in `~/.config/viewer/config.toml`:
+
+```toml
+exclude = ["*.pyc", "target/**", "node_modules/**"]
+```
