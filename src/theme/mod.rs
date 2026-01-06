@@ -9,6 +9,7 @@ pub struct Theme {
     pub bg_main: Color,
     pub bg_darker: Color,
     pub bg_selected: Color,
+    pub bg_search: Color,
     pub fg_text: Color,
     pub fg_selected: Color,
     pub fg_dim: Color,
@@ -24,6 +25,7 @@ impl Default for Theme {
             bg_main: Color::Rgb(0x3b, 0x22, 0x4c),     // midnight
             bg_darker: Color::Rgb(0x28, 0x17, 0x33),   // revolver
             bg_selected: Color::Rgb(0x45, 0x28, 0x59), // bossanova
+            bg_search: Color::Rgb(0xd9, 0x73, 0x0d),   // orange
             fg_text: Color::Rgb(0xa4, 0xa0, 0xe8),     // lavender
             fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f), // mint
             fg_dim: Color::Rgb(0x69, 0x7c, 0x81),      // sirocco

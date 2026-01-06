@@ -1,6 +1,6 @@
 use crate::app::App;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, Clear, List, ListItem, Paragraph};
 
 pub fn render(frame: &mut Frame, app: &App) {
     let area = frame.area();
@@ -18,12 +18,10 @@ pub fn render(frame: &mut Frame, app: &App) {
         height: popup_height,
     };
 
-    // Render popup block with border
+    // Clear area and render opaque popup block
+    frame.render_widget(Clear, popup_area);
     let block = Block::default()
-        .title("File Search")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.border))
-        .style(Style::default().bg(app.theme.bg_main));
+        .style(Style::default().bg(app.theme.bg_search));
 
     frame.render_widget(block, popup_area);
 
@@ -35,21 +33,16 @@ pub fn render(frame: &mut Frame, app: &App) {
     ])
     .areas(inner);
 
-    // Render search input with border
+    // Render search input
     let input_text = format!("/ {}", app.search_query);
     let input = Paragraph::new(input_text)
-        .style(Style::default().fg(app.theme.fg_text))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(app.theme.border)),
-        );
+        .style(Style::default().fg(app.theme.fg_text).bg(app.theme.bg_search));
     frame.render_widget(input, input_area);
 
     // Render filtered results
     if app.search_results.is_empty() {
         let no_results = Paragraph::new("No matches")
-            .style(Style::default().fg(app.theme.fg_dim))
+            .style(Style::default().fg(app.theme.fg_dim).bg(app.theme.bg_search))
             .alignment(Alignment::Center);
         frame.render_widget(no_results, results_area);
     } else {
@@ -64,12 +57,14 @@ pub fn render(frame: &mut Frame, app: &App) {
                         .ok()
                         .and_then(|p| p.to_str())
                         .unwrap_or(&file.name);
-                    ListItem::new(display_path).style(Style::default().fg(app.theme.fg_text))
+                    ListItem::new(display_path)
+                        .style(Style::default().fg(app.theme.fg_text).bg(app.theme.bg_search))
                 })
             })
             .collect();
 
         let results_list = List::new(items)
+            .style(Style::default().bg(app.theme.bg_search))
             .highlight_style(
                 Style::default()
                     .bg(app.theme.bg_selected)
