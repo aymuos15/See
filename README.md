@@ -6,6 +6,9 @@ A TUI file viewer built with Ratatui.
 ![Search](assests/search.png)
 *Fuzzy search across entire directory tree*
 
+![Select](assests/select.png)
+*Text selection in preview pane*
+
 ## Build
 
 ```bash
