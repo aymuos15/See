@@ -21,7 +21,9 @@ cargo run [FILE_PATH]
 ## Controls
 
 - `q` - Quit
-- `j`/`k` or mouse scroll - Scroll preview (hold `Shift` to select text)
+- `j`/`k` or mouse scroll - Scroll preview
+- Click and drag - Select text in preview
+- `Ctrl+c` - Copy selected text
 - `Shift+H` / `Shift+L` - Shrink/grow file list pane
 - `/` - Open search (searches entire directory tree from root)
   - Type to filter files by name
@@ -31,10 +33,13 @@ cargo run [FILE_PATH]
 
 ## Config
 
-Exclude files using glob patterns in `~/.config/viewer/config.toml`:
+Configure in `~/.config/viewer/config.toml`:
 
 ```toml
 exclude = ["*.pyc", "target/**", "node_modules/**"]
+
+[theme]
+bg_selection = "#ffff00"  # text selection color (default: yellow)
 ```
 
 ## Auto-Refresh
