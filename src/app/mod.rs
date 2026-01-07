@@ -2,6 +2,7 @@ mod directory;
 mod diff;
 mod event_handler;
 mod git;
+mod help;
 mod mouse;
 mod navigation;
 mod search;
@@ -72,6 +73,8 @@ pub struct App {
     pub current_theme_name: String,
     pub available_themes: Vec<String>,
     pub theme_preview_mode: bool,
+    // Help mode state
+    pub help_mode: bool,
 }
 
 impl App {
@@ -154,6 +157,7 @@ impl App {
                 .map(|s| s.to_string())
                 .collect(),
             theme_preview_mode: false,
+            help_mode: false,
         };
 
         if !app.files.is_empty() {

@@ -16,7 +16,7 @@ impl App {
     fn handle_next_event(&mut self) -> anyhow::Result<()> {
         let event = poll_event(
             Duration::from_millis(16),
-            self.search_mode || self.symbol_search_mode || self.theme_preview_mode,
+            self.search_mode || self.symbol_search_mode || self.theme_preview_mode || self.help_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
         )?;
@@ -41,7 +41,9 @@ impl App {
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
             AppEvent::CloseSearch => {
-                if self.theme_preview_mode {
+                if self.help_mode {
+                    self.close_help();
+                } else if self.theme_preview_mode {
                     self.theme_preview_mode = false;
                 } else if self.symbol_search_mode {
                     self.exit_symbol_search_mode();
@@ -106,6 +108,9 @@ impl App {
                 if !self.search_mode && !self.symbol_search_mode {
                     self.toggle_theme_preview();
                 }
+            }
+            AppEvent::ToggleHelp => {
+                self.toggle_help();
             }
             AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),
             AppEvent::SymbolSearchBackspace => self.symbol_search_backspace(),

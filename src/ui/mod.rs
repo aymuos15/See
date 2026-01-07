@@ -1,5 +1,6 @@
 pub mod coordinates;
 pub mod file_list;
+pub mod help;
 pub mod layout;
 pub mod preview;
 pub mod search;
@@ -22,5 +23,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     // Render theme picker popup if active
     if app.theme_preview_mode {
         theme_picker::render(frame, app);
+    }
+
+    // Render help overlay if active
+    if app.help_mode {
+        help::render(frame, app, frame.area());
     }
 }

@@ -40,6 +40,7 @@ cargo run [FILE_PATH]
 - `g` - Toggle git highlighting (shows modified files with ● dot indicator and colored text)
 - `d` - Toggle unified git diff view for the current file
 - `t` - Toggle theme preview (cycle through themes)
+- `?` - Show keyboard shortcuts help overlay
 - `/` - Open file search (searches entire directory tree from root)
   - Type to filter files by name
   - `Up`/`Down` - Navigate results
