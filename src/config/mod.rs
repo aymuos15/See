@@ -24,6 +24,7 @@ pub struct ThemeConfig {
     pub fg_selected: Option<String>,
     pub fg_dim: Option<String>,
     pub fg_folder: Option<String>,
+    pub fg_modified: Option<String>,
     pub border: Option<String>,
     pub line_num: Option<String>,
 }

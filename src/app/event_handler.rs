@@ -25,6 +25,12 @@ impl App {
             AppEvent::Quit => self.handle_quit(),
             AppEvent::DirectoryChanged => {
                 self.refresh_current_directory();
+                // Refresh git status if highlighting is enabled
+                if self.git_highlight_enabled {
+                    if let Some(ref mut git_status) = self.git_status {
+                        git_status.refresh();
+                    }
+                }
             }
             AppEvent::PreviewFileChanged => {
                 self.refresh_preview();
@@ -75,6 +81,11 @@ impl App {
             }
             AppEvent::OpenSymbolSearch => self.enter_symbol_search_mode(),
             AppEvent::CloseSymbolSearch => self.exit_symbol_search_mode(),
+            AppEvent::ToggleGitHighlight => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.toggle_git_highlight();
+                }
+            }
             AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),
             AppEvent::SymbolSearchBackspace => self.symbol_search_backspace(),
             AppEvent::SymbolSearchNavigateUp => self.symbol_search_navigate_up(),

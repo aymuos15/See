@@ -18,7 +18,9 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
             let text = format!(" {}", entry.name);
             // Pad to full width so background color fills the entire line
             let padded = format!("{text:<inner_width$}");
-            let fg_color = if entry.is_file {
+            let fg_color = if app.is_file_modified(&entry.path) {
+                theme.fg_modified
+            } else if entry.is_file {
                 theme.fg_text
             } else {
                 theme.fg_folder

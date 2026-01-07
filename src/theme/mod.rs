@@ -17,23 +17,25 @@ pub struct Theme {
     pub fg_selected: Color,
     pub fg_dim: Color,
     pub fg_folder: Color,
+    pub fg_modified: Color,
     pub border: Color,
     pub line_num: Color,
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        // Default Helix purple theme
+        // Default Helix purple theme with white file list pane
         Self {
             bg_main: Color::Rgb(0x3b, 0x22, 0x4c),     // midnight
-            bg_darker: Color::Rgb(0x28, 0x17, 0x33),   // revolver
+            bg_darker: Color::White,                   // white for file list pane
             bg_selected: Color::Rgb(0x45, 0x28, 0x59), // bossanova
             bg_search: Color::Rgb(0xd9, 0x73, 0x0d),   // orange
             bg_selection: Color::White,                // white for text selection
-            fg_text: Color::Rgb(0xa4, 0xa0, 0xe8),     // lavender
+            fg_text: Color::Black,                     // black text on white
             fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f), // mint
             fg_dim: Color::Rgb(0x69, 0x7c, 0x81),      // sirocco
-            fg_folder: Color::Rgb(0x5c, 0xc9, 0xf5),   // bright cyan
+            fg_folder: Color::Rgb(0x00, 0x66, 0xcc),   // blue for folders
+            fg_modified: Color::Rgb(0xff, 0x99, 0x00), // orange for git modified
             border: Color::Rgb(0x5a, 0x59, 0x77),      // comet
             line_num: Color::Rgb(0x5a, 0x59, 0x77),    // comet
         }
@@ -117,6 +119,11 @@ impl Theme {
                 theme.fg_folder = color;
             }
         }
+        if let Some(hex) = &cfg.fg_modified {
+            if let Some(color) = parser::parse_hex_color(hex) {
+                theme.fg_modified = color;
+            }
+        }
         if let Some(hex) = &cfg.border {
             if let Some(color) = parser::parse_hex_color(hex) {
                 theme.border = color;
@@ -141,6 +148,7 @@ impl Theme {
             || cfg.fg_selected.is_some()
             || cfg.fg_dim.is_some()
             || cfg.fg_folder.is_some()
+            || cfg.fg_modified.is_some()
             || cfg.border.is_some()
             || cfg.line_num.is_some()
     }
@@ -312,6 +320,7 @@ foreground = \"#ffffff\"\n\
             fg_selected: Some("#00ff00".to_string()),
             fg_dim: Some("#808080".to_string()),
             fg_folder: Some("#00ccff".to_string()),
+            fg_modified: Some("#ff9900".to_string()),
             border: Some("#666666".to_string()),
             line_num: Some("#666666".to_string()),
         };
@@ -344,6 +353,7 @@ foreground = \"#ffffff\"\n\
             fg_selected: None,
             fg_dim: None,
             fg_folder: None,
+            fg_modified: None,
             border: None,
             line_num: None,
         };
@@ -362,7 +372,7 @@ foreground = \"#ffffff\"\n\
 
         // Verify unspecified colors use defaults
         match theme.bg_darker {
-            Color::Rgb(0x28, 0x17, 0x33) => {} // default value
+            Color::White => {} // default value
             _ => panic!("Expected default color for bg_darker"),
         }
     }

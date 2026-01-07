@@ -1,5 +1,6 @@
 mod directory;
 mod event_handler;
+mod git;
 mod mouse;
 mod navigation;
 mod search;
@@ -11,6 +12,7 @@ use crate::config::Config;
 use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
+use crate::git::GitStatus;
 use crate::highlight::SyntaxHighlighter;
 use ratatui::prelude::Rect;
 use ratatui::text::Line;
@@ -56,6 +58,9 @@ pub struct App {
     pub last_preview_area: Option<Rect>,
     pub last_file_list_area: Option<Rect>,
     clipboard: ClipboardManager,
+    // Git highlighting
+    git_highlight_enabled: bool,
+    git_status: Option<GitStatus>,
 }
 
 impl App {
@@ -128,6 +133,8 @@ impl App {
             last_preview_area: None,
             last_file_list_area: None,
             clipboard: ClipboardManager::new(),
+            git_highlight_enabled: false,
+            git_status: None,
         };
 
         if !app.files.is_empty() {

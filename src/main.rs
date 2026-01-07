@@ -7,6 +7,7 @@ mod config;
 mod constants;
 mod event;
 mod files;
+mod git;
 mod highlight;
 mod theme;
 mod tui;
