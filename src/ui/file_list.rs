@@ -15,16 +15,24 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         .files
         .iter()
         .map(|entry| {
-            let text = entry.name.clone();
-            // Pad to full width so background color fills the entire line
-            let padded = format!("{text:<inner_width$}");
-            let fg_color = if app.is_file_modified(&entry.path) {
+            let is_modified = app.is_file_modified(&entry.path);
+            let fg_color = if is_modified {
                 theme.fg_modified
             } else if entry.is_file {
                 theme.fg_text
             } else {
                 theme.fg_folder
             };
+            
+            // Add a dot prefix if the file is modified, otherwise just the name
+            let text = if is_modified {
+                format!("●{}", entry.name)
+            } else {
+                entry.name.clone()
+            };
+            
+            // Pad to full width so background color fills the entire line
+            let padded = format!("{text:<inner_width$}");
             ListItem::new(padded).style(Style::default().fg(fg_color))
         })
         .collect();

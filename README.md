@@ -1,4 +1,4 @@
-A TUI file viewer built with Ratatui.
+# TUI file viewer built with Ratatui.
 
 ![Main view](assests/main.png)
 *File browser with syntax-highlighted preview*
