@@ -37,6 +37,7 @@ pub enum AppEvent {
     SymbolSearchConfirm,
     ToggleGitHighlight,
     ToggleDiff,
+    ToggleThemePreview,
     DirectoryChanged,
     PreviewFileChanged,
     SearchIndexRefreshTimer,
@@ -74,6 +75,10 @@ pub fn poll_event(
                 // Handle Ctrl+c for copy selection
                 if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
                     return Ok(AppEvent::CopySelection);
+                }
+                // Handle Shift+t for theme preview
+                if key.modifiers.contains(KeyModifiers::SHIFT) && key.code == KeyCode::Char('t') {
+                    return Ok(AppEvent::ToggleThemePreview);
                 }
                 return Ok(handle_key(key.code, any_search_mode));
             }

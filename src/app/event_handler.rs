@@ -94,6 +94,11 @@ impl App {
                     self.toggle_diff();
                 }
             }
+            AppEvent::ToggleThemePreview => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.cycle_theme();
+                }
+            }
             AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),
             AppEvent::SymbolSearchBackspace => self.symbol_search_backspace(),
             AppEvent::SymbolSearchNavigateUp => self.symbol_search_navigate_up(),

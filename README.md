@@ -30,6 +30,7 @@ cargo run [FILE_PATH]
 - `Shift+H` / `Shift+L` - Shrink/grow file list pane
 - `g` - Toggle git highlighting (shows modified files and folders in red)
 - `d` - Show git diff for modified file (unified format, toggle on/off)
+- `Shift+T` - Cycle through available themes (live preview)
 - `/` - Open file search (searches entire directory tree from root)
   - Type to filter files by name
   - `Up`/`Down` - Navigate results

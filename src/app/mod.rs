@@ -15,6 +15,7 @@ use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
 use crate::git::GitStatus;
 use crate::highlight::SyntaxHighlighter;
+use crate::theme::Theme;
 use ratatui::prelude::Rect;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
@@ -66,6 +67,9 @@ pub struct App {
     // Diff mode state
     diff_mode: bool,
     original_preview_content: Option<PreviewContent>,
+    // Theme state
+    current_theme_name: String,
+    available_themes: Vec<String>,
 }
 
 impl App {
@@ -142,6 +146,11 @@ impl App {
             git_status: None,
             diff_mode: false,
             original_preview_content: None,
+            current_theme_name: "jellybeans".to_string(),
+            available_themes: Theme::list_builtins()
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
         };
 
         if !app.files.is_empty() {
@@ -150,6 +159,36 @@ impl App {
         }
 
         Ok(app)
+    }
+}
+
+// Theme management
+impl App {
+    /// Switch to a built-in theme by name
+    pub fn switch_theme(&mut self, name: &str) -> anyhow::Result<()> {
+        if let Some(new_theme) = Theme::by_name(name) {
+            self.config.theme = new_theme;
+            self.current_theme_name = name.to_string();
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Theme not found: {}", name))
+        }
+    }
+
+    /// Cycle to the next available theme
+    pub fn cycle_theme(&mut self) {
+        if self.available_themes.is_empty() {
+            return;
+        }
+
+        let current_idx = self
+            .available_themes
+            .iter()
+            .position(|t| t == &self.current_theme_name)
+            .unwrap_or(0);
+        let next_idx = (current_idx + 1) % self.available_themes.len();
+        let next_theme = self.available_themes[next_idx].clone();
+        let _ = self.switch_theme(&next_theme);
     }
 }
 

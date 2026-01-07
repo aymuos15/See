@@ -24,7 +24,13 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        // Default Jellybeans theme for preview pane, dark cream for file list pane
+        Self::jellybeans()
+    }
+}
+
+impl Theme {
+    /// Jellybeans theme - dark purple background with cream file list
+    pub fn jellybeans() -> Self {
         Self {
             bg_main: Color::Rgb(0x4c, 0x3d, 0x57),     // Jellybeans background (#4c3d57)
             bg_darker: Color::Rgb(0xe8, 0xe0, 0xd0),   // dark cream (#e8e0d0)
@@ -39,6 +45,38 @@ impl Default for Theme {
             border: Color::Rgb(0x6d, 0x6d, 0x6d),      // Jellybeans light gray
             line_num: Color::Rgb(0x53, 0x53, 0x53),    // Jellybeans dark gray
         }
+    }
+
+    /// Dracula theme - dark background with purple tones
+    pub fn dracula() -> Self {
+        Self {
+            bg_main: Color::Rgb(0x28, 0x2a, 0x36),     // Dracula dark background
+            bg_darker: Color::Rgb(0xf8, 0xf8, 0xf2),   // Dracula light text/list background
+            bg_selected: Color::Rgb(0x44, 0x47, 0x5a),  // Dracula darker background
+            bg_search: Color::Rgb(0x62, 0x72, 0xa4),   // Dracula comment color for search
+            bg_selection: Color::Rgb(0x44, 0x47, 0x5a), // Dracula selection
+            fg_text: Color::Rgb(0xf8, 0xf8, 0xf2),     // Dracula main text
+            fg_selected: Color::Rgb(0xf1, 0xfa, 0x8c), // Dracula yellow
+            fg_dim: Color::Rgb(0x62, 0x72, 0xa4),      // Dracula comment gray
+            fg_folder: Color::Rgb(0x8b, 0xe9, 0xfd),   // Dracula cyan
+            fg_modified: Color::Rgb(0xff, 0x79, 0xc6), // Dracula pink
+            border: Color::Rgb(0x62, 0x72, 0xa4),      // Dracula comment color
+            line_num: Color::Rgb(0x62, 0x72, 0xa4),    // Dracula comment color
+        }
+    }
+
+    /// Get theme by name (built-in themes)
+    pub fn by_name(name: &str) -> Option<Self> {
+        match name {
+            "jellybeans" => Some(Self::jellybeans()),
+            "dracula" => Some(Self::dracula()),
+            _ => None,
+        }
+    }
+
+    /// List all available built-in theme names
+    pub fn list_builtins() -> Vec<&'static str> {
+        vec!["jellybeans", "dracula"]
     }
 }
 
@@ -370,10 +408,14 @@ foreground = \"#ffffff\"\n\
             _ => panic!("Expected RGB color for bg_main"),
         }
 
-        // Verify unspecified colors use defaults
+        // Verify unspecified colors use defaults from jellybeans theme
         match theme.bg_darker {
-            Color::White => {} // default value
-            _ => panic!("Expected default color for bg_darker"),
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 0xe8);
+                assert_eq!(g, 0xe0);
+                assert_eq!(b, 0xd0);
+            }
+            _ => panic!("Expected default Jellybeans color for bg_darker"),
         }
     }
 }
