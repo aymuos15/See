@@ -48,6 +48,10 @@ impl App {
     }
 
     pub(super) fn load_preview(&mut self) {
+        // Exit diff mode when loading new file
+        self.diff_mode = false;
+        self.original_preview_content = None;
+
         if let Some(idx) = self.file_list_state.selected() {
             if let Some(entry) = self.files.get(idx) {
                 if entry.is_file {

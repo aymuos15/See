@@ -1,4 +1,5 @@
 mod directory;
+mod diff;
 mod event_handler;
 mod git;
 mod mouse;
@@ -21,6 +22,7 @@ use std::path::PathBuf;
 
 use selection::TextSelection;
 
+#[derive(Clone)]
 pub struct PreviewContent {
     pub lines: Vec<Line<'static>>,
     pub raw_lines: Vec<String>,
@@ -61,6 +63,9 @@ pub struct App {
     // Git highlighting
     git_highlight_enabled: bool,
     git_status: Option<GitStatus>,
+    // Diff mode state
+    diff_mode: bool,
+    original_preview_content: Option<PreviewContent>,
 }
 
 impl App {
@@ -135,6 +140,8 @@ impl App {
             clipboard: ClipboardManager::new(),
             git_highlight_enabled: false,
             git_status: None,
+            diff_mode: false,
+            original_preview_content: None,
         };
 
         if !app.files.is_empty() {

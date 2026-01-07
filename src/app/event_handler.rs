@@ -33,7 +33,10 @@ impl App {
                 }
             }
             AppEvent::PreviewFileChanged => {
-                self.refresh_preview();
+                // Don't refresh preview if we're in diff mode - file changes don't matter
+                if !self.diff_mode {
+                    self.refresh_preview();
+                }
             }
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
@@ -84,6 +87,11 @@ impl App {
             AppEvent::ToggleGitHighlight => {
                 if !self.search_mode && !self.symbol_search_mode {
                     self.toggle_git_highlight();
+                }
+            }
+            AppEvent::ToggleDiff => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.toggle_diff();
                 }
             }
             AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),

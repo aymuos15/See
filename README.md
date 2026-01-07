@@ -29,6 +29,7 @@ cargo run [FILE_PATH]
 - `Ctrl+c` - Copy selected text
 - `Shift+H` / `Shift+L` - Shrink/grow file list pane
 - `g` - Toggle git highlighting (shows modified files and folders in red)
+- `d` - Show git diff for modified file (unified format, toggle on/off)
 - `/` - Open file search (searches entire directory tree from root)
   - Type to filter files by name
   - `Up`/`Down` - Navigate results

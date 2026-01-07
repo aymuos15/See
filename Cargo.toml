@@ -27,6 +27,7 @@ tree-sitter-typescript = "0.23"
 tree-sitter-go = "0.23"
 tree-sitter-html = "0.23"
 tree-sitter-css = "0.23"
+similar = { version = "2.6", features = ["text"] }
 
 [lints.clippy]
 all = "warn"
