@@ -1,15 +1,19 @@
 # TUI file viewer built with Ratatui.
 
 ![Main view](assests/main.png)
+
 *File browser with syntax-highlighted preview*
 
 ![Git diff view](assests/diff_and_pane_git_notif.png)
+
 *Git highlighting with visual diff - modified files marked with ● and colored text*
 
 ![Search](assests/search.png)
+
 *Fuzzy search across entire directory tree*
 
 ![Select](assests/select.png)
+
 *Text selection in preview pane*
 
 ## Build
