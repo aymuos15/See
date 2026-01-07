@@ -16,7 +16,7 @@ impl App {
     fn handle_next_event(&mut self) -> anyhow::Result<()> {
         let event = poll_event(
             Duration::from_millis(16),
-            self.search_mode || self.symbol_search_mode,
+            self.search_mode || self.symbol_search_mode || self.theme_preview_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
         )?;
@@ -41,7 +41,9 @@ impl App {
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
             AppEvent::CloseSearch => {
-                if self.symbol_search_mode {
+                if self.theme_preview_mode {
+                    self.theme_preview_mode = false;
+                } else if self.symbol_search_mode {
                     self.exit_symbol_search_mode();
                 } else {
                     self.exit_search_mode();
@@ -62,21 +64,27 @@ impl App {
                 }
             }
             AppEvent::SearchNavigateUp => {
-                if self.symbol_search_mode {
+                if self.theme_preview_mode {
+                    self.theme_search_navigate_up();
+                } else if self.symbol_search_mode {
                     self.symbol_search_navigate_up();
                 } else {
                     self.search_navigate_up();
                 }
             }
             AppEvent::SearchNavigateDown => {
-                if self.symbol_search_mode {
+                if self.theme_preview_mode {
+                    self.theme_search_navigate_down();
+                } else if self.symbol_search_mode {
                     self.symbol_search_navigate_down();
                 } else {
                     self.search_navigate_down();
                 }
             }
             AppEvent::SearchConfirm => {
-                if self.symbol_search_mode {
+                if self.theme_preview_mode {
+                    self.theme_search_confirm();
+                } else if self.symbol_search_mode {
                     self.symbol_search_confirm();
                 } else {
                     self.search_confirm();
@@ -96,7 +104,7 @@ impl App {
             }
             AppEvent::ToggleThemePreview => {
                 if !self.search_mode && !self.symbol_search_mode {
-                    self.cycle_theme();
+                    self.toggle_theme_preview();
                 }
             }
             AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),

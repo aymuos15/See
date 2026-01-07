@@ -76,10 +76,6 @@ pub fn poll_event(
                 if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
                     return Ok(AppEvent::CopySelection);
                 }
-                // Handle Shift+t for theme preview
-                if key.modifiers.contains(KeyModifiers::SHIFT) && key.code == KeyCode::Char('t') {
-                    return Ok(AppEvent::ToggleThemePreview);
-                }
                 return Ok(handle_key(key.code, any_search_mode));
             }
             Event::Mouse(mouse) => {
@@ -125,6 +121,7 @@ fn handle_key(code: KeyCode, any_search_mode: bool) -> AppEvent {
             KeyCode::Char('f') => AppEvent::OpenSymbolSearch,
             KeyCode::Char('g') => AppEvent::ToggleGitHighlight,
             KeyCode::Char('d') => AppEvent::ToggleDiff,
+            KeyCode::Char('t') => AppEvent::ToggleThemePreview,
             KeyCode::Char('j') => AppEvent::ScrollPreviewDown,
             KeyCode::Char('k') => AppEvent::ScrollPreviewUp,
             KeyCode::Down => AppEvent::NavigateDown,

@@ -6,6 +6,7 @@ mod mouse;
 mod navigation;
 mod search;
 mod symbol_search;
+mod theme_search;
 pub mod selection;
 
 use crate::clipboard::ClipboardManager;
@@ -68,8 +69,9 @@ pub struct App {
     diff_mode: bool,
     original_preview_content: Option<PreviewContent>,
     // Theme state
-    current_theme_name: String,
-    available_themes: Vec<String>,
+    pub current_theme_name: String,
+    pub available_themes: Vec<String>,
+    pub theme_preview_mode: bool,
 }
 
 impl App {
@@ -151,6 +153,7 @@ impl App {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
+            theme_preview_mode: false,
         };
 
         if !app.files.is_empty() {
@@ -175,7 +178,13 @@ impl App {
         }
     }
 
+    /// Toggle theme preview mode (shows theme picker popup)
+    pub fn toggle_theme_preview(&mut self) {
+        self.theme_preview_mode = !self.theme_preview_mode;
+    }
+
     /// Cycle to the next available theme
+    #[allow(dead_code)]
     pub fn cycle_theme(&mut self) {
         if self.available_themes.is_empty() {
             return;
