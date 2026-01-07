@@ -24,20 +24,20 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        // Default Helix purple theme with white file list pane
+        // Default Helix OneDark theme for preview pane, white for file list pane
         Self {
-            bg_main: Color::Rgb(0x3b, 0x22, 0x4c),     // midnight
+            bg_main: Color::Rgb(0x28, 0x2c, 0x34),     // OneDark dark background (#282c34)
             bg_darker: Color::White,                   // white for file list pane
-            bg_selected: Color::Rgb(0x45, 0x28, 0x59), // bossanova
-            bg_search: Color::Rgb(0xd9, 0x73, 0x0d),   // orange
-            bg_selection: Color::White,                // white for text selection
-            fg_text: Color::Black,                     // black text on white
-            fg_selected: Color::Rgb(0x9f, 0xf2, 0x8f), // mint
-            fg_dim: Color::Rgb(0x69, 0x7c, 0x81),      // sirocco
-            fg_folder: Color::Rgb(0x00, 0x66, 0xcc),   // blue for folders
-            fg_modified: Color::Rgb(0xff, 0x99, 0x00), // orange for git modified
-            border: Color::Rgb(0x5a, 0x59, 0x77),      // comet
-            line_num: Color::Rgb(0x5a, 0x59, 0x77),    // comet
+            bg_selected: Color::Rgb(0x3e, 0x44, 0x52), // OneDark selection
+            bg_search: Color::Rgb(0xd1, 0x9a, 0x66),   // OneDark orange
+            bg_selection: Color::Rgb(0xab, 0xb2, 0xbf),// OneDark selection highlight
+            fg_text: Color::Rgb(0xab, 0xb2, 0xbf),     // OneDark light gray text
+            fg_selected: Color::Rgb(0x61, 0xaf, 0xef), // OneDark blue
+            fg_dim: Color::Rgb(0x5c, 0x63, 0x73),      // OneDark dim gray
+            fg_folder: Color::Rgb(0x61, 0xaf, 0xef),   // OneDark blue for folders
+            fg_modified: Color::Rgb(0xe0, 0x6c, 0x75), // OneDark red for git modified
+            border: Color::Rgb(0x5c, 0x63, 0x73),      // OneDark dim gray
+            line_num: Color::Rgb(0x5c, 0x63, 0x73),    // OneDark dim gray
         }
     }
 }
