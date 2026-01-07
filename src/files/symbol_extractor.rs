@@ -34,7 +34,7 @@ pub fn get_language(file_path: &Path) -> Option<Language> {
 }
 
 /// Comprehensive Rust queries following Zed's outline.scm pattern
-const RUST_QUERY: &str = r#"
+const RUST_QUERY: &str = r"
 ; Functions
 (function_item name: (identifier) @name) @item
 
@@ -71,10 +71,10 @@ const RUST_QUERY: &str = r#"
 
 ; Struct/enum fields (optional - can be noisy)
 ; (field_declaration name: (field_identifier) @name) @item
-"#;
+";
 
 /// Comprehensive Python queries
-const PYTHON_QUERY: &str = r#"
+const PYTHON_QUERY: &str = r"
 ; Functions and methods
 (function_definition name: (identifier) @name) @item
 
@@ -94,10 +94,10 @@ const PYTHON_QUERY: &str = r#"
 ; Global assignments (module-level constants)
 (assignment
   left: (identifier) @name) @item
-"#;
+";
 
 /// Comprehensive JavaScript queries
-const JAVASCRIPT_QUERY: &str = r#"
+const JAVASCRIPT_QUERY: &str = r"
 ; Function declarations
 (function_declaration name: (identifier) @name) @item
 
@@ -143,10 +143,10 @@ const JAVASCRIPT_QUERY: &str = r#"
   declaration: (function_declaration name: (identifier) @name)) @item
 (export_statement
   declaration: (class_declaration name: (identifier) @name)) @item
-"#;
+";
 
 /// Comprehensive TypeScript queries
-const TYPESCRIPT_QUERY: &str = r#"
+const TYPESCRIPT_QUERY: &str = r"
 ; Function declarations
 (function_declaration name: (identifier) @name) @item
 
@@ -198,10 +198,10 @@ const TYPESCRIPT_QUERY: &str = r#"
   declaration: (interface_declaration name: (type_identifier) @name)) @item
 (export_statement
   declaration: (type_alias_declaration name: (type_identifier) @name)) @item
-"#;
+";
 
 /// Comprehensive Go queries
-const GO_QUERY: &str = r#"
+const GO_QUERY: &str = r"
 ; Function declarations
 (function_declaration name: (identifier) @name) @item
 
@@ -232,7 +232,7 @@ const GO_QUERY: &str = r#"
 ; Variables (package-level)
 (var_declaration
   (var_spec name: (identifier) @name)) @item
-"#;
+";
 
 /// HTML queries - elements with id/class attributes
 const HTML_QUERY: &str = r#"
@@ -280,6 +280,9 @@ const CSS_QUERY: &str = r#"
   (#match? @name "^--")) @item
 "#;
 
+// Note: HTML_QUERY and CSS_QUERY keep r#""# syntax because they contain special
+// characters that would interfere with tree-sitter query parsing
+
 pub fn get_query(file_path: &Path, language: &Language) -> Option<Query> {
     let lang_key = get_language_key(file_path)?;
     let query_str = match lang_key {
@@ -297,14 +300,12 @@ pub fn get_query(file_path: &Path, language: &Language) -> Option<Query> {
 }
 
 pub fn extract_symbols(file_path: &Path, content: &str) -> Vec<Symbol> {
-    let language = match get_language(file_path) {
-        Some(lang) => lang,
-        None => return Vec::new(),
+    let Some(language) = get_language(file_path) else {
+        return Vec::new();
     };
 
-    let query = match get_query(file_path, &language) {
-        Some(q) => q,
-        None => return Vec::new(),
+    let Some(query) = get_query(file_path, &language) else {
+        return Vec::new();
     };
 
     let mut parser = Parser::new();
@@ -312,9 +313,8 @@ pub fn extract_symbols(file_path: &Path, content: &str) -> Vec<Symbol> {
         return Vec::new();
     }
 
-    let tree = match parser.parse(content, None) {
-        Some(t) => t,
-        None => return Vec::new(),
+    let Some(tree) = parser.parse(content, None) else {
+        return Vec::new();
     };
 
     let mut symbols = Vec::new();
@@ -324,9 +324,8 @@ pub fn extract_symbols(file_path: &Path, content: &str) -> Vec<Symbol> {
     let name_index = query.capture_index_for_name("name");
     let item_index = query.capture_index_for_name("item");
 
-    let name_idx = match name_index {
-        Some(idx) => idx,
-        None => return symbols,
+    let Some(name_idx) = name_index else {
+        return symbols;
     };
 
     // Use captures iterator (tree-sitter 0.24+ API with StreamingIterator)
@@ -344,9 +343,8 @@ pub fn extract_symbols(file_path: &Path, content: &str) -> Vec<Symbol> {
             }
 
             // Find the @item node for context (parent/container)
-            let item_node = item_index.and_then(|idx| {
-                mat.captures.iter().find(|c| c.index == idx).map(|c| c.node)
-            });
+            let item_node = item_index
+                .and_then(|idx| mat.captures.iter().find(|c| c.index == idx).map(|c| c.node));
 
             // Use @item node for position and kind if available, otherwise use parent
             let context_node = item_node.or_else(|| node.parent());
@@ -382,23 +380,34 @@ pub fn extract_symbols(file_path: &Path, content: &str) -> Vec<Symbol> {
 fn find_parent_symbol(node: tree_sitter::Node, content: &str) -> Option<String> {
     let mut current = node.parent();
     while let Some(parent) = current {
+        // Allow same arms - keeping them separate for clarity
+        #[allow(clippy::match_same_arms)]
         match parent.kind() {
             // Rust
             "impl_item" => {
                 // Try to get the type name from impl
                 if let Some(type_node) = parent.child_by_field_name("type") {
-                    return type_node.utf8_text(content.as_bytes()).ok().map(String::from);
+                    return type_node
+                        .utf8_text(content.as_bytes())
+                        .ok()
+                        .map(String::from);
                 }
             }
             "struct_item" | "enum_item" | "trait_item" => {
                 if let Some(name_node) = parent.child_by_field_name("name") {
-                    return name_node.utf8_text(content.as_bytes()).ok().map(String::from);
+                    return name_node
+                        .utf8_text(content.as_bytes())
+                        .ok()
+                        .map(String::from);
                 }
             }
             // Python/JS/TS
             "class_definition" | "class_declaration" => {
                 if let Some(name_node) = parent.child_by_field_name("name") {
-                    return name_node.utf8_text(content.as_bytes()).ok().map(String::from);
+                    return name_node
+                        .utf8_text(content.as_bytes())
+                        .ok()
+                        .map(String::from);
                 }
             }
             // Go
@@ -407,7 +416,10 @@ fn find_parent_symbol(node: tree_sitter::Node, content: &str) -> Option<String> 
                 for child in parent.children(&mut parent.walk()) {
                     if child.kind() == "type_spec" {
                         if let Some(name_node) = child.child_by_field_name("name") {
-                            return name_node.utf8_text(content.as_bytes()).ok().map(String::from);
+                            return name_node
+                                .utf8_text(content.as_bytes())
+                                .ok()
+                                .map(String::from);
                         }
                     }
                 }
@@ -422,6 +434,8 @@ fn find_parent_symbol(node: tree_sitter::Node, content: &str) -> Option<String> 
 fn determine_symbol_kind_from_node(node: tree_sitter::Node) -> crate::files::SymbolKind {
     use crate::files::SymbolKind;
 
+    // Allow same arms - keeping them separate for clarity and easier language-specific changes
+    #[allow(clippy::match_same_arms)]
     match node.kind() {
         // Rust
         "function_item" => SymbolKind::Function,

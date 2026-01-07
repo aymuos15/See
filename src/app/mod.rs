@@ -1,14 +1,14 @@
-mod directory;
 mod diff;
+mod directory;
 mod event_handler;
 mod git;
 mod help;
 mod mouse;
 mod navigation;
 mod search;
+pub mod selection;
 mod symbol_search;
 mod theme_search;
-pub mod selection;
 
 use crate::clipboard::ClipboardManager;
 use crate::config::Config;
@@ -21,16 +21,21 @@ use crate::theme::Theme;
 use ratatui::prelude::Rect;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use selection::TextSelection;
 
+/// Content displayed in the preview pane with syntax highlighting.
 #[derive(Clone)]
 pub struct PreviewContent {
+    /// Syntax-highlighted lines for rendering.
     pub lines: Vec<Line<'static>>,
+    /// Raw text lines without highlighting (for copying).
     pub raw_lines: Vec<String>,
 }
 
+/// Main application state for the TUI file viewer.
+#[allow(clippy::struct_excessive_bools)]
 pub struct App {
     root_dir: PathBuf,
     pub current_dir: PathBuf,
@@ -78,14 +83,20 @@ pub struct App {
 }
 
 impl App {
-    pub const fn root_dir(&self) -> &PathBuf {
+    /// Returns the root directory being browsed.
+    pub fn root_dir(&self) -> &Path {
         &self.root_dir
     }
 
-    pub const fn search_index(&self) -> &Vec<FileEntry> {
+    /// Returns the index of all files for searching.
+    pub fn search_index(&self) -> &[FileEntry] {
         &self.search_index
     }
 
+    /// Creates a new App instance for the given path.
+    ///
+    /// # Errors
+    /// Returns an error if the path doesn't exist or is inaccessible.
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
         // Validate the path exists
         if !path.exists() {
@@ -154,7 +165,7 @@ impl App {
             current_theme_name: "jellybeans".to_string(),
             available_themes: Theme::list_builtins()
                 .iter()
-                .map(|s| s.to_string())
+                .map(|s| (*s).to_string())
                 .collect(),
             theme_preview_mode: false,
             help_mode: false,
@@ -178,11 +189,12 @@ impl App {
             self.current_theme_name = name.to_string();
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Theme not found: {}", name))
+            Err(anyhow::anyhow!("Theme not found: {name}"))
         }
     }
 
     /// Toggle theme preview mode (shows theme picker popup)
+    #[allow(clippy::missing_const_for_fn)]
     pub fn toggle_theme_preview(&mut self) {
         self.theme_preview_mode = !self.theme_preview_mode;
     }

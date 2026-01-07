@@ -32,9 +32,17 @@ pub fn generate_diff_lines(file_path: &Path, current_content: &str) -> Option<Ve
     for group in diff.grouped_ops(3) {
         // Calculate line numbers for this hunk
         let old_start = group[0].old_range().start;
-        let old_end = group.iter().map(|op| op.old_range().end).max().unwrap_or(old_start);
+        let old_end = group
+            .iter()
+            .map(|op| op.old_range().end)
+            .max()
+            .unwrap_or(old_start);
         let new_start = group[0].new_range().start;
-        let new_end = group.iter().map(|op| op.new_range().end).max().unwrap_or(new_start);
+        let new_end = group
+            .iter()
+            .map(|op| op.new_range().end)
+            .max()
+            .unwrap_or(new_start);
 
         let old_len = old_end.saturating_sub(old_start);
         let new_len = new_end.saturating_sub(new_start);
@@ -56,7 +64,7 @@ pub fn generate_diff_lines(file_path: &Path, current_content: &str) -> Option<Ve
                     ChangeTag::Insert => "+",
                     ChangeTag::Equal => " ",
                 };
-                let line = format!("{}{}", sign, change);
+                let line = format!("{sign}{change}");
                 diff_lines.push(line.trim_end().to_string());
             }
         }

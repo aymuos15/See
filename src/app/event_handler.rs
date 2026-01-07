@@ -13,10 +13,14 @@ impl App {
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     fn handle_next_event(&mut self) -> anyhow::Result<()> {
         let event = poll_event(
             Duration::from_millis(16),
-            self.search_mode || self.symbol_search_mode || self.theme_preview_mode || self.help_mode,
+            self.search_mode
+                || self.symbol_search_mode
+                || self.theme_preview_mode
+                || self.help_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
         )?;

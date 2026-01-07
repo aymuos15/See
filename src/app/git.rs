@@ -31,7 +31,7 @@ impl App {
 
         self.git_status
             .as_ref()
-            .map_or(false, |status| status.is_modified(&canonical_path))
+            .is_some_and(|status| status.is_modified(&canonical_path))
     }
 }
 

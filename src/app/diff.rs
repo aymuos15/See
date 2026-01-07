@@ -11,16 +11,13 @@ impl App {
         // Only works on files, not directories
         if let Some(idx) = self.file_list_state.selected() {
             // Clone path to avoid borrow issues
-            let file_path = self
-                .files
-                .get(idx)
-                .and_then(|entry| {
-                    if entry.is_file {
-                        Some(entry.path.clone())
-                    } else {
-                        None
-                    }
-                });
+            let file_path = self.files.get(idx).and_then(|entry| {
+                if entry.is_file {
+                    Some(entry.path.clone())
+                } else {
+                    None
+                }
+            });
 
             if let Some(path) = file_path {
                 // Initialize git status if not already done
@@ -29,14 +26,10 @@ impl App {
                 }
 
                 // Check if file is modified
-                let is_modified = self
-                    .git_status
-                    .as_ref()
-                    .map_or(false, |status| {
-                        let canonical_path =
-                            path.canonicalize().unwrap_or_else(|_| path.clone());
-                        status.is_modified(&canonical_path)
-                    });
+                let is_modified = self.git_status.as_ref().is_some_and(|status| {
+                    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
+                    status.is_modified(&canonical_path)
+                });
 
                 if !is_modified {
                     return; // Silent no-op for unmodified files
@@ -64,7 +57,7 @@ impl App {
                     self.original_preview_content = self.preview_content.clone();
 
                     // Convert diff lines to styled Lines
-                    let styled_lines = self.style_diff_lines(&diff_lines);
+                    let styled_lines = Self::style_diff_lines(&diff_lines);
 
                     // Update preview content with diff
                     self.preview_content = Some(PreviewContent {
@@ -91,7 +84,7 @@ impl App {
         }
     }
 
-    fn style_diff_lines(&self, diff_lines: &[String]) -> Vec<Line<'static>> {
+    fn style_diff_lines(diff_lines: &[String]) -> Vec<Line<'static>> {
         diff_lines
             .iter()
             .map(|line| {
@@ -99,17 +92,13 @@ impl App {
                     // Added line - black text on green background
                     Line::from(Span::styled(
                         line.clone(),
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::LightGreen),
+                        Style::default().fg(Color::Black).bg(Color::LightGreen),
                     ))
                 } else if line.starts_with('-') && !line.starts_with("---") {
                     // Deleted line - black text on red background
                     Line::from(Span::styled(
                         line.clone(),
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::LightRed),
+                        Style::default().fg(Color::Black).bg(Color::LightRed),
                     ))
                 } else if line.starts_with("@@") {
                     // Hunk header - bright yellow text with bold
@@ -119,12 +108,14 @@ impl App {
                             .fg(Color::LightYellow)
                             .add_modifier(Modifier::BOLD),
                     ))
-                } else if line.starts_with("diff ") || line.starts_with("---") || line.starts_with("+++") {
+                } else if line.starts_with("diff ")
+                    || line.starts_with("---")
+                    || line.starts_with("+++")
+                {
                     // File header lines - white
                     Line::from(Span::styled(
                         line.clone(),
-                        Style::default()
-                            .fg(Color::White),
+                        Style::default().fg(Color::White),
                     ))
                 } else {
                     // Context lines - white

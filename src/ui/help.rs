@@ -32,11 +32,8 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
             .areas(inner);
 
     // Render header
-    let header = Paragraph::new("Keyboard Shortcuts").style(
-        Style::default()
-            .fg(theme.fg_text)
-            .bg(theme.bg_search),
-    );
+    let header = Paragraph::new("Keyboard Shortcuts")
+        .style(Style::default().fg(theme.fg_text).bg(theme.bg_search));
     frame.render_widget(header, header_area);
 
     let help_text = "UP/DOWN, j/k     Scroll file list / preview\n\

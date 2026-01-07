@@ -49,6 +49,7 @@ impl App {
         self.apply_symbol_filter();
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn symbol_search_navigate_up(&mut self) {
         if !self.symbol_search_results.is_empty() {
             self.symbol_search_selected = if self.symbol_search_selected == 0 {
@@ -59,6 +60,7 @@ impl App {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn symbol_search_navigate_down(&mut self) {
         if !self.symbol_search_results.is_empty() {
             self.symbol_search_selected =
@@ -71,16 +73,14 @@ impl App {
             let symbol_idx = self.symbol_search_results[self.symbol_search_selected];
             if let Some(symbol) = self.symbol_index.get(symbol_idx).cloned() {
                 // Navigate to the file containing the symbol
-                let target_dir = symbol
-                    .file
-                    .parent()
-                    .unwrap_or(&self.root_dir)
-                    .to_path_buf();
-                
-                let symbol_line = symbol.line;
-                let symbol_file = symbol.file.clone();
+                let target_dir = symbol.file.parent().unwrap_or(&self.root_dir).to_path_buf();
 
-                if let Ok(files) = crate::files::read_directory(&target_dir, &self.root_dir, &self.config) {
+                let symbol_line = symbol.line;
+                let symbol_file = symbol.file;
+
+                if let Ok(files) =
+                    crate::files::read_directory(&target_dir, &self.root_dir, &self.config)
+                {
                     self.current_dir = target_dir;
                     self.files = files;
 
@@ -93,7 +93,7 @@ impl App {
 
                     self.preview_scroll = 0;
                     self.load_preview();
-                    
+
                     // Scroll to the symbol's line in the preview
                     self.jump_to_line(symbol_line);
 
@@ -108,7 +108,7 @@ impl App {
     pub fn jump_to_line(&mut self, line: usize) {
         if let Some(content) = &self.preview_content {
             if line < content.lines.len() {
-                self.preview_scroll = line as u16;
+                self.preview_scroll = u16::try_from(line).unwrap_or(u16::MAX);
             }
         }
     }
@@ -126,11 +126,7 @@ impl App {
             Normalization::Smart,
         );
 
-        let names: Vec<&str> = self
-            .symbol_index
-            .iter()
-            .map(|s| s.name.as_str())
-            .collect();
+        let names: Vec<&str> = self.symbol_index.iter().map(|s| s.name.as_str()).collect();
         let matched_names = pattern.match_list(&names, &mut matcher);
 
         // Build index map for O(1) lookup

@@ -17,7 +17,9 @@ pub enum SymbolKind {
 }
 
 impl SymbolKind {
+    #[allow(clippy::missing_const_for_fn)]
     pub fn icon(&self) -> &'static str {
+        #[allow(clippy::match_same_arms)]
         match self {
             Self::Function | Self::Method => "fn",
             Self::Struct => "st",
@@ -25,7 +27,7 @@ impl SymbolKind {
             Self::Trait => "tr",
             Self::Impl => "im",
             Self::Const => "co",
-            Self::Static => "st",
+            Self::Static => "st", // Same as Struct but semantically different
             Self::Module => "mo",
             Self::Class => "cl",
             Self::Variable => "va",
@@ -48,20 +50,17 @@ pub struct Symbol {
 impl Symbol {
     #[allow(dead_code)]
     pub fn display_name(&self) -> String {
-        if let Some(ref parent) = self.parent {
-            format!("{} in {}", self.name, parent)
-        } else {
-            self.name.clone()
-        }
+        self.parent.as_ref().map_or_else(
+            || self.name.clone(),
+            |parent| format!("{} in {}", self.name, parent),
+        )
     }
 
     #[allow(dead_code)]
     pub fn display_location(&self) -> String {
         format!(
             "{}:{}",
-            self.file.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(""),
+            self.file.file_name().and_then(|n| n.to_str()).unwrap_or(""),
             self.line
         )
     }

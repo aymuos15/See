@@ -1,5 +1,5 @@
-mod parser;
 mod builtins;
+mod parser;
 
 use crate::config::ThemeConfig;
 use ratatui::style::Color;

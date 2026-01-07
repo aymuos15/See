@@ -158,7 +158,7 @@ mod tests {
         let entries = read_directory(temp.path(), temp.path(), &config).unwrap();
 
         // First non-hidden entry should be directory (subdir)
-        let first_is_dir = entries[0].is_file == false;
+        let first_is_dir = !entries[0].is_file;
         assert!(first_is_dir);
     }
 

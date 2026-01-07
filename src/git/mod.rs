@@ -1,5 +1,5 @@
-mod status;
 mod diff;
+mod status;
 
-pub use status::GitStatus;
 pub use diff::generate_diff_lines;
+pub use status::GitStatus;

@@ -23,14 +23,14 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
             } else {
                 theme.fg_folder
             };
-            
+
             // Add a dot prefix if the file is modified, otherwise just the name
             let text = if is_modified {
                 format!("●{}", entry.name)
             } else {
                 entry.name.clone()
             };
-            
+
             // Pad to full width so background color fills the entire line
             let padded = format!("{text:<inner_width$}");
             ListItem::new(padded).style(Style::default().fg(fg_color))

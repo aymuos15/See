@@ -24,40 +24,31 @@ pub fn read_file_content(path: &Path) -> anyhow::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_read_file_content() {
-        let temp_file = "/tmp/test_viewer_content.txt";
+        let mut temp_file = NamedTempFile::new().unwrap();
         let content = "Hello, world!";
+        temp_file.write_all(content.as_bytes()).unwrap();
 
-        let mut file = File::create(temp_file).unwrap();
-        file.write_all(content.as_bytes()).unwrap();
-        drop(file);
-
-        let result = read_file_content(Path::new(temp_file)).unwrap();
+        let result = read_file_content(temp_file.path()).unwrap();
         assert_eq!(result, content);
-
-        std::fs::remove_file(temp_file).unwrap();
     }
 
     #[test]
     fn test_read_nonexistent_file() {
-        let result = read_file_content(Path::new("/tmp/nonexistent_viewer_file.txt"));
+        let result = read_file_content(Path::new("/nonexistent/path/file.txt"));
         assert!(result.is_err());
     }
 
     #[test]
     fn test_read_binary_file_detection() {
-        let temp_file = "/tmp/test_viewer_binary.bin";
-        let mut file = File::create(temp_file).unwrap();
-        file.write_all(&[0u8, 1, 2, 3]).unwrap();
-        drop(file);
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&[0u8, 1, 2, 3]).unwrap();
 
-        let result = read_file_content(Path::new(temp_file)).unwrap();
+        let result = read_file_content(temp_file.path()).unwrap();
         assert_eq!(result, "[Binary file - cannot preview]");
-
-        std::fs::remove_file(temp_file).unwrap();
     }
 }

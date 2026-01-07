@@ -12,7 +12,7 @@ pub struct GitStatus {
 const CACHE_DURATION: Duration = Duration::from_secs(2);
 
 impl GitStatus {
-    /// Create a new GitStatus, discovering the git repository if it exists
+    /// Create a new `GitStatus`, discovering the git repository if it exists
     pub fn new(path: &Path) -> Self {
         let repo = Repository::discover(path).ok();
 
@@ -20,7 +20,9 @@ impl GitStatus {
             repo,
             modified_files: HashSet::new(),
             // Initialize to past to ensure first refresh() call always executes
-            last_refresh: Instant::now() - CACHE_DURATION,
+            last_refresh: Instant::now()
+                .checked_sub(CACHE_DURATION)
+                .unwrap_or_else(Instant::now),
         }
     }
 
@@ -30,7 +32,7 @@ impl GitStatus {
     }
 
     /// Check if we're in a git repository
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::missing_const_for_fn)]
     pub fn is_in_git_repo(&self) -> bool {
         self.repo.is_some()
     }
@@ -50,13 +52,14 @@ impl GitStatus {
                     if let Some(path) = entry.path() {
                         if is_modified_status(entry.status()) {
                             // Convert to absolute path for comparison
-                            let file_path = repo.workdir()
-                                .map(|wd| {
+                            let file_path = repo.workdir().map_or_else(
+                                || PathBuf::from(path),
+                                |wd| {
                                     // Use canonicalize if possible to ensure consistent paths
                                     let joined = wd.join(path);
                                     joined.canonicalize().unwrap_or(joined)
-                                })
-                                .unwrap_or_else(|| PathBuf::from(path));
+                                },
+                            );
 
                             self.modified_files.insert(file_path.clone());
 

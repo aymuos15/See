@@ -10,14 +10,19 @@ pub use symbol_extractor::extract_symbols;
 
 use std::path::PathBuf;
 
+/// Represents a file or directory entry in the file browser.
 #[derive(Debug, Clone)]
 pub struct FileEntry {
+    /// Full path to the file or directory.
     pub path: PathBuf,
+    /// Display name (filename without parent path).
     pub name: String,
+    /// True if this is a file, false if it's a directory.
     pub is_file: bool,
 }
 
 impl FileEntry {
+    /// Creates a new `FileEntry` from a path.
     pub fn new(path: PathBuf) -> Self {
         let name = path
             .file_name()
