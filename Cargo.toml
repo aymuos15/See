@@ -45,3 +45,10 @@ unimplemented = "warn"
 
 [dev-dependencies]
 tempfile = "3.8"
+
+# Optimized release profile for smaller, faster binaries
+[profile.release]
+codegen-units = 1  # Better optimization (slower compile)
+lto = true         # Link-time optimization across crates
+panic = "abort"    # Smaller binary, no stack unwinding
+strip = true       # Remove symbols from binary
