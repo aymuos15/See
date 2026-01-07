@@ -67,3 +67,16 @@ The viewer automatically watches for file changes:
 - **Current directory**: Refreshes file list when files are added/deleted
 - **Preview file**: Refreshes preview when the viewed file is modified
 - **Search index**: Refreshes every 30 seconds to pick up new files
+
+## Development
+
+### Pre-commit Hooks
+
+Install pre-commit hooks to run formatting and linting checks before each commit:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+This will run `cargo fmt`, `cargo clippy`, and other checks automatically on commit.
