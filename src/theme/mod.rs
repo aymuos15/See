@@ -24,20 +24,20 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        // Default Helix OneDark theme for preview pane, white for file list pane
+        // Default Jellybeans theme for preview pane, dark cream for file list pane
         Self {
-            bg_main: Color::Rgb(0x28, 0x2c, 0x34),     // OneDark dark background (#282c34)
-            bg_darker: Color::White,                   // white for file list pane
-            bg_selected: Color::Rgb(0x3e, 0x44, 0x52), // OneDark selection
-            bg_search: Color::Rgb(0xd1, 0x9a, 0x66),   // OneDark orange
-            bg_selection: Color::Rgb(0xab, 0xb2, 0xbf),// OneDark selection highlight
-            fg_text: Color::Rgb(0xab, 0xb2, 0xbf),     // OneDark light gray text
-            fg_selected: Color::Rgb(0x61, 0xaf, 0xef), // OneDark blue
-            fg_dim: Color::Rgb(0x5c, 0x63, 0x73),      // OneDark dim gray
-            fg_folder: Color::Rgb(0x61, 0xaf, 0xef),   // OneDark blue for folders
-            fg_modified: Color::Rgb(0xe0, 0x6c, 0x75), // OneDark red for git modified
-            border: Color::Rgb(0x5c, 0x63, 0x73),      // OneDark dim gray
-            line_num: Color::Rgb(0x5c, 0x63, 0x73),    // OneDark dim gray
+            bg_main: Color::Rgb(0x4c, 0x3d, 0x57),     // Jellybeans background (#4c3d57)
+            bg_darker: Color::Rgb(0xe8, 0xe0, 0xd0),   // dark cream (#e8e0d0)
+            bg_selected: Color::Rgb(0x29, 0x29, 0x29), // Jellybeans darker
+            bg_search: Color::Rgb(0xcf, 0x6a, 0x4c),   // Jellybeans dark orange
+            bg_selection: Color::Rgb(0x37, 0x23, 0x2d),// Jellybeans selection
+            fg_text: Color::Rgb(0x5a, 0x5a, 0x5a),     // dark gray
+            fg_selected: Color::Rgb(0xf2, 0xaa, 0xc7), // Jellybeans selection fg
+            fg_dim: Color::Rgb(0x8a, 0x8a, 0x8a),      // medium gray
+            fg_folder: Color::Rgb(0x4a, 0x6a, 0x8a),   // dark blue
+            fg_modified: Color::Rgb(0xa8, 0x4a, 0x4a), // dark red
+            border: Color::Rgb(0x6d, 0x6d, 0x6d),      // Jellybeans light gray
+            line_num: Color::Rgb(0x53, 0x53, 0x53),    // Jellybeans dark gray
         }
     }
 }
