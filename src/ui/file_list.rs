@@ -15,7 +15,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         .files
         .iter()
         .map(|entry| {
-            let text = format!(" {}", entry.name);
+            let text = entry.name.clone();
             // Pad to full width so background color fills the entire line
             let padded = format!("{text:<inner_width$}");
             let fg_color = if app.is_file_modified(&entry.path) {
