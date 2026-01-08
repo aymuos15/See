@@ -161,12 +161,11 @@ fn render_find_search(frame: &mut Frame, app: &App) {
     let theme = &app.config.theme;
     let area = frame.area();
 
-    // Position in top right
+    // Position in top right, flush against edges
     let popup_width = (area.width * 30).min(40);
     let popup_height = 3;
-    let margin = 1;
-    let popup_x = area.width.saturating_sub(popup_width + margin);
-    let popup_y = margin;
+    let popup_x = area.width.saturating_sub(popup_width);
+    let popup_y = 0;
 
     let popup_area = Rect {
         x: popup_x,
