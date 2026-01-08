@@ -260,11 +260,14 @@ impl App {
     }
 
     fn split_active_pane(&mut self, direction: crate::app::split::SplitDirection) {
+        use std::rc::Rc;
+
         if self.split_layout.is_none() {
             let mut layout = crate::app::split::SplitLayout::new();
-            if let Some(ref preview) = self.preview_content {
+            // Use shared preview content (Rc::clone is O(1))
+            if let Some(ref preview) = self.shared_preview_content {
                 if let Some(pane) = layout.panes.get_mut(0) {
-                    pane.preview_content = Some(preview.clone());
+                    pane.preview_content = Some(Rc::clone(preview));
                     // Find current file path
                     if let Some(idx) = self.file_list_state.selected() {
                         if let Some(entry) = self.files.get(idx) {

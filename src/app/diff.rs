@@ -4,6 +4,7 @@ use crate::git::generate_diff_lines;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use std::path::Path;
+use std::rc::Rc;
 
 impl App {
     /// Toggle between normal view and diff view
@@ -53,17 +54,18 @@ impl App {
             if let Some(diff_lines) = generate_diff_lines(file_path, &current_content) {
                 // Only proceed if we have diff lines (not empty)
                 if !diff_lines.is_empty() {
-                    // Cache original content for toggling back
-                    self.original_preview_content = self.preview_content.clone();
+                    // Cache original content for toggling back (Rc::clone is O(1))
+                    self.original_preview_content =
+                        self.shared_preview_content.as_ref().map(Rc::clone);
 
                     // Convert diff lines to styled Lines
                     let styled_lines = Self::style_diff_lines(&diff_lines);
 
                     // Update preview content with diff
-                    self.preview_content = Some(PreviewContent {
+                    self.shared_preview_content = Some(Rc::new(PreviewContent {
                         lines: styled_lines,
                         raw_lines: diff_lines,
-                    });
+                    }));
 
                     // Reset scroll and enter diff mode
                     self.preview_scroll = 0;
@@ -78,7 +80,7 @@ impl App {
 
     fn restore_original_content(&mut self) {
         if let Some(original) = self.original_preview_content.take() {
-            self.preview_content = Some(original);
+            self.shared_preview_content = Some(original);
             self.preview_scroll = 0;
             self.diff_mode = false;
         }

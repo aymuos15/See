@@ -15,7 +15,8 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     // Store area for coordinate mapping
     app.last_preview_area = Some(inner_area);
 
-    if let Some(preview) = &app.preview_content {
+    // Use shared_preview_content (Rc) for better performance
+    if let Some(preview) = &app.shared_preview_content {
         let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(1)]);
         let [line_num_area, content_area] = horizontal.areas(inner_area);
 

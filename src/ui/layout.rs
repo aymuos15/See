@@ -8,6 +8,7 @@ pub struct AppLayout {
 }
 
 impl AppLayout {
+    #[allow(clippy::ref_option, clippy::option_if_let_else)]
     pub fn new(area: Rect, split_layout: &Option<SplitLayout>, split_percent: u16) -> Self {
         if let Some(layout) = split_layout {
             let (file_list_area, panes_area) = if layout.file_list_visible {

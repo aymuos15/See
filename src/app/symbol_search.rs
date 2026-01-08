@@ -106,7 +106,7 @@ impl App {
     }
 
     pub fn jump_to_line(&mut self, line: usize) {
-        if let Some(content) = &self.preview_content {
+        if let Some(content) = &self.shared_preview_content {
             if line < content.lines.len() {
                 self.preview_scroll = u16::try_from(line).unwrap_or(u16::MAX);
             }

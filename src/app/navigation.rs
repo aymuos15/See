@@ -1,6 +1,7 @@
 use crate::constants::{
     MAX_SPLIT_PERCENT, MIN_SPLIT_PERCENT, PREVIEW_PAGE_SCROLL_LINES, SPLIT_RESIZE_STEP,
 };
+use std::rc::Rc;
 
 use super::App;
 
@@ -22,17 +23,7 @@ impl App {
         self.load_preview();
 
         // Update active pane if split layout exists
-        if let Some(ref mut layout) = self.split_layout {
-            if let Some(preview) = &self.preview_content {
-                let active_idx = layout.active_pane_index;
-                if let Some(pane) = layout.panes.iter_mut().find(|p| p.id == active_idx) {
-                    pane.preview_content = Some(preview.clone());
-                    if let Some(entry) = self.files.get(next) {
-                        pane.file_path = Some(entry.path.clone());
-                    }
-                }
-            }
-        }
+        self.sync_active_pane_content(next);
     }
 
     pub(super) fn navigate_up(&mut self) {
@@ -52,12 +43,19 @@ impl App {
         self.load_preview();
 
         // Update active pane if split layout exists
+        self.sync_active_pane_content(prev);
+    }
+
+    /// Sync the active pane's content with the main preview content.
+    /// Uses `Rc::clone` for O(1) sharing instead of deep cloning.
+    fn sync_active_pane_content(&mut self, file_idx: usize) {
         if let Some(ref mut layout) = self.split_layout {
-            if let Some(preview) = &self.preview_content {
-                let active_idx = layout.active_pane_index;
-                if let Some(pane) = layout.panes.iter_mut().find(|p| p.id == active_idx) {
-                    pane.preview_content = Some(preview.clone());
-                    if let Some(entry) = self.files.get(prev) {
+            if let Some(preview) = &self.shared_preview_content {
+                if let Some(pane) = layout.get_active_pane_mut() {
+                    // Rc::clone is O(1) - just increments reference count
+                    pane.preview_content = Some(Rc::clone(preview));
+                    pane.scroll = 0;
+                    if let Some(entry) = self.files.get(file_idx) {
                         pane.file_path = Some(entry.path.clone());
                     }
                 }
@@ -67,8 +65,7 @@ impl App {
 
     pub(super) fn scroll_preview_down(&mut self) {
         if let Some(ref mut layout) = self.split_layout {
-            let active_idx = layout.active_pane_index;
-            if let Some(pane) = layout.panes.iter_mut().find(|p| p.id == active_idx) {
+            if let Some(pane) = layout.get_active_pane_mut() {
                 if let Some(preview) = &pane.preview_content {
                     if !preview.lines.is_empty() {
                         let max_scroll = preview.lines.len().saturating_sub(1);
@@ -77,7 +74,7 @@ impl App {
                     }
                 }
             }
-        } else if let Some(preview) = &self.preview_content {
+        } else if let Some(preview) = &self.shared_preview_content {
             if !preview.lines.is_empty() {
                 let max_scroll = preview.lines.len().saturating_sub(1);
                 self.preview_scroll =
@@ -89,8 +86,7 @@ impl App {
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn scroll_preview_up(&mut self) {
         if let Some(ref mut layout) = self.split_layout {
-            let active_idx = layout.active_pane_index;
-            if let Some(pane) = layout.panes.iter_mut().find(|p| p.id == active_idx) {
+            if let Some(pane) = layout.get_active_pane_mut() {
                 pane.scroll = pane.scroll.saturating_sub(1);
             }
         } else {
@@ -99,7 +95,7 @@ impl App {
     }
 
     pub(super) fn scroll_preview_page_down(&mut self) {
-        if let Some(preview) = &self.preview_content {
+        if let Some(preview) = &self.shared_preview_content {
             if !preview.lines.is_empty() {
                 let max_scroll = preview.lines.len().saturating_sub(1);
                 self.preview_scroll = (self.preview_scroll + PREVIEW_PAGE_SCROLL_LINES)

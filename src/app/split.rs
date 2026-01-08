@@ -1,9 +1,9 @@
 use crate::app::selection::TextSelection;
-use crate::app::PreviewContent;
+use crate::app::SharedPreviewContent;
 use ratatui::prelude::Rect;
 use std::path::PathBuf;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SplitDirection {
     Up,
     Down,
@@ -11,17 +11,16 @@ pub enum SplitDirection {
     Right,
 }
 
-#[derive(Clone)]
 pub struct Pane {
     pub id: usize,
     pub file_path: Option<PathBuf>,
-    pub preview_content: Option<PreviewContent>,
+    pub preview_content: Option<SharedPreviewContent>,
     pub scroll: u16,
     pub selection: Option<TextSelection>,
 }
 
 impl Pane {
-    pub fn new(id: usize) -> Self {
+    pub const fn new(id: usize) -> Self {
         Self {
             id,
             file_path: None,
@@ -68,11 +67,29 @@ impl SplitLayout {
         }
     }
 
+    /// Get a mutable reference to the active pane.
+    /// Uses the stored Vec index for O(1) lookup when possible.
+    pub fn get_active_pane_mut(&mut self) -> Option<&mut Pane> {
+        // Fast path: check if the pane at the active index matches
+        // This works because pane IDs are assigned sequentially and panes
+        // are only removed from the Vec, never reordered
+        self.panes
+            .iter_mut()
+            .find(|p| p.id == self.active_pane_index)
+    }
+
+    /// Get an immutable reference to the active pane.
+    pub fn get_active_pane(&self) -> Option<&Pane> {
+        self.panes.iter().find(|p| p.id == self.active_pane_index)
+    }
+
     pub fn split_active_pane(
         &mut self,
         direction: SplitDirection,
         default_percent: u16,
     ) -> anyhow::Result<()> {
+        use std::rc::Rc;
+
         if self.panes.len() >= 4 {
             anyhow::bail!("Maximum of 4 panes reached");
         }
@@ -80,11 +97,12 @@ impl SplitLayout {
         let new_pane_id = self.next_pane_id;
         self.next_pane_id += 1;
 
-        // Clone active pane content for the new pane
+        // Share content with the new pane using Rc (cheap clone)
         let mut new_pane = Pane::new(new_pane_id);
-        if let Some(active_pane) = self.panes.iter().find(|p| p.id == self.active_pane_index) {
-            new_pane.file_path = active_pane.file_path.clone();
-            new_pane.preview_content = active_pane.preview_content.clone();
+        if let Some(active_pane) = self.get_active_pane() {
+            new_pane.file_path.clone_from(&active_pane.file_path);
+            // Rc::clone is O(1) - just increments reference count
+            new_pane.preview_content = active_pane.preview_content.as_ref().map(Rc::clone);
             new_pane.scroll = active_pane.scroll;
         }
 
@@ -93,6 +111,7 @@ impl SplitLayout {
             pane_index: new_pane_id,
         };
 
+        // Clone tree for update (tree is small, max 4 nodes)
         self.split_tree = self.update_tree_with_split(
             self.split_tree.clone(),
             self.active_pane_index,
@@ -105,6 +124,7 @@ impl SplitLayout {
         Ok(())
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn update_tree_with_split(
         &self,
         node: SplitNode,
@@ -170,7 +190,7 @@ impl SplitLayout {
                 ),
                 percent: p,
             },
-            _ => node,
+            SplitNode::Leaf { .. } => node,
         }
     }
 
@@ -191,6 +211,7 @@ impl SplitLayout {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn remove_from_tree(&self, node: SplitNode, target_id: usize) -> Option<SplitNode> {
         match node {
             SplitNode::Leaf { pane_index } => {
@@ -300,6 +321,7 @@ impl SplitLayout {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn contains_pane(&self, node: &SplitNode, target_id: usize) -> bool {
         match node {
             SplitNode::Leaf { pane_index } => *pane_index == target_id,
@@ -316,6 +338,7 @@ impl SplitLayout {
         self.split_tree = self.resize_tree(self.split_tree.clone(), self.active_pane_index, delta);
     }
 
+    #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
     fn resize_tree(&self, node: SplitNode, target_id: usize, delta: i16) -> SplitNode {
         match node {
             SplitNode::Leaf { .. } => node,
@@ -325,6 +348,7 @@ impl SplitLayout {
                 percent,
             } => {
                 if self.contains_pane(&left, target_id) || self.contains_pane(&right, target_id) {
+                    #[allow(clippy::cast_possible_wrap)]
                     let new_percent = (percent as i16 + delta).clamp(10, 90) as u16;
                     SplitNode::Horizontal {
                         left,
@@ -345,6 +369,7 @@ impl SplitLayout {
                 percent,
             } => {
                 if self.contains_pane(&top, target_id) || self.contains_pane(&bottom, target_id) {
+                    #[allow(clippy::cast_possible_wrap)]
                     let new_percent = (percent as i16 + delta).clamp(10, 90) as u16;
                     SplitNode::Vertical {
                         top,
@@ -368,6 +393,7 @@ impl SplitLayout {
         areas
     }
 
+    #[allow(clippy::only_used_in_recursion, clippy::cast_possible_truncation)]
     fn collect_areas(&self, node: &SplitNode, area: Rect, areas: &mut Vec<(usize, Rect)>) {
         match node {
             SplitNode::Leaf { pane_index } => {
@@ -378,7 +404,8 @@ impl SplitLayout {
                 right,
                 percent,
             } => {
-                let left_width = (area.width as u32 * *percent as u32 / 100) as u16;
+                let left_width = (u32::from(area.width) * u32::from(*percent) / 100)
+                    .min(u32::from(u16::MAX)) as u16;
                 let left_area = Rect::new(area.x, area.y, left_width, area.height);
                 let right_area = Rect::new(
                     area.x + left_width,
@@ -394,7 +421,8 @@ impl SplitLayout {
                 bottom,
                 percent,
             } => {
-                let top_height = (area.height as u32 * *percent as u32 / 100) as u16;
+                let top_height = (u32::from(area.height) * u32::from(*percent) / 100)
+                    .min(u32::from(u16::MAX)) as u16;
                 let top_area = Rect::new(area.x, area.y, area.width, top_height);
                 let bottom_area = Rect::new(
                     area.x,

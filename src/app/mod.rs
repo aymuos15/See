@@ -23,18 +23,21 @@ use ratatui::prelude::Rect;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use selection::TextSelection;
 use split::SplitLayout;
 
 /// Content displayed in the preview pane with syntax highlighting.
-#[derive(Clone)]
 pub struct PreviewContent {
     /// Syntax-highlighted lines for rendering.
     pub lines: Vec<Line<'static>>,
     /// Raw text lines without highlighting (for copying).
     pub raw_lines: Vec<String>,
 }
+
+/// Reference-counted preview content for efficient sharing between panes.
+pub type SharedPreviewContent = Rc<PreviewContent>;
 
 /// Main application state for the TUI file viewer.
 #[allow(clippy::struct_excessive_bools)]
@@ -44,6 +47,8 @@ pub struct App {
     pub files: Vec<FileEntry>,
     pub file_list_state: ListState,
     pub preview_content: Option<PreviewContent>,
+    /// Shared preview content for efficient pane sharing (avoids cloning).
+    pub shared_preview_content: Option<SharedPreviewContent>,
     pub preview_scroll: u16,
     pub highlighter: SyntaxHighlighter,
     pub should_quit: bool,
@@ -75,7 +80,7 @@ pub struct App {
     git_status: Option<GitStatus>,
     // Diff mode state
     diff_mode: bool,
-    original_preview_content: Option<PreviewContent>,
+    original_preview_content: Option<SharedPreviewContent>,
     // Theme state
     pub current_theme_name: String,
     pub available_themes: Vec<String>,
@@ -143,6 +148,7 @@ impl App {
             files,
             file_list_state: ListState::default(),
             preview_content: None,
+            shared_preview_content: None,
             preview_scroll: 0,
             highlighter,
             should_quit: false,
@@ -594,8 +600,8 @@ mod tests {
                 app.load_preview();
 
                 // Should have loaded preview content
-                assert!(app.preview_content.is_some());
-                if let Some(content) = &app.preview_content {
+                assert!(app.shared_preview_content.is_some());
+                if let Some(content) = &app.shared_preview_content {
                     assert!(!content.lines.is_empty());
                 }
             }

@@ -177,28 +177,36 @@ fn handle_key(code: KeyCode, modifiers: KeyModifiers, any_search_mode: bool) -> 
 mod tests {
     use super::*;
 
+    const NO_MODS: KeyModifiers = KeyModifiers::NONE;
+
     #[test]
     fn test_handle_key_normal_mode_quit() {
         assert!(matches!(
-            handle_key(KeyCode::Char('q'), false),
+            handle_key(KeyCode::Char('q'), NO_MODS, false),
             AppEvent::Quit
         ));
-        assert!(matches!(handle_key(KeyCode::Esc, false), AppEvent::Quit));
+        assert!(matches!(
+            handle_key(KeyCode::Esc, NO_MODS, false),
+            AppEvent::Quit
+        ));
     }
 
     #[test]
     fn test_handle_key_normal_mode_navigation() {
         assert!(matches!(
-            handle_key(KeyCode::Down, false),
+            handle_key(KeyCode::Down, NO_MODS, false),
             AppEvent::NavigateDown
         ));
         assert!(matches!(
-            handle_key(KeyCode::Up, false),
+            handle_key(KeyCode::Up, NO_MODS, false),
             AppEvent::NavigateUp
         ));
-        assert!(matches!(handle_key(KeyCode::Enter, false), AppEvent::Enter));
         assert!(matches!(
-            handle_key(KeyCode::Backspace, false),
+            handle_key(KeyCode::Enter, NO_MODS, false),
+            AppEvent::Enter
+        ));
+        assert!(matches!(
+            handle_key(KeyCode::Backspace, NO_MODS, false),
             AppEvent::GoBack
         ));
     }
@@ -206,19 +214,19 @@ mod tests {
     #[test]
     fn test_handle_key_normal_mode_scroll() {
         assert!(matches!(
-            handle_key(KeyCode::Char('j'), false),
+            handle_key(KeyCode::Char('j'), NO_MODS, false),
             AppEvent::ScrollPreviewDown
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('k'), false),
+            handle_key(KeyCode::Char('k'), NO_MODS, false),
             AppEvent::ScrollPreviewUp
         ));
         assert!(matches!(
-            handle_key(KeyCode::PageDown, false),
+            handle_key(KeyCode::PageDown, NO_MODS, false),
             AppEvent::ScrollPreviewPageDown
         ));
         assert!(matches!(
-            handle_key(KeyCode::PageUp, false),
+            handle_key(KeyCode::PageUp, NO_MODS, false),
             AppEvent::ScrollPreviewPageUp
         ));
     }
@@ -226,11 +234,11 @@ mod tests {
     #[test]
     fn test_handle_key_normal_mode_resize() {
         assert!(matches!(
-            handle_key(KeyCode::Char('H'), false),
+            handle_key(KeyCode::Char('H'), NO_MODS, false),
             AppEvent::ShrinkFileList
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('L'), false),
+            handle_key(KeyCode::Char('L'), NO_MODS, false),
             AppEvent::GrowFileList
         ));
     }
@@ -238,7 +246,7 @@ mod tests {
     #[test]
     fn test_handle_key_normal_mode_search() {
         assert!(matches!(
-            handle_key(KeyCode::Char('/'), false),
+            handle_key(KeyCode::Char('/'), NO_MODS, false),
             AppEvent::OpenSearch
         ));
     }
@@ -246,11 +254,11 @@ mod tests {
     #[test]
     fn test_handle_key_search_mode_input() {
         assert!(matches!(
-            handle_key(KeyCode::Char('a'), true),
+            handle_key(KeyCode::Char('a'), NO_MODS, true),
             AppEvent::SearchInput('a')
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('z'), true),
+            handle_key(KeyCode::Char('z'), NO_MODS, true),
             AppEvent::SearchInput('z')
         ));
     }
@@ -258,11 +266,11 @@ mod tests {
     #[test]
     fn test_handle_key_search_mode_navigation() {
         assert!(matches!(
-            handle_key(KeyCode::Up, true),
+            handle_key(KeyCode::Up, NO_MODS, true),
             AppEvent::SearchNavigateUp
         ));
         assert!(matches!(
-            handle_key(KeyCode::Down, true),
+            handle_key(KeyCode::Down, NO_MODS, true),
             AppEvent::SearchNavigateDown
         ));
     }
@@ -270,7 +278,7 @@ mod tests {
     #[test]
     fn test_handle_key_search_mode_confirm() {
         assert!(matches!(
-            handle_key(KeyCode::Enter, true),
+            handle_key(KeyCode::Enter, NO_MODS, true),
             AppEvent::SearchConfirm
         ));
     }
@@ -278,7 +286,7 @@ mod tests {
     #[test]
     fn test_handle_key_search_mode_close() {
         assert!(matches!(
-            handle_key(KeyCode::Esc, true),
+            handle_key(KeyCode::Esc, NO_MODS, true),
             AppEvent::CloseSearch
         ));
     }
@@ -286,21 +294,34 @@ mod tests {
     #[test]
     fn test_handle_key_search_mode_backspace() {
         assert!(matches!(
-            handle_key(KeyCode::Backspace, true),
+            handle_key(KeyCode::Backspace, NO_MODS, true),
             AppEvent::SearchBackspace
         ));
     }
 
     #[test]
     fn test_handle_key_unknown() {
-        assert!(matches!(handle_key(KeyCode::Tab, false), AppEvent::None));
-        assert!(matches!(handle_key(KeyCode::Tab, true), AppEvent::None));
+        // Tab now cycles panes, so it's not None
+        assert!(matches!(
+            handle_key(KeyCode::Tab, NO_MODS, false),
+            AppEvent::CyclePane
+        ));
+        assert!(matches!(
+            handle_key(KeyCode::Tab, NO_MODS, true),
+            AppEvent::None
+        ));
     }
 
     #[test]
     fn test_handle_key_arrows_in_search() {
         // Arrows navigate search, not open files
-        assert!(matches!(handle_key(KeyCode::Left, true), AppEvent::None));
-        assert!(matches!(handle_key(KeyCode::Right, true), AppEvent::None));
+        assert!(matches!(
+            handle_key(KeyCode::Left, NO_MODS, true),
+            AppEvent::None
+        ));
+        assert!(matches!(
+            handle_key(KeyCode::Right, NO_MODS, true),
+            AppEvent::None
+        ));
     }
 }

@@ -1,4 +1,5 @@
 use crate::files::{read_directory, read_file_content};
+use std::rc::Rc;
 
 use super::{App, PreviewContent};
 
@@ -58,7 +59,14 @@ impl App {
                     if let Ok(content) = read_file_content(&entry.path) {
                         let lines = self.highlighter.highlight(&entry.path, &content);
                         let raw_lines: Vec<String> = content.lines().map(String::from).collect();
-                        self.preview_content = Some(PreviewContent { lines, raw_lines });
+                        let preview = PreviewContent { lines, raw_lines };
+                        // Create shared reference for panes (Rc::clone is O(1))
+                        let shared = Rc::new(preview);
+                        self.shared_preview_content = Some(Rc::clone(&shared));
+                        // For backward compatibility, we need to keep preview_content
+                        // But we can't easily convert Rc back, so we'll use shared_preview_content
+                        // in the rendering code instead
+                        self.preview_content = None;
                         // Watch this file for changes
                         let _ = self.file_watcher.watch_preview_file(Some(&entry.path));
                         // Clear selection when loading new file
@@ -71,6 +79,7 @@ impl App {
         // No preview, stop watching preview file
         let _ = self.file_watcher.watch_preview_file(None);
         self.preview_content = None;
+        self.shared_preview_content = None;
     }
 
     /// Refresh the file list for the current directory
@@ -115,13 +124,14 @@ impl App {
 
                         // Check if content actually changed
                         let content_changed = self
-                            .preview_content
+                            .shared_preview_content
                             .as_ref()
                             .is_none_or(|prev| prev.raw_lines != raw_lines);
 
                         if content_changed {
                             let lines = self.highlighter.highlight(&entry.path, &content);
-                            self.preview_content = Some(PreviewContent { lines, raw_lines });
+                            self.shared_preview_content =
+                                Some(Rc::new(PreviewContent { lines, raw_lines }));
                             // Only clear selection if content changed
                             self.selection = None;
                         }
@@ -131,7 +141,7 @@ impl App {
             }
         }
         // No valid preview
-        self.preview_content = None;
+        self.shared_preview_content = None;
         self.selection = None;
     }
 }
