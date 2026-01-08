@@ -61,7 +61,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
 }
 
 /// Apply selection highlighting to lines
-fn apply_selection_to_lines<'a>(
+pub fn apply_selection_to_lines<'a>(
     highlighted_lines: &[Line<'a>],
     raw_lines: &[String],
     selection: &TextSelection,

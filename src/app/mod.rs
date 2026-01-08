@@ -7,6 +7,7 @@ mod mouse;
 mod navigation;
 mod search;
 pub mod selection;
+pub mod split;
 mod symbol_search;
 mod theme_search;
 
@@ -24,6 +25,7 @@ use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
 
 use selection::TextSelection;
+use split::SplitLayout;
 
 /// Content displayed in the preview pane with syntax highlighting.
 #[derive(Clone)]
@@ -80,8 +82,12 @@ pub struct App {
     pub theme_preview_mode: bool,
     // Help mode state
     pub help_mode: bool,
+    // Split layout
+    pub split_layout: Option<SplitLayout>,
 }
 
+/// Main application state for the TUI file viewer.
+#[allow(clippy::struct_excessive_bools)]
 impl App {
     /// Returns the root directory being browsed.
     pub fn root_dir(&self) -> &Path {
@@ -169,6 +175,7 @@ impl App {
                 .collect(),
             theme_preview_mode: false,
             help_mode: false,
+            split_layout: None,
         };
 
         if !app.files.is_empty() {

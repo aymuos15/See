@@ -48,6 +48,18 @@ pub enum AppEvent {
     MouseDrag { column: u16, row: u16 },
     MouseUp { column: u16, row: u16 },
     CopySelection,
+    SplitHorizontal,
+    SplitVertical,
+    SplitUp,
+    SplitDown,
+    SplitLeft,
+    SplitRight,
+    SwapSplitOrientation,
+    CloseActivePane,
+    CyclePane,
+    ToggleFileList,
+    ResizeSplitLeft,
+    ResizeSplitRight,
     None,
 }
 
@@ -81,7 +93,7 @@ pub fn poll_event(
                 if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
                     return Ok(AppEvent::CopySelection);
                 }
-                return Ok(handle_key(key.code, any_search_mode));
+                return Ok(handle_key(key.code, key.modifiers, any_search_mode));
             }
             Event::Mouse(mouse) => {
                 return Ok(match mouse.kind {
@@ -109,7 +121,7 @@ pub fn poll_event(
 }
 
 #[allow(clippy::missing_const_for_fn)]
-fn handle_key(code: KeyCode, any_search_mode: bool) -> AppEvent {
+fn handle_key(code: KeyCode, modifiers: KeyModifiers, any_search_mode: bool) -> AppEvent {
     if any_search_mode {
         match code {
             KeyCode::Esc => AppEvent::CloseSearch, // Works for both file and symbol search
@@ -121,8 +133,25 @@ fn handle_key(code: KeyCode, any_search_mode: bool) -> AppEvent {
             _ => AppEvent::None,
         }
     } else {
+        // Alt-based split controls
+        if modifiers.contains(KeyModifiers::ALT) {
+            match code {
+                KeyCode::Char('s') => return AppEvent::SwapSplitOrientation,
+                KeyCode::Char('q') => return AppEvent::CloseActivePane,
+                KeyCode::Char('p') => return AppEvent::ToggleFileList,
+                KeyCode::Up => return AppEvent::SplitUp,
+                KeyCode::Down => return AppEvent::SplitDown,
+                KeyCode::Left => return AppEvent::SplitLeft,
+                KeyCode::Right => return AppEvent::SplitRight,
+                KeyCode::Char('h') => return AppEvent::ResizeSplitLeft,
+                KeyCode::Char('l') => return AppEvent::ResizeSplitRight,
+                _ => {}
+            }
+        }
+
         match code {
             KeyCode::Char('q') | KeyCode::Esc => AppEvent::Quit,
+            KeyCode::Tab => AppEvent::CyclePane,
             KeyCode::Char('/') => AppEvent::OpenSearch,
             KeyCode::Char('f') => AppEvent::OpenSymbolSearch,
             KeyCode::Char('g') => AppEvent::ToggleGitHighlight,
