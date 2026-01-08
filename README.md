@@ -1,4 +1,4 @@
-# TUI file viewer built with Ratatui.
+# See: A TUI file viewer.
 
 ![Main view](assets/main.png)
 
@@ -15,6 +15,10 @@
 ![Select](assets/select.png)
 
 *Text selection in preview pane*
+
+![Split Panes](assets/tabs_and_panes.png)
+
+*Split panes with tab bar for multiple files*
 
 ## Build
 
