@@ -23,6 +23,7 @@ impl App {
                 || self.help_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
+            &self.config.keys,
         )?;
 
         match event {

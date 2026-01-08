@@ -2,6 +2,7 @@ mod watcher;
 
 pub use watcher::{FileWatcher, RefreshTimer};
 
+use crate::config::{Action, KeyBindings};
 use crossterm::event::{
     self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
 };
@@ -71,6 +72,7 @@ pub fn poll_event(
     any_search_mode: bool,
     watcher: &mut FileWatcher,
     timer: &mut RefreshTimer,
+    keys: &KeyBindings,
 ) -> anyhow::Result<AppEvent> {
     // Check for file watcher events (non-blocking)
     if let Some(fs_event) = watcher.poll_events() {
@@ -89,11 +91,7 @@ pub fn poll_event(
                 if key.kind != KeyEventKind::Press {
                     return Ok(AppEvent::None);
                 }
-                // Handle Ctrl+c for copy selection
-                if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
-                    return Ok(AppEvent::CopySelection);
-                }
-                return Ok(handle_key(key.code, key.modifiers, any_search_mode));
+                return Ok(handle_key(key.code, key.modifiers, any_search_mode, keys));
             }
             Event::Mouse(mouse) => {
                 return Ok(match mouse.kind {
@@ -120,56 +118,66 @@ pub fn poll_event(
     Ok(AppEvent::None)
 }
 
-#[allow(clippy::missing_const_for_fn)]
-fn handle_key(code: KeyCode, modifiers: KeyModifiers, any_search_mode: bool) -> AppEvent {
+fn handle_key(
+    code: KeyCode,
+    modifiers: KeyModifiers,
+    any_search_mode: bool,
+    keys: &KeyBindings,
+) -> AppEvent {
     if any_search_mode {
-        match code {
-            KeyCode::Esc => AppEvent::CloseSearch, // Works for both file and symbol search
-            KeyCode::Enter => AppEvent::SearchConfirm, // Routes to correct handler in app
-            KeyCode::Backspace => AppEvent::SearchBackspace, // Routes to correct handler in app
-            KeyCode::Up => AppEvent::SearchNavigateUp, // Routes to correct handler in app
-            KeyCode::Down => AppEvent::SearchNavigateDown, // Routes to correct handler in app
-            KeyCode::Char(c) => AppEvent::SearchInput(c), // Routes to correct handler in app
-            _ => AppEvent::None,
+        // Check configurable search mode bindings first
+        if let Some(action) = keys.lookup_search(code, modifiers) {
+            return action_to_app_event(action);
+        }
+        // Fall through to text input for unbound keys
+        if let KeyCode::Char(c) = code {
+            return AppEvent::SearchInput(c);
         }
     } else {
-        // Alt-based split controls
-        if modifiers.contains(KeyModifiers::ALT) {
-            match code {
-                KeyCode::Char('s') => return AppEvent::SwapSplitOrientation,
-                KeyCode::Char('q') => return AppEvent::CloseActivePane,
-                KeyCode::Char('p') => return AppEvent::ToggleFileList,
-                KeyCode::Up => return AppEvent::SplitUp,
-                KeyCode::Down => return AppEvent::SplitDown,
-                KeyCode::Left => return AppEvent::SplitLeft,
-                KeyCode::Right => return AppEvent::SplitRight,
-                KeyCode::Char('h') => return AppEvent::ResizeSplitLeft,
-                KeyCode::Char('l') => return AppEvent::ResizeSplitRight,
-                _ => {}
-            }
+        // Look up the action in the keybindings
+        if let Some(action) = keys.lookup_normal(code, modifiers) {
+            return action_to_app_event(action);
         }
+    }
+    AppEvent::None
+}
 
-        match code {
-            KeyCode::Char('q') | KeyCode::Esc => AppEvent::Quit,
-            KeyCode::Tab => AppEvent::CyclePane,
-            KeyCode::Char('/') => AppEvent::OpenSearch,
-            KeyCode::Char('f') => AppEvent::OpenSymbolSearch,
-            KeyCode::Char('g') => AppEvent::ToggleGitHighlight,
-            KeyCode::Char('d') => AppEvent::ToggleDiff,
-            KeyCode::Char('t') => AppEvent::ToggleThemePreview,
-            KeyCode::Char('?') => AppEvent::ToggleHelp,
-            KeyCode::Char('j') => AppEvent::ScrollPreviewDown,
-            KeyCode::Char('k') => AppEvent::ScrollPreviewUp,
-            KeyCode::Down => AppEvent::NavigateDown,
-            KeyCode::Up => AppEvent::NavigateUp,
-            KeyCode::PageDown => AppEvent::ScrollPreviewPageDown,
-            KeyCode::PageUp => AppEvent::ScrollPreviewPageUp,
-            KeyCode::Char('H') => AppEvent::ShrinkFileList,
-            KeyCode::Char('L') => AppEvent::GrowFileList,
-            KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => AppEvent::Enter,
-            KeyCode::Backspace | KeyCode::Char('h') | KeyCode::Left => AppEvent::GoBack,
-            _ => AppEvent::None,
-        }
+/// Convert a keybinding Action to an `AppEvent`
+const fn action_to_app_event(action: Action) -> AppEvent {
+    match action {
+        Action::Quit => AppEvent::Quit,
+        Action::NavigateUp => AppEvent::NavigateUp,
+        Action::NavigateDown => AppEvent::NavigateDown,
+        Action::Enter => AppEvent::Enter,
+        Action::GoBack => AppEvent::GoBack,
+        Action::ScrollPreviewUp => AppEvent::ScrollPreviewUp,
+        Action::ScrollPreviewDown => AppEvent::ScrollPreviewDown,
+        Action::ScrollPreviewPageUp => AppEvent::ScrollPreviewPageUp,
+        Action::ScrollPreviewPageDown => AppEvent::ScrollPreviewPageDown,
+        Action::ShrinkFileList => AppEvent::ShrinkFileList,
+        Action::GrowFileList => AppEvent::GrowFileList,
+        Action::OpenSearch => AppEvent::OpenSearch,
+        Action::OpenSymbolSearch => AppEvent::OpenSymbolSearch,
+        Action::ToggleGitHighlight => AppEvent::ToggleGitHighlight,
+        Action::ToggleDiff => AppEvent::ToggleDiff,
+        Action::ToggleThemePreview => AppEvent::ToggleThemePreview,
+        Action::ToggleHelp => AppEvent::ToggleHelp,
+        Action::CyclePane => AppEvent::CyclePane,
+        Action::CopySelection => AppEvent::CopySelection,
+        Action::SwapSplitOrientation => AppEvent::SwapSplitOrientation,
+        Action::CloseActivePane => AppEvent::CloseActivePane,
+        Action::ToggleFileList => AppEvent::ToggleFileList,
+        Action::SplitUp => AppEvent::SplitUp,
+        Action::SplitDown => AppEvent::SplitDown,
+        Action::SplitLeft => AppEvent::SplitLeft,
+        Action::SplitRight => AppEvent::SplitRight,
+        Action::ResizeSplitLeft => AppEvent::ResizeSplitLeft,
+        Action::ResizeSplitRight => AppEvent::ResizeSplitRight,
+        Action::SearchClose => AppEvent::CloseSearch,
+        Action::SearchConfirm => AppEvent::SearchConfirm,
+        Action::SearchBackspace => AppEvent::SearchBackspace,
+        Action::SearchNavigateUp => AppEvent::SearchNavigateUp,
+        Action::SearchNavigateDown => AppEvent::SearchNavigateDown,
     }
 }
 
@@ -179,149 +187,188 @@ mod tests {
 
     const NO_MODS: KeyModifiers = KeyModifiers::NONE;
 
+    fn default_keys() -> KeyBindings {
+        KeyBindings::default()
+    }
+
     #[test]
     fn test_handle_key_normal_mode_quit() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Char('q'), NO_MODS, false),
+            handle_key(KeyCode::Char('q'), NO_MODS, false, &keys),
             AppEvent::Quit
         ));
         assert!(matches!(
-            handle_key(KeyCode::Esc, NO_MODS, false),
+            handle_key(KeyCode::Esc, NO_MODS, false, &keys),
             AppEvent::Quit
         ));
     }
 
     #[test]
     fn test_handle_key_normal_mode_navigation() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Down, NO_MODS, false),
+            handle_key(KeyCode::Down, NO_MODS, false, &keys),
             AppEvent::NavigateDown
         ));
         assert!(matches!(
-            handle_key(KeyCode::Up, NO_MODS, false),
+            handle_key(KeyCode::Up, NO_MODS, false, &keys),
             AppEvent::NavigateUp
         ));
         assert!(matches!(
-            handle_key(KeyCode::Enter, NO_MODS, false),
+            handle_key(KeyCode::Enter, NO_MODS, false, &keys),
             AppEvent::Enter
         ));
         assert!(matches!(
-            handle_key(KeyCode::Backspace, NO_MODS, false),
+            handle_key(KeyCode::Backspace, NO_MODS, false, &keys),
             AppEvent::GoBack
         ));
     }
 
     #[test]
     fn test_handle_key_normal_mode_scroll() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Char('j'), NO_MODS, false),
+            handle_key(KeyCode::Char('j'), NO_MODS, false, &keys),
             AppEvent::ScrollPreviewDown
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('k'), NO_MODS, false),
+            handle_key(KeyCode::Char('k'), NO_MODS, false, &keys),
             AppEvent::ScrollPreviewUp
         ));
         assert!(matches!(
-            handle_key(KeyCode::PageDown, NO_MODS, false),
+            handle_key(KeyCode::PageDown, NO_MODS, false, &keys),
             AppEvent::ScrollPreviewPageDown
         ));
         assert!(matches!(
-            handle_key(KeyCode::PageUp, NO_MODS, false),
+            handle_key(KeyCode::PageUp, NO_MODS, false, &keys),
             AppEvent::ScrollPreviewPageUp
         ));
     }
 
     #[test]
     fn test_handle_key_normal_mode_resize() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Char('H'), NO_MODS, false),
+            handle_key(KeyCode::Char('H'), NO_MODS, false, &keys),
             AppEvent::ShrinkFileList
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('L'), NO_MODS, false),
+            handle_key(KeyCode::Char('L'), NO_MODS, false, &keys),
             AppEvent::GrowFileList
         ));
     }
 
     #[test]
     fn test_handle_key_normal_mode_search() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Char('/'), NO_MODS, false),
+            handle_key(KeyCode::Char('/'), NO_MODS, false, &keys),
             AppEvent::OpenSearch
         ));
     }
 
     #[test]
     fn test_handle_key_search_mode_input() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Char('a'), NO_MODS, true),
+            handle_key(KeyCode::Char('a'), NO_MODS, true, &keys),
             AppEvent::SearchInput('a')
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('z'), NO_MODS, true),
+            handle_key(KeyCode::Char('z'), NO_MODS, true, &keys),
             AppEvent::SearchInput('z')
         ));
     }
 
     #[test]
     fn test_handle_key_search_mode_navigation() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Up, NO_MODS, true),
+            handle_key(KeyCode::Up, NO_MODS, true, &keys),
             AppEvent::SearchNavigateUp
         ));
         assert!(matches!(
-            handle_key(KeyCode::Down, NO_MODS, true),
+            handle_key(KeyCode::Down, NO_MODS, true, &keys),
             AppEvent::SearchNavigateDown
         ));
     }
 
     #[test]
     fn test_handle_key_search_mode_confirm() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Enter, NO_MODS, true),
+            handle_key(KeyCode::Enter, NO_MODS, true, &keys),
             AppEvent::SearchConfirm
         ));
     }
 
     #[test]
     fn test_handle_key_search_mode_close() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Esc, NO_MODS, true),
+            handle_key(KeyCode::Esc, NO_MODS, true, &keys),
             AppEvent::CloseSearch
         ));
     }
 
     #[test]
     fn test_handle_key_search_mode_backspace() {
+        let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Backspace, NO_MODS, true),
+            handle_key(KeyCode::Backspace, NO_MODS, true, &keys),
             AppEvent::SearchBackspace
         ));
     }
 
     #[test]
     fn test_handle_key_unknown() {
+        let keys = default_keys();
         // Tab now cycles panes, so it's not None
         assert!(matches!(
-            handle_key(KeyCode::Tab, NO_MODS, false),
+            handle_key(KeyCode::Tab, NO_MODS, false, &keys),
             AppEvent::CyclePane
         ));
         assert!(matches!(
-            handle_key(KeyCode::Tab, NO_MODS, true),
+            handle_key(KeyCode::Tab, NO_MODS, true, &keys),
             AppEvent::None
         ));
     }
 
     #[test]
     fn test_handle_key_arrows_in_search() {
+        let keys = default_keys();
         // Arrows navigate search, not open files
         assert!(matches!(
-            handle_key(KeyCode::Left, NO_MODS, true),
+            handle_key(KeyCode::Left, NO_MODS, true, &keys),
             AppEvent::None
         ));
         assert!(matches!(
-            handle_key(KeyCode::Right, NO_MODS, true),
+            handle_key(KeyCode::Right, NO_MODS, true, &keys),
             AppEvent::None
+        ));
+    }
+
+    #[test]
+    fn test_custom_keybindings() {
+        use crate::config::KeyBindingsConfig;
+
+        // Test that custom keybindings override defaults
+        let config = KeyBindingsConfig {
+            quit: Some(vec!["ctrl+q".to_string()]),
+            ..Default::default()
+        };
+        let keys = KeyBindings::from_config(Some(config));
+
+        // Old 'q' binding should not trigger quit
+        assert!(matches!(
+            handle_key(KeyCode::Char('q'), NO_MODS, false, &keys),
+            AppEvent::None
+        ));
+        // New Ctrl+q binding should trigger quit
+        assert!(matches!(
+            handle_key(KeyCode::Char('q'), KeyModifiers::CONTROL, false, &keys),
+            AppEvent::Quit
         ));
     }
 }

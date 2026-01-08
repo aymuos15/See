@@ -1,3 +1,7 @@
+mod keys;
+
+pub use keys::{Action, KeyBindings, KeyBindingsConfig};
+
 use crate::theme::Theme;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::Deserialize;
@@ -12,6 +16,8 @@ struct ConfigFile {
     theme: Option<ThemeConfig>,
     #[serde(default)]
     divider_width: Option<u16>,
+    #[serde(default)]
+    keys: Option<KeyBindingsConfig>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -36,6 +42,8 @@ pub struct Config {
     pub theme: Theme,
     /// Width of divider lines between split panes (1 = thin line character, 2+ = solid block)
     pub divider_width: u16,
+    /// Configurable key bindings
+    pub keys: KeyBindings,
 }
 
 impl Default for Config {
@@ -44,6 +52,7 @@ impl Default for Config {
             exclude_set: GlobSet::empty(),
             theme: Theme::default(),
             divider_width: 1,
+            keys: KeyBindings::default(),
         }
     }
 }
@@ -61,11 +70,13 @@ impl Config {
         let exclude_set = build_globset(&config_file.exclude)?;
         let theme = Theme::from_config(config_file.theme);
         let divider_width = config_file.divider_width.unwrap_or(1).max(1);
+        let keys = KeyBindings::from_config(config_file.keys);
 
         Some(Self {
             exclude_set,
             theme,
             divider_width,
+            keys,
         })
     }
 
@@ -102,7 +113,7 @@ mod tests {
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
         let config = Config {
             exclude_set,
-            theme: crate::theme::Theme::default(),
+            ..Default::default()
         };
 
         assert!(config.is_excluded(Path::new("debug.log")));
@@ -116,7 +127,7 @@ mod tests {
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
         let config = Config {
             exclude_set,
-            theme: crate::theme::Theme::default(),
+            ..Default::default()
         };
 
         assert!(config.is_excluded(Path::new("target/debug/app")));
@@ -134,7 +145,7 @@ mod tests {
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
         let config = Config {
             exclude_set,
-            theme: crate::theme::Theme::default(),
+            ..Default::default()
         };
 
         assert!(config.is_excluded(Path::new("app.log")));
@@ -150,7 +161,7 @@ mod tests {
         let exclude_set = build_globset(&patterns).expect("Failed to build globset");
         let config = Config {
             exclude_set,
-            theme: crate::theme::Theme::default(),
+            ..Default::default()
         };
 
         // Valid pattern works

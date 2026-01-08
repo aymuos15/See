@@ -1,0 +1,99 @@
+# Viewer Configuration
+# ====================
+# Copy this file to ~/.config/viewer/config.toml
+#
+# All options shown below are optional. Default values are used when not specified.
+
+# File/directory exclusion patterns (glob syntax)
+# Files matching these patterns will be hidden from the file list
+exclude = [
+    "*.log",
+    "*.tmp",
+    "target/**",
+    "node_modules",
+    ".git",
+]
+
+# Width of dividers between split panes
+# 1 = thin line character, 2+ = solid block
+divider_width = 1
+
+# Theme Configuration
+# -------------------
+[theme]
+# Option 1: Use a Helix theme by name (searches ~/.config/helix/themes/ and system paths)
+# helix_theme = "catppuccin_mocha"
+
+# Option 2: Define custom colors (hex format)
+# These are ignored if helix_theme is set and found
+# bg_main = "#1a1a1a"
+# bg_darker = "#0f0f0f"
+# bg_selected = "#2a2a2a"
+# bg_search = "#ff6600"
+# bg_selection = "#ffff00"
+# fg_text = "#e0e0e0"
+# fg_selected = "#00ff00"
+# fg_dim = "#808080"
+# fg_folder = "#00ccff"
+# fg_modified = "#ff9900"
+# border = "#666666"
+# line_num = "#666666"
+
+# Key Bindings
+# ------------
+# All key bindings are optional. Default values shown below.
+# Multiple keys can be bound to the same action using arrays.
+#
+# Key format:
+#   - Simple keys: "q", "j", "k", "/", "?"
+#   - Arrow keys: "up", "down", "left", "right"
+#   - Special keys: "enter", "esc", "backspace", "tab", "space"
+#   - Page keys: "pageup", "pagedown", "home", "end"
+#   - Function keys: "f1" through "f12"
+#   - With modifiers: "ctrl+c", "alt+s", "shift+h"
+#
+[keys]
+# Normal mode - Navigation
+quit = ["q", "esc"]
+navigate_up = ["up"]
+navigate_down = ["down"]
+enter = ["enter", "l", "right"]
+go_back = ["backspace", "h", "left"]
+
+# Normal mode - Preview scrolling
+scroll_preview_up = ["k"]
+scroll_preview_down = ["j"]
+scroll_preview_page_up = ["pageup"]
+scroll_preview_page_down = ["pagedown"]
+
+# Normal mode - Pane resizing
+shrink_file_list = ["shift+h"]
+grow_file_list = ["shift+l"]
+
+# Normal mode - Features
+open_search = ["/"]
+open_symbol_search = ["f"]
+toggle_git_highlight = ["g"]
+toggle_diff = ["d"]
+toggle_theme_preview = ["t"]
+toggle_help = ["?"]
+cycle_pane = ["tab"]
+copy_selection = ["ctrl+c"]
+
+# Split pane controls
+swap_split_orientation = ["alt+s"]
+close_active_pane = ["alt+q"]
+toggle_file_list = ["alt+p"]
+split_up = ["alt+up"]
+split_down = ["alt+down"]
+split_left = ["alt+left"]
+split_right = ["alt+right"]
+resize_split_left = ["alt+h"]
+resize_split_right = ["alt+l"]
+
+# Search mode (file search, symbol search, theme picker)
+search_close = ["esc"]
+search_confirm = ["enter"]
+search_backspace = ["backspace"]
+search_navigate_up = ["up"]
+search_navigate_down = ["down"]
