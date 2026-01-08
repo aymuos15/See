@@ -52,12 +52,24 @@ cargo run [FILE_PATH]
   - `Enter` - Go to symbol and close search
   - `Esc` - Close search
 
+### Split Panes
+
+- `Alt+Up/Down/Left/Right` - Split pane in that direction
+- `Alt+q` - Close active pane
+- `Alt+s` - Swap split orientation (horizontal/vertical)
+- `Alt+p` - Toggle file list visibility in split mode
+- `Alt+h` / `Alt+l` - Resize split (shrink/grow active pane)
+- `Tab` - Cycle to next pane
+
 ## Config
 
 Configure in `~/.config/viewer/config.toml`:
 
 ```toml
 exclude = ["*.pyc", "target/**", "node_modules/**"]
+
+# Width of divider lines between split panes (1 = thin line, 2+ = solid block)
+divider_width = 1
 ```
 
 ## Auto-Refresh
