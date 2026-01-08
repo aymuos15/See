@@ -40,70 +40,10 @@ Press `?` in the app to see all keyboard shortcuts, or see [`config.example.toml
 
 Configuration file location: `~/.config/viewer/config.toml`
 
-See [`config.example.toml`](config.example.toml) for a complete example with all options.
-
-### General Options
-
-```toml
-# File/directory exclusion patterns (glob syntax)
-exclude = ["*.pyc", "target/**", "node_modules/**", ".git"]
-
-# Width of divider lines between split panes (1 = thin line, 2+ = solid block)
-divider_width = 1
-```
-
-### Theme Configuration
-
-```toml
-[theme]
-# Option 1: Use a Helix theme by name
-helix_theme = "catppuccin_mocha"
-
-# Option 2: Define custom colors (hex format)
-# bg_main = "#1a1a1a"
-# bg_darker = "#0f0f0f"
-# bg_selected = "#2a2a2a"
-# bg_search = "#ff6600"
-# bg_selection = "#ffff00"
-# fg_text = "#e0e0e0"
-# fg_selected = "#00ff00"
-# fg_dim = "#808080"
-# fg_folder = "#00ccff"
-# fg_modified = "#ff9900"
-# border = "#666666"
-# line_num = "#666666"
-```
-
-### Key Bindings
-
-All key bindings are customizable. Keys can be specified as:
-- Simple keys: `"q"`, `"j"`, `"/"`, `"?"`
-- Special keys: `"enter"`, `"esc"`, `"backspace"`, `"tab"`, `"space"`
-- Arrow/page keys: `"up"`, `"down"`, `"pageup"`, `"pagedown"`
-- With modifiers: `"ctrl+c"`, `"alt+s"`, `"shift+h"`
-
-```toml
-[keys]
-# Multiple keys can be bound to the same action
-quit = ["q", "esc"]
-navigate_up = ["up"]
-navigate_down = ["down"]
-enter = ["enter", "l", "right"]
-go_back = ["backspace", "h", "left"]
-scroll_preview_up = ["k"]
-scroll_preview_down = ["j"]
-open_search = ["/"]
-toggle_help = ["?"]
-copy_selection = ["ctrl+c"]
-
-# Split pane controls
-split_up = ["alt+up"]
-split_down = ["alt+down"]
-close_active_pane = ["alt+q"]
-cycle_pane = ["tab"]
-```
-
-See [`config.example.toml`](config.example.toml) for all available key bindings.
+See [`config.example.toml`](config.example.toml) for all available options including:
+- File/directory exclusion patterns
+- Theme configuration (Helix themes or custom colors)
+- Customizable key bindings
 
 ## Auto-Refresh
 
