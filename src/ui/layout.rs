@@ -4,12 +4,18 @@ use ratatui::prelude::*;
 pub struct AppLayout {
     pub file_list_area: Option<Rect>,
     pub pane_areas: Vec<(usize, Rect)>,
+    pub dividers: Vec<Rect>,
     pub tab_bar_area: Rect,
 }
 
 impl AppLayout {
     #[allow(clippy::ref_option, clippy::option_if_let_else)]
-    pub fn new(area: Rect, split_layout: &Option<SplitLayout>, split_percent: u16) -> Self {
+    pub fn new(
+        area: Rect,
+        split_layout: &Option<SplitLayout>,
+        split_percent: u16,
+        divider_width: u16,
+    ) -> Self {
         if let Some(layout) = split_layout {
             let (file_list_area, panes_area) = if layout.file_list_visible {
                 let chunks: [Rect; 2] =
@@ -25,7 +31,8 @@ impl AppLayout {
 
             Self {
                 file_list_area,
-                pane_areas: layout.get_pane_areas(panes_with_tabs[1]),
+                pane_areas: layout.get_pane_areas(panes_with_tabs[1], divider_width),
+                dividers: layout.get_dividers(panes_with_tabs[1], divider_width),
                 tab_bar_area: panes_with_tabs[0],
             }
         } else {
@@ -40,6 +47,7 @@ impl AppLayout {
             Self {
                 file_list_area: Some(file_list_area),
                 pane_areas: vec![(0, preview_area)],
+                dividers: Vec::new(),
                 tab_bar_area: Rect::default(),
             }
         }

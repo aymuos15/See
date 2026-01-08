@@ -387,14 +387,42 @@ impl SplitLayout {
         }
     }
 
-    pub fn get_pane_areas(&self, area: Rect) -> Vec<(usize, Rect)> {
+    pub fn get_pane_areas(&self, area: Rect, divider_width: u16) -> Vec<(usize, Rect)> {
         let mut areas = Vec::new();
-        self.collect_areas(&self.split_tree, area, &mut areas);
+        let mut dividers = Vec::new();
+        self.collect_areas(
+            &self.split_tree,
+            area,
+            &mut areas,
+            &mut dividers,
+            divider_width,
+        );
         areas
     }
 
+    /// Get vertical divider positions (x, y, height) for rendering
+    pub fn get_dividers(&self, area: Rect, divider_width: u16) -> Vec<Rect> {
+        let mut areas = Vec::new();
+        let mut dividers = Vec::new();
+        self.collect_areas(
+            &self.split_tree,
+            area,
+            &mut areas,
+            &mut dividers,
+            divider_width,
+        );
+        dividers
+    }
+
     #[allow(clippy::only_used_in_recursion, clippy::cast_possible_truncation)]
-    fn collect_areas(&self, node: &SplitNode, area: Rect, areas: &mut Vec<(usize, Rect)>) {
+    fn collect_areas(
+        &self,
+        node: &SplitNode,
+        area: Rect,
+        areas: &mut Vec<(usize, Rect)>,
+        dividers: &mut Vec<Rect>,
+        divider_width: u16,
+    ) {
         match node {
             SplitNode::Leaf { pane_index } => {
                 areas.push((*pane_index, area));
@@ -404,34 +432,46 @@ impl SplitLayout {
                 right,
                 percent,
             } => {
-                let left_width = (u32::from(area.width) * u32::from(*percent) / 100)
+                // Leave space for divider between panes
+                let available_width = area.width.saturating_sub(divider_width);
+                let left_width = (u32::from(available_width) * u32::from(*percent) / 100)
                     .min(u32::from(u16::MAX)) as u16;
                 let left_area = Rect::new(area.x, area.y, left_width, area.height);
+                // Divider between left and right panes
+                let divider_area =
+                    Rect::new(area.x + left_width, area.y, divider_width, area.height);
+                dividers.push(divider_area);
+                // Right pane starts after left pane + divider
                 let right_area = Rect::new(
-                    area.x + left_width,
+                    area.x + left_width + divider_width,
                     area.y,
-                    area.width - left_width,
+                    available_width - left_width,
                     area.height,
                 );
-                self.collect_areas(left, left_area, areas);
-                self.collect_areas(right, right_area, areas);
+                self.collect_areas(left, left_area, areas, dividers, divider_width);
+                self.collect_areas(right, right_area, areas, dividers, divider_width);
             }
             SplitNode::Vertical {
                 top,
                 bottom,
                 percent,
             } => {
-                let top_height = (u32::from(area.height) * u32::from(*percent) / 100)
+                // Leave 1 row for divider between panes (always 1 row for horizontal dividers)
+                let available_height = area.height.saturating_sub(1);
+                let top_height = (u32::from(available_height) * u32::from(*percent) / 100)
                     .min(u32::from(u16::MAX)) as u16;
                 let top_area = Rect::new(area.x, area.y, area.width, top_height);
+                // Divider is 1 row tall between top and bottom panes
+                let divider_area = Rect::new(area.x, area.y + top_height, area.width, 1);
+                dividers.push(divider_area);
                 let bottom_area = Rect::new(
                     area.x,
-                    area.y + top_height,
+                    area.y + top_height + 1,
                     area.width,
-                    area.height - top_height,
+                    available_height - top_height,
                 );
-                self.collect_areas(top, top_area, areas);
-                self.collect_areas(bottom, bottom_area, areas);
+                self.collect_areas(top, top_area, areas, dividers, divider_width);
+                self.collect_areas(bottom, bottom_area, areas, dividers, divider_width);
             }
         }
     }

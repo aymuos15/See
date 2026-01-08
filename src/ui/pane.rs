@@ -3,16 +3,9 @@ use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph};
 
-pub fn render(frame: &mut Frame, pane: &Pane, area: Rect, theme: &Theme, is_active: bool) {
-    let border_style = if is_active {
-        Style::default().fg(theme.fg_selected)
-    } else {
-        Style::default().fg(theme.fg_dim)
-    };
-
-    let block = Block::bordered()
-        .border_style(border_style)
-        .style(Style::default().bg(theme.bg_main));
+pub fn render(frame: &mut Frame, pane: &Pane, area: Rect, theme: &Theme, _is_active: bool) {
+    // No borders - tab bar serves as top separator, divider line between panes drawn separately
+    let block = Block::default().style(Style::default().bg(theme.bg_main));
 
     let inner_area = block.inner(area);
     frame.render_widget(block, area);

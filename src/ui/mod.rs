@@ -10,9 +10,19 @@ pub mod theme_picker;
 
 use crate::app::App;
 use ratatui::prelude::*;
+use ratatui::widgets::{Block, Paragraph};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
-    let layout = layout::AppLayout::new(frame.area(), &app.split_layout, app.split_percent);
+    // Fill entire frame with background color first
+    let bg_block = Block::default().style(Style::default().bg(app.config.theme.bg_main));
+    frame.render_widget(bg_block, frame.area());
+
+    let layout = layout::AppLayout::new(
+        frame.area(),
+        &app.split_layout,
+        app.split_percent,
+        app.config.divider_width,
+    );
 
     if let Some(file_list_area) = layout.file_list_area {
         file_list::render(frame, app, file_list_area);
@@ -29,6 +39,75 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     &app.config.theme,
                     pane.id == split_layout.active_pane_index,
                 );
+            }
+        }
+
+        // Render dividers between panes
+        let divider_width = app.config.divider_width;
+
+        if divider_width == 1 {
+            // Thin line characters for width 1
+            let horizontal_dividers: Vec<&Rect> =
+                layout.dividers.iter().filter(|d| d.height == 1).collect();
+            let vertical_dividers: Vec<&Rect> =
+                layout.dividers.iter().filter(|d| d.height > 1).collect();
+
+            for divider in &layout.dividers {
+                if divider.height > 1 {
+                    // Vertical divider
+                    let lines: Vec<Line> = (0..divider.height)
+                        .map(|row| {
+                            let y = divider.y + row;
+                            let mut ch = "│";
+                            for h in &horizontal_dividers {
+                                if h.y == y {
+                                    let h_start = h.x;
+                                    let h_end = h.x + h.width;
+                                    if divider.x == h_start.saturating_sub(1) {
+                                        ch = "├";
+                                    } else if divider.x == h_end {
+                                        ch = "┤";
+                                    } else if divider.x >= h_start && divider.x < h_end {
+                                        ch = "┼";
+                                    }
+                                }
+                            }
+                            Line::from(ch).style(Style::default().fg(app.config.theme.fg_dim))
+                        })
+                        .collect();
+                    let divider_widget =
+                        Paragraph::new(lines).style(Style::default().bg(app.config.theme.bg_main));
+                    frame.render_widget(divider_widget, *divider);
+                } else {
+                    // Horizontal divider
+                    let line_str: String = (0..divider.width)
+                        .map(|col| {
+                            let x = divider.x + col;
+                            for v in &vertical_dividers {
+                                if x >= v.x
+                                    && x < v.x + v.width
+                                    && divider.y >= v.y
+                                    && divider.y < v.y + v.height
+                                {
+                                    return '┼';
+                                }
+                            }
+                            '─'
+                        })
+                        .collect();
+                    let line =
+                        Line::from(line_str).style(Style::default().fg(app.config.theme.fg_dim));
+                    let divider_widget =
+                        Paragraph::new(line).style(Style::default().bg(app.config.theme.bg_main));
+                    frame.render_widget(divider_widget, *divider);
+                }
+            }
+        } else {
+            // Solid block for wider dividers
+            for divider in &layout.dividers {
+                let divider_block =
+                    Block::default().style(Style::default().bg(app.config.theme.fg_dim));
+                frame.render_widget(divider_block, *divider);
             }
         }
     } else {
