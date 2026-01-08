@@ -34,36 +34,7 @@ cargo run [FILE_PATH]
 
 ## Controls
 
-- `q` or `Esc` - Quit
-- `j`/`k` or mouse scroll - Scroll preview
-- `PgUp`/`PgDn` - Page up/down in preview
-- Click and drag - Select text in preview
-- `Ctrl+c` - Copy selected text
-- `h`/`l` or `Left`/`Right` - Navigate back/enter directory
-- `Shift+H` / `Shift+L` - Shrink/grow file list pane
-- `g` - Toggle git highlighting (shows modified files with ● dot indicator and colored text)
-- `d` - Toggle unified git diff view for the current file
-- `t` - Toggle theme preview (cycle through themes)
-- `?` - Show keyboard shortcuts help overlay
-- `/` - Open file search (searches entire directory tree from root)
-  - Type to filter files by name
-  - `Up`/`Down` - Navigate results
-  - `Enter` - Go to file and close search
-  - `Esc` - Close search
-- `f` - Symbol search (tree-sitter powered, supports Rust/Python/JS/TS/Go/HTML/CSS)
-  - Type to filter symbols
-  - `Up`/`Down` - Navigate results
-  - `Enter` - Go to symbol and close search
-  - `Esc` - Close search
-
-### Split Panes
-
-- `Alt+Up/Down/Left/Right` - Split pane in that direction
-- `Alt+q` - Close active pane
-- `Alt+s` - Swap split orientation (horizontal/vertical)
-- `Alt+p` - Toggle file list visibility in split mode
-- `Alt+h` / `Alt+l` - Resize split (shrink/grow active pane)
-- `Tab` - Cycle to next pane
+Press `?` in the app to see all keyboard shortcuts, or see [`config.example.toml`](config.example.toml) for the full list of configurable key bindings.
 
 ## Configuration
 
