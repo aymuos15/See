@@ -28,7 +28,7 @@ impl App {
         let Some(preview_area) = self.last_preview_area else {
             return;
         };
-        let Some(preview) = &self.preview_content else {
+        let Some(preview) = &self.shared_preview_content else {
             return;
         };
 
@@ -60,7 +60,7 @@ impl App {
         let Some(preview_area) = self.last_preview_area else {
             return;
         };
-        let Some(preview) = &self.preview_content else {
+        let Some(preview) = &self.shared_preview_content else {
             return;
         };
 
@@ -91,7 +91,7 @@ impl App {
             return false;
         }
 
-        let Some(preview) = &self.preview_content else {
+        let Some(preview) = &self.shared_preview_content else {
             return false;
         };
 
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn test_handle_mouse_down_without_preview() {
         let mut app = create_test_app();
-        app.preview_content = None;
+        app.shared_preview_content = None;
         app.last_preview_area = Some(Rect::new(0, 0, 80, 24));
 
         app.handle_mouse_down(10, 5);
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn test_copy_selection_without_preview() {
         let mut app = create_test_app();
-        app.preview_content = None;
+        app.shared_preview_content = None;
         app.selection = Some(TextSelection {
             anchor: TextPosition::new(0, 0),
             cursor: TextPosition::new(0, 5),

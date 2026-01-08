@@ -4,7 +4,7 @@ This document provides guidelines for AI coding agents working on this Rust TUI 
 
 ## Project Overview
 
-A terminal-based file viewer built with Ratatui, featuring syntax highlighting, git integration, and symbol search. Written in Rust (2021 edition).
+A terminal-based file viewer built with Ratatui, featuring syntax highlighting, git integration, symbol search, and split panes. Written in Rust (2021 edition).
 
 ## Build Commands
 
@@ -126,6 +126,7 @@ src/
   main.rs           # Entry point, CLI parsing
   tui.rs            # Terminal init/restore
   app/              # Core application logic (App struct, event handling, navigation)
+    split.rs        # Split pane management (SplitLayout, Pane, SplitNode tree)
   config/           # Configuration loading
   event/            # Event handling, file watching
   files/            # File system operations
@@ -133,6 +134,9 @@ src/
   highlight/        # Syntax highlighting
   theme/            # Theming system
   ui/               # UI rendering
+    pane.rs         # Individual pane rendering
+    tab_bar.rs      # Tab bar for split panes
+    layout.rs       # Layout calculation with dividers
 tests/              # Integration tests
 ```
 

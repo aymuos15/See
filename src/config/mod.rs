@@ -10,6 +10,8 @@ struct ConfigFile {
     exclude: Vec<String>,
     #[serde(default)]
     theme: Option<ThemeConfig>,
+    #[serde(default)]
+    divider_width: Option<u16>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -32,6 +34,8 @@ pub struct ThemeConfig {
 pub struct Config {
     pub exclude_set: GlobSet,
     pub theme: Theme,
+    /// Width of divider lines between split panes (1 = thin line character, 2+ = solid block)
+    pub divider_width: u16,
 }
 
 impl Default for Config {
@@ -39,6 +43,7 @@ impl Default for Config {
         Self {
             exclude_set: GlobSet::empty(),
             theme: Theme::default(),
+            divider_width: 1,
         }
     }
 }
@@ -55,8 +60,13 @@ impl Config {
 
         let exclude_set = build_globset(&config_file.exclude)?;
         let theme = Theme::from_config(config_file.theme);
+        let divider_width = config_file.divider_width.unwrap_or(1).max(1);
 
-        Some(Self { exclude_set, theme })
+        Some(Self {
+            exclude_set,
+            theme,
+            divider_width,
+        })
     }
 
     pub fn is_excluded(&self, path: &Path) -> bool {

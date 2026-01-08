@@ -171,6 +171,60 @@ impl App {
                     self.go_back();
                 }
             }
+            AppEvent::SplitHorizontal | AppEvent::SplitVertical => {
+                let direction = match event {
+                    AppEvent::SplitHorizontal => crate::app::split::SplitDirection::Right,
+                    AppEvent::SplitVertical => crate::app::split::SplitDirection::Down,
+                    _ => unreachable!(),
+                };
+                self.split_active_pane(direction);
+            }
+            AppEvent::SplitUp
+            | AppEvent::SplitDown
+            | AppEvent::SplitLeft
+            | AppEvent::SplitRight => {
+                let direction = match event {
+                    AppEvent::SplitUp => crate::app::split::SplitDirection::Up,
+                    AppEvent::SplitDown => crate::app::split::SplitDirection::Down,
+                    AppEvent::SplitLeft => crate::app::split::SplitDirection::Left,
+                    AppEvent::SplitRight => crate::app::split::SplitDirection::Right,
+                    _ => unreachable!(),
+                };
+                self.split_active_pane(direction);
+            }
+            AppEvent::CloseActivePane => {
+                if let Some(ref mut layout) = self.split_layout {
+                    layout.close_active_pane();
+                    if layout.panes.len() <= 1 {
+                        self.split_layout = None;
+                    }
+                }
+            }
+            AppEvent::CyclePane => {
+                if let Some(ref mut layout) = self.split_layout {
+                    layout.cycle_active_pane();
+                }
+            }
+            AppEvent::SwapSplitOrientation => {
+                if let Some(ref mut layout) = self.split_layout {
+                    layout.swap_active_split_orientation();
+                }
+            }
+            AppEvent::ToggleFileList => {
+                if let Some(ref mut layout) = self.split_layout {
+                    layout.file_list_visible = !layout.file_list_visible;
+                }
+            }
+            AppEvent::ResizeSplitLeft => {
+                if let Some(ref mut layout) = self.split_layout {
+                    layout.resize_active_split(-5);
+                }
+            }
+            AppEvent::ResizeSplitRight => {
+                if let Some(ref mut layout) = self.split_layout {
+                    layout.resize_active_split(5);
+                }
+            }
             AppEvent::MouseDown { column, row } => {
                 if !self.search_mode && !self.symbol_search_mode {
                     self.handle_mouse_down(column, row);
@@ -202,6 +256,31 @@ impl App {
             self.exit_symbol_search_mode();
         } else {
             self.should_quit = true;
+        }
+    }
+
+    fn split_active_pane(&mut self, direction: crate::app::split::SplitDirection) {
+        use std::rc::Rc;
+
+        if self.split_layout.is_none() {
+            let mut layout = crate::app::split::SplitLayout::new();
+            // Use shared preview content (Rc::clone is O(1))
+            if let Some(ref preview) = self.shared_preview_content {
+                if let Some(pane) = layout.panes.get_mut(0) {
+                    pane.preview_content = Some(Rc::clone(preview));
+                    // Find current file path
+                    if let Some(idx) = self.file_list_state.selected() {
+                        if let Some(entry) = self.files.get(idx) {
+                            pane.file_path = Some(entry.path.clone());
+                        }
+                    }
+                }
+            }
+            self.split_layout = Some(layout);
+        }
+
+        if let Some(ref mut layout) = self.split_layout {
+            let _ = layout.split_active_pane(direction, 50);
         }
     }
 }
