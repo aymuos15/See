@@ -4,12 +4,14 @@ use crate::constants::{
     SEARCH_POPUP_WIDTH_PERCENT,
 };
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Clear, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
 /// Renders the appropriate search popup based on current mode.
 pub fn render(frame: &mut Frame, app: &App) {
     if app.symbol_search_mode {
         render_symbol_search(frame, app);
+    } else if app.find_mode {
+        render_find_search(frame, app);
     } else {
         render_file_search(frame, app);
     }
@@ -153,4 +155,33 @@ fn render_symbol_search(frame: &mut Frame, app: &App) {
             theme,
         );
     }
+}
+
+fn render_find_search(frame: &mut Frame, app: &App) {
+    let theme = &app.config.theme;
+    let area = frame.area();
+
+    // Position in top right
+    let popup_width = (area.width * 30).min(40);
+    let popup_height = 3;
+    let margin = 1;
+    let popup_x = area.width.saturating_sub(popup_width + margin);
+    let popup_y = margin;
+
+    let popup_area = Rect {
+        x: popup_x,
+        y: popup_y,
+        width: popup_width,
+        height: popup_height,
+    };
+
+    frame.render_widget(Clear, popup_area);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.fg_dim))
+        .style(Style::default().bg(theme.bg_search));
+    let inner_area = block.inner(popup_area);
+    frame.render_widget(block, popup_area);
+
+    render_input(frame, inner_area, "\\", &app.find_query, theme);
 }

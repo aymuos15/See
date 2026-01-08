@@ -186,6 +186,8 @@ pub fn apply_word_highlights<'a>(
         .add_modifier(Modifier::BOLD)
         .add_modifier(Modifier::UNDERLINED);
 
+    let word_lower = word.to_lowercase();
+
     lines
         .iter()
         .enumerate()
@@ -196,8 +198,9 @@ pub fn apply_word_highlights<'a>(
 
             let mut current_line = line.clone();
             let mut start_search = 0;
+            let raw_line_lower = raw_line.to_lowercase();
 
-            while let Some(start_idx) = raw_line[start_search..].find(word) {
+            while let Some(start_idx) = raw_line_lower[start_search..].find(&word_lower) {
                 let absolute_start = start_search + start_idx;
                 let absolute_end = absolute_start + word.len();
 
@@ -209,8 +212,8 @@ pub fn apply_word_highlights<'a>(
                 };
                 let after_char = raw_line.chars().nth(absolute_end);
 
-                let is_whole_word = before_char.map_or(true, |c| !c.is_alphanumeric() && c != '_')
-                    && after_char.map_or(true, |c| !c.is_alphanumeric() && c != '_');
+                let is_whole_word = before_char.is_none_or(|c| !c.is_alphanumeric() && c != '_')
+                    && after_char.is_none_or(|c| !c.is_alphanumeric() && c != '_');
 
                 if is_whole_word {
                     current_line = apply_selection_to_line(
@@ -362,18 +365,15 @@ mod tests {
         let raw_lines = vec!["let mut app = App::new();".to_string()];
         let theme = create_test_theme();
 
-        // Highlight "app"
+        // Highlight "app" - case-insensitive, so both "app" and "App" should be highlighted
         let result = apply_word_highlights(&lines, &raw_lines, "app", &theme);
-        // "let mut " + "app" (highlighted) + " = App::new();" -> 3 spans
+        // "let mut " + "app" (highlighted) + " = " + "App" (highlighted) + "::new();" -> 5 spans
         assert_eq!(result[0].spans[1].content, "app");
         assert!(result[0].spans[1].style.bg.is_some());
 
-        // Should NOT highlight "App" when searching for "app"
-        // The original spans might have been split further by the previous call if not careful,
-        // but here we are using fresh 'lines'
-        let result = apply_word_highlights(&lines, &raw_lines, "app", &theme);
-        let app_capital_span = result[0].spans.iter().find(|s| s.content.contains("App"));
+        // "App" should also be highlighted (case-insensitive)
+        let app_capital_span = result[0].spans.iter().find(|s| s.content == "App");
         assert!(app_capital_span.is_some());
-        assert!(app_capital_span.unwrap().style.bg.is_none());
+        assert!(app_capital_span.unwrap().style.bg.is_some());
     }
 }

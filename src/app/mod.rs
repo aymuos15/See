@@ -59,6 +59,9 @@ pub struct App {
     pub search_query: String,
     pub search_results: Vec<usize>,
     pub search_selected: usize,
+    // Find mode state (in-pane search)
+    pub find_mode: bool,
+    pub find_query: String,
     // All files under root for searching
     search_index: Vec<FileEntry>,
     // Symbol search mode state
@@ -160,6 +163,8 @@ impl App {
             search_results: Vec::new(),
             search_selected: 0,
             search_index: Vec::new(),
+            find_mode: false,
+            find_query: String::new(),
             symbol_search_mode: false,
             symbol_search_query: String::new(),
             symbol_index: Vec::new(),

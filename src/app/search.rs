@@ -133,4 +133,39 @@ impl App {
             }
         }
     }
+
+    pub fn enter_find_mode(&mut self) {
+        // If there's already a highlight and we're not in find mode,
+        // pressing the find key again clears the highlight
+        if self.highlighted_word.is_some() && !self.find_mode {
+            self.highlighted_word = None;
+            return;
+        }
+        self.find_mode = true;
+        self.find_query.clear();
+    }
+
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn exit_find_mode(&mut self) {
+        self.find_mode = false;
+        // Keep highlighted word until explicitly cleared or new search
+    }
+
+    pub fn find_input(&mut self, c: char) {
+        self.find_query.push(c);
+        self.highlighted_word = Some(self.find_query.clone());
+    }
+
+    pub fn find_backspace(&mut self) {
+        self.find_query.pop();
+        if self.find_query.is_empty() {
+            self.highlighted_word = None;
+        } else {
+            self.highlighted_word = Some(self.find_query.clone());
+        }
+    }
+
+    pub fn find_confirm(&mut self) {
+        self.exit_find_mode();
+    }
 }

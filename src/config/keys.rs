@@ -109,6 +109,7 @@ pub struct KeyBindingsConfig {
     pub shrink_file_list: Option<Vec<String>>,
     pub grow_file_list: Option<Vec<String>>,
     pub open_search: Option<Vec<String>>,
+    pub open_find: Option<Vec<String>>,
     pub open_symbol_search: Option<Vec<String>>,
     pub toggle_git_highlight: Option<Vec<String>>,
     pub toggle_diff: Option<Vec<String>>,
@@ -153,6 +154,7 @@ pub struct KeyBindings {
     pub shrink_file_list: Vec<KeyBinding>,
     pub grow_file_list: Vec<KeyBinding>,
     pub open_search: Vec<KeyBinding>,
+    pub open_find: Vec<KeyBinding>,
     pub open_symbol_search: Vec<KeyBinding>,
     pub toggle_git_highlight: Vec<KeyBinding>,
     pub toggle_diff: Vec<KeyBinding>,
@@ -201,6 +203,7 @@ pub enum Action {
     ShrinkFileList,
     GrowFileList,
     OpenSearch,
+    OpenFind,
     OpenSymbolSearch,
     ToggleGitHighlight,
     ToggleDiff,
@@ -256,6 +259,7 @@ impl Default for KeyBindings {
             shrink_file_list: vec![KeyBinding::key(KeyCode::Char('H'))],
             grow_file_list: vec![KeyBinding::key(KeyCode::Char('L'))],
             open_search: vec![KeyBinding::key(KeyCode::Char('/'))],
+            open_find: vec![KeyBinding::key(KeyCode::Char('\\'))],
             open_symbol_search: vec![KeyBinding::key(KeyCode::Char('f'))],
             toggle_git_highlight: vec![KeyBinding::key(KeyCode::Char('g'))],
             toggle_diff: vec![KeyBinding::key(KeyCode::Char('d'))],
@@ -349,6 +353,7 @@ impl KeyBindings {
         apply_config_keys(&mut bindings.shrink_file_list, cfg.shrink_file_list.clone());
         apply_config_keys(&mut bindings.grow_file_list, cfg.grow_file_list.clone());
         apply_config_keys(&mut bindings.open_search, cfg.open_search.clone());
+        apply_config_keys(&mut bindings.open_find, cfg.open_find.clone());
         apply_config_keys(
             &mut bindings.open_symbol_search,
             cfg.open_symbol_search.clone(),
@@ -465,6 +470,7 @@ impl KeyBindings {
             &self.open_search,
             Action::OpenSearch,
         );
+        insert_bindings(&mut self.normal_mode_map, &self.open_find, Action::OpenFind);
         insert_bindings(
             &mut self.normal_mode_map,
             &self.open_symbol_search,

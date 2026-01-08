@@ -24,6 +24,7 @@ pub enum AppEvent {
     Enter,
     GoBack,
     OpenSearch,
+    OpenFind,
     CloseSearch,
     SearchInput(char),
     SearchBackspace,
@@ -130,6 +131,13 @@ fn handle_key(
         if let Some(action) = keys.lookup_search(code, modifiers) {
             return action_to_app_event(action);
         }
+        // Allow modifier keys (Alt, Ctrl) to pass through to normal mode
+        // This enables split commands (Alt+Arrow) while in find mode
+        if modifiers.intersects(KeyModifiers::ALT | KeyModifiers::CONTROL) {
+            if let Some(action) = keys.lookup_normal(code, modifiers) {
+                return action_to_app_event(action);
+            }
+        }
         // Fall through to text input for unbound keys
         if let KeyCode::Char(c) = code {
             return AppEvent::SearchInput(c);
@@ -158,6 +166,7 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::ShrinkFileList => AppEvent::ShrinkFileList,
         Action::GrowFileList => AppEvent::GrowFileList,
         Action::OpenSearch => AppEvent::OpenSearch,
+        Action::OpenFind => AppEvent::OpenFind,
         Action::OpenSymbolSearch => AppEvent::OpenSymbolSearch,
         Action::ToggleGitHighlight => AppEvent::ToggleGitHighlight,
         Action::ToggleDiff => AppEvent::ToggleDiff,

@@ -39,6 +39,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     &app.config.theme,
                     pane.id == split_layout.active_pane_index,
                     app.config.wrap,
+                    app.highlighted_word.as_deref(),
                 );
             }
         }
@@ -116,7 +117,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     }
 
     // Render search popup overlay if active (file or symbol search)
-    if app.search_mode || app.symbol_search_mode {
+    if app.search_mode || app.symbol_search_mode || app.find_mode {
         search::render(frame, app);
     }
 

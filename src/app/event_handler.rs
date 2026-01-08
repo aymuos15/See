@@ -18,6 +18,7 @@ impl App {
         let event = poll_event(
             Duration::from_millis(16),
             self.search_mode
+                || self.find_mode
                 || self.symbol_search_mode
                 || self.theme_preview_mode
                 || self.help_mode,
@@ -45,6 +46,7 @@ impl App {
             }
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
+            AppEvent::OpenFind => self.enter_find_mode(),
             AppEvent::CloseSearch => {
                 if self.help_mode {
                     self.close_help();
@@ -52,6 +54,8 @@ impl App {
                     self.theme_preview_mode = false;
                 } else if self.symbol_search_mode {
                     self.exit_symbol_search_mode();
+                } else if self.find_mode {
+                    self.exit_find_mode();
                 } else {
                     self.exit_search_mode();
                 }
@@ -59,6 +63,12 @@ impl App {
             AppEvent::SearchInput(c) => {
                 if self.symbol_search_mode {
                     self.symbol_search_input(c);
+                } else if self.find_mode {
+                    // In find mode, some characters might be used for navigation
+                    // if they are bound to Enter/GoBack actions in normal mode.
+                    // However, handle_key in search mode prioritizes SearchInput
+                    // for chars unless explicitly bound in search_mode_map.
+                    self.find_input(c);
                 } else {
                     self.search_input(c);
                 }
@@ -66,6 +76,8 @@ impl App {
             AppEvent::SearchBackspace => {
                 if self.symbol_search_mode {
                     self.symbol_search_backspace();
+                } else if self.find_mode {
+                    self.find_backspace();
                 } else {
                     self.search_backspace();
                 }
@@ -75,6 +87,8 @@ impl App {
                     self.theme_search_navigate_up();
                 } else if self.symbol_search_mode {
                     self.symbol_search_navigate_up();
+                } else if self.find_mode {
+                    self.navigate_up();
                 } else {
                     self.search_navigate_up();
                 }
@@ -84,6 +98,8 @@ impl App {
                     self.theme_search_navigate_down();
                 } else if self.symbol_search_mode {
                     self.symbol_search_navigate_down();
+                } else if self.find_mode {
+                    self.navigate_down();
                 } else {
                     self.search_navigate_down();
                 }
@@ -93,6 +109,8 @@ impl App {
                     self.theme_search_confirm();
                 } else if self.symbol_search_mode {
                     self.symbol_search_confirm();
+                } else if self.find_mode {
+                    self.find_confirm();
                 } else {
                     self.search_confirm();
                 }

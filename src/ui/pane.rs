@@ -10,6 +10,7 @@ pub fn render(
     theme: &Theme,
     _is_active: bool,
     wrap: bool,
+    highlight_word: Option<&str>,
 ) {
     // No borders - tab bar serves as top separator, divider line between panes drawn separately
     let block = Block::default().style(Style::default().bg(theme.bg_main));
@@ -38,7 +39,7 @@ pub fn render(
         frame.render_widget(line_num_paragraph, line_num_area);
 
         // Content with selection highlighting
-        let visible_lines: Vec<Line> = pane.selection.as_ref().map_or_else(
+        let mut visible_lines: Vec<Line> = pane.selection.as_ref().map_or_else(
             || preview.lines[start..end].to_vec(),
             |selection| {
                 crate::ui::preview::apply_selection_to_lines(
@@ -50,6 +51,16 @@ pub fn render(
                 )
             },
         );
+
+        // Apply word highlights if active (carries find highlight to split panes)
+        if let Some(word) = highlight_word {
+            visible_lines = crate::ui::preview::apply_word_highlights(
+                &visible_lines,
+                &preview.raw_lines[start..end],
+                word,
+                theme,
+            );
+        }
 
         let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
         let content = if wrap {
