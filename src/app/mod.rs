@@ -72,6 +72,7 @@ pub struct App {
     search_index_timer: RefreshTimer,
     // Text selection
     pub selection: Option<TextSelection>,
+    pub highlighted_word: Option<String>,
     pub last_preview_area: Option<Rect>,
     pub last_file_list_area: Option<Rect>,
     clipboard: ClipboardManager,
@@ -167,6 +168,7 @@ impl App {
             file_watcher,
             search_index_timer,
             selection: None,
+            highlighted_word: None,
             last_preview_area: None,
             last_file_list_area: None,
             clipboard: ClipboardManager::new(),

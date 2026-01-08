@@ -37,7 +37,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         frame.render_widget(line_num_paragraph, line_num_area);
 
         // Content with selection highlighting
-        let visible_lines: Vec<Line> = app.selection.as_ref().map_or_else(
+        let mut visible_lines: Vec<Line> = app.selection.as_ref().map_or_else(
             || preview.lines[start..end].to_vec(),
             |selection| {
                 apply_selection_to_lines(
@@ -49,6 +49,12 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
                 )
             },
         );
+
+        // Apply word highlights if active
+        if let Some(word) = &app.highlighted_word {
+            visible_lines =
+                apply_word_highlights(&visible_lines, &preview.raw_lines[start..end], word, theme);
+        }
 
         let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
         let content = if app.config.wrap {
@@ -162,6 +168,65 @@ fn apply_selection_to_line(
     }
 
     Line::from(new_spans)
+}
+
+/// Apply word highlights to lines
+pub fn apply_word_highlights<'a>(
+    lines: &[Line<'a>],
+    raw_lines: &[String],
+    word: &str,
+    theme: &Theme,
+) -> Vec<Line<'a>> {
+    if word.is_empty() {
+        return lines.to_vec();
+    }
+
+    let highlight_style = Style::default()
+        .bg(theme.bg_selection)
+        .add_modifier(Modifier::BOLD)
+        .add_modifier(Modifier::UNDERLINED);
+
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            let Some(raw_line) = raw_lines.get(i) else {
+                return line.clone();
+            };
+
+            let mut current_line = line.clone();
+            let mut start_search = 0;
+
+            while let Some(start_idx) = raw_line[start_search..].find(word) {
+                let absolute_start = start_search + start_idx;
+                let absolute_end = absolute_start + word.len();
+
+                // Check if it's a whole word match
+                let before_char = if absolute_start > 0 {
+                    raw_line.chars().nth(absolute_start - 1)
+                } else {
+                    None
+                };
+                let after_char = raw_line.chars().nth(absolute_end);
+
+                let is_whole_word = before_char.map_or(true, |c| !c.is_alphanumeric() && c != '_')
+                    && after_char.map_or(true, |c| !c.is_alphanumeric() && c != '_');
+
+                if is_whole_word {
+                    current_line = apply_selection_to_line(
+                        &current_line,
+                        absolute_start,
+                        absolute_end,
+                        highlight_style,
+                    );
+                }
+
+                start_search = absolute_start + word.len().max(1);
+            }
+
+            current_line
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -289,5 +354,26 @@ mod tests {
         // Line should be unchanged since selection is outside visible range
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].spans[0].content, "Visible line");
+    }
+
+    #[test]
+    fn test_apply_word_highlights() {
+        let lines = vec![Line::from(vec![Span::raw("let mut app = App::new();")])];
+        let raw_lines = vec!["let mut app = App::new();".to_string()];
+        let theme = create_test_theme();
+
+        // Highlight "app"
+        let result = apply_word_highlights(&lines, &raw_lines, "app", &theme);
+        // "let mut " + "app" (highlighted) + " = App::new();" -> 3 spans
+        assert_eq!(result[0].spans[1].content, "app");
+        assert!(result[0].spans[1].style.bg.is_some());
+
+        // Should NOT highlight "App" when searching for "app"
+        // The original spans might have been split further by the previous call if not careful,
+        // but here we are using fresh 'lines'
+        let result = apply_word_highlights(&lines, &raw_lines, "app", &theme);
+        let app_capital_span = result[0].spans.iter().find(|s| s.content.contains("App"));
+        assert!(app_capital_span.is_some());
+        assert!(app_capital_span.unwrap().style.bg.is_none());
     }
 }

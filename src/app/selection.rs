@@ -106,6 +106,39 @@ impl TextSelection {
     }
 }
 
+/// Get the word at a specific text position
+pub fn get_word_at(lines: &[String], pos: TextPosition) -> Option<String> {
+    let line = lines.get(pos.line)?;
+    let chars: Vec<char> = line.chars().collect();
+    if pos.column >= chars.len() {
+        return None;
+    }
+
+    let is_word_char = |c: char| c.is_alphanumeric() || c == '_';
+
+    if !is_word_char(chars[pos.column]) {
+        return None;
+    }
+
+    // Find start of word
+    let mut start = pos.column;
+    while start > 0 && is_word_char(chars[start - 1]) {
+        start -= 1;
+    }
+
+    // Find end of word
+    let mut end = pos.column;
+    while end < chars.len() && is_word_char(chars[end]) {
+        end += 1;
+    }
+
+    if start < end {
+        Some(chars[start..end].iter().collect())
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -179,5 +212,40 @@ mod tests {
         };
         assert!(sel.is_empty());
         assert_eq!(sel.extract_text(&["Hello".to_string()]), "");
+    }
+
+    #[test]
+    fn test_get_word_at() {
+        let lines = vec!["let mut app = App::new();".to_string()];
+
+        // Middle of "app"
+        assert_eq!(
+            get_word_at(&lines, TextPosition::new(0, 9)),
+            Some("app".to_string())
+        );
+
+        // Start of "let"
+        assert_eq!(
+            get_word_at(&lines, TextPosition::new(0, 0)),
+            Some("let".to_string())
+        );
+
+        // End of "new"
+        assert_eq!(
+            get_word_at(&lines, TextPosition::new(0, 21)),
+            Some("new".to_string())
+        );
+
+        // On space
+        assert_eq!(get_word_at(&lines, TextPosition::new(0, 3)), None);
+
+        // On semicolon
+        assert_eq!(get_word_at(&lines, TextPosition::new(0, 24)), None);
+
+        // Out of bounds line
+        assert_eq!(get_word_at(&lines, TextPosition::new(1, 0)), None);
+
+        // Out of bounds column
+        assert_eq!(get_word_at(&lines, TextPosition::new(0, 100)), None);
     }
 }

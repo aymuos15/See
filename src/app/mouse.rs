@@ -1,6 +1,6 @@
 use crate::ui::coordinates::screen_to_text_position;
 
-use super::selection::TextSelection;
+use super::selection::{get_word_at, TextSelection};
 use super::App;
 
 impl App {
@@ -43,9 +43,11 @@ impl App {
 
         if let Some(pos) = pos {
             self.selection = Some(TextSelection::new(pos));
+            self.highlighted_word = get_word_at(&preview.raw_lines, pos);
         } else {
             // Clicked outside content area, clear selection
             self.selection = None;
+            self.highlighted_word = None;
         }
     }
 

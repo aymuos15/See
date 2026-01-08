@@ -71,6 +71,7 @@ impl App {
                         let _ = self.file_watcher.watch_preview_file(Some(&entry.path));
                         // Clear selection when loading new file
                         self.selection = None;
+                        self.highlighted_word = None;
                         return;
                     }
                 }
@@ -134,6 +135,7 @@ impl App {
                                 Some(Rc::new(PreviewContent { lines, raw_lines }));
                             // Only clear selection if content changed
                             self.selection = None;
+                            self.highlighted_word = None;
                         }
                         return;
                     }
@@ -143,5 +145,6 @@ impl App {
         // No valid preview
         self.shared_preview_content = None;
         self.selection = None;
+        self.highlighted_word = None;
     }
 }
