@@ -42,4 +42,3 @@ pub struct Symbol {
     pub file: PathBuf,
     pub line: usize,
 }
-

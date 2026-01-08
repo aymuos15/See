@@ -2,7 +2,7 @@ use crate::app::selection::TextSelection;
 use crate::app::App;
 use crate::theme::Theme;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::{Block, Paragraph, Wrap};
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = &app.config.theme;
@@ -51,6 +51,11 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         );
 
         let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
+        let content = if app.config.wrap {
+            content.wrap(Wrap { trim: false })
+        } else {
+            content
+        };
         frame.render_widget(content, content_area);
     } else {
         let placeholder = Paragraph::new("Select a file to preview")

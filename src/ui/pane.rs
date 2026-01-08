@@ -1,9 +1,16 @@
 use crate::app::split::Pane;
 use crate::theme::Theme;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::{Block, Paragraph, Wrap};
 
-pub fn render(frame: &mut Frame, pane: &Pane, area: Rect, theme: &Theme, _is_active: bool) {
+pub fn render(
+    frame: &mut Frame,
+    pane: &Pane,
+    area: Rect,
+    theme: &Theme,
+    _is_active: bool,
+    wrap: bool,
+) {
     // No borders - tab bar serves as top separator, divider line between panes drawn separately
     let block = Block::default().style(Style::default().bg(theme.bg_main));
 
@@ -45,6 +52,11 @@ pub fn render(frame: &mut Frame, pane: &Pane, area: Rect, theme: &Theme, _is_act
         );
 
         let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
+        let content = if wrap {
+            content.wrap(Wrap { trim: false })
+        } else {
+            content
+        };
         frame.render_widget(content, content_area);
     } else {
         let placeholder = Paragraph::new("Empty")

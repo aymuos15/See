@@ -38,6 +38,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     *area,
                     &app.config.theme,
                     pane.id == split_layout.active_pane_index,
+                    app.config.wrap,
                 );
             }
         }

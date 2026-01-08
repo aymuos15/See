@@ -18,6 +18,8 @@ struct ConfigFile {
     divider_width: Option<u16>,
     #[serde(default)]
     keys: Option<KeyBindingsConfig>,
+    #[serde(default)]
+    pub wrap: bool,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -44,6 +46,8 @@ pub struct Config {
     pub divider_width: u16,
     /// Configurable key bindings
     pub keys: KeyBindings,
+    /// Whether to wrap text in the preview pane
+    pub wrap: bool,
 }
 
 impl Default for Config {
@@ -53,6 +57,7 @@ impl Default for Config {
             theme: Theme::default(),
             divider_width: 1,
             keys: KeyBindings::default(),
+            wrap: false,
         }
     }
 }
@@ -71,12 +76,14 @@ impl Config {
         let theme = Theme::from_config(config_file.theme);
         let divider_width = config_file.divider_width.unwrap_or(1).max(1);
         let keys = KeyBindings::from_config(config_file.keys);
+        let wrap = config_file.wrap;
 
         Some(Self {
             exclude_set,
             theme,
             divider_width,
             keys,
+            wrap,
         })
     }
 

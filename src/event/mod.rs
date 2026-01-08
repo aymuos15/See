@@ -61,6 +61,7 @@ pub enum AppEvent {
     ToggleFileList,
     ResizeSplitLeft,
     ResizeSplitRight,
+    ToggleWrap,
     None,
 }
 
@@ -173,6 +174,7 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::SplitRight => AppEvent::SplitRight,
         Action::ResizeSplitLeft => AppEvent::ResizeSplitLeft,
         Action::ResizeSplitRight => AppEvent::ResizeSplitRight,
+        Action::ToggleWrap => AppEvent::ToggleWrap,
         Action::SearchClose => AppEvent::CloseSearch,
         Action::SearchConfirm => AppEvent::SearchConfirm,
         Action::SearchBackspace => AppEvent::SearchBackspace,

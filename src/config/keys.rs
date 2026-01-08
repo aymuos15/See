@@ -116,6 +116,7 @@ pub struct KeyBindingsConfig {
     pub toggle_help: Option<Vec<String>>,
     pub cycle_pane: Option<Vec<String>>,
     pub copy_selection: Option<Vec<String>>,
+    pub toggle_wrap: Option<Vec<String>>,
 
     // Split pane controls (Alt-based by default)
     pub swap_split_orientation: Option<Vec<String>>,
@@ -159,6 +160,7 @@ pub struct KeyBindings {
     pub toggle_help: Vec<KeyBinding>,
     pub cycle_pane: Vec<KeyBinding>,
     pub copy_selection: Vec<KeyBinding>,
+    pub toggle_wrap: Vec<KeyBinding>,
 
     // Split pane controls
     pub swap_split_orientation: Vec<KeyBinding>,
@@ -206,6 +208,7 @@ pub enum Action {
     ToggleHelp,
     CyclePane,
     CopySelection,
+    ToggleWrap,
 
     // Split pane controls
     SwapSplitOrientation,
@@ -260,6 +263,7 @@ impl Default for KeyBindings {
             toggle_help: vec![KeyBinding::key(KeyCode::Char('?'))],
             cycle_pane: vec![KeyBinding::key(KeyCode::Tab)],
             copy_selection: vec![KeyBinding::ctrl(KeyCode::Char('c'))],
+            toggle_wrap: vec![KeyBinding::key(KeyCode::Char('w'))],
 
             // Split pane controls (Alt-based)
             swap_split_orientation: vec![KeyBinding::alt(KeyCode::Char('s'))],
@@ -361,6 +365,7 @@ impl KeyBindings {
         apply_config_keys(&mut bindings.toggle_help, cfg.toggle_help.clone());
         apply_config_keys(&mut bindings.cycle_pane, cfg.cycle_pane.clone());
         apply_config_keys(&mut bindings.copy_selection, cfg.copy_selection.clone());
+        apply_config_keys(&mut bindings.toggle_wrap, cfg.toggle_wrap.clone());
     }
 
     fn apply_split_config(bindings: &mut Self, cfg: &KeyBindingsConfig) {
@@ -494,6 +499,11 @@ impl KeyBindings {
             &mut self.normal_mode_map,
             &self.copy_selection,
             Action::CopySelection,
+        );
+        insert_bindings(
+            &mut self.normal_mode_map,
+            &self.toggle_wrap,
+            Action::ToggleWrap,
         );
     }
 
