@@ -357,78 +357,16 @@ pub fn extract_symbols(file_path: &Path, content: &str) -> Vec<Symbol> {
             let position_node = item_node.unwrap_or(node);
             let start_point = position_node.start_position();
             let line = start_point.row;
-            let column = start_point.column;
-
-            // Determine parent context for hierarchy
-            let parent = find_parent_symbol(item_node.unwrap_or(node), content);
-
             symbols.push(Symbol {
                 name,
                 kind,
                 file: file_path.to_path_buf(),
                 line,
-                column,
-                parent,
             });
         }
     }
 
     symbols
-}
-
-/// Find the parent symbol (e.g., class/struct/impl containing a method)
-fn find_parent_symbol(node: tree_sitter::Node, content: &str) -> Option<String> {
-    let mut current = node.parent();
-    while let Some(parent) = current {
-        // Allow same arms - keeping them separate for clarity
-        #[allow(clippy::match_same_arms)]
-        match parent.kind() {
-            // Rust
-            "impl_item" => {
-                // Try to get the type name from impl
-                if let Some(type_node) = parent.child_by_field_name("type") {
-                    return type_node
-                        .utf8_text(content.as_bytes())
-                        .ok()
-                        .map(String::from);
-                }
-            }
-            "struct_item" | "enum_item" | "trait_item" => {
-                if let Some(name_node) = parent.child_by_field_name("name") {
-                    return name_node
-                        .utf8_text(content.as_bytes())
-                        .ok()
-                        .map(String::from);
-                }
-            }
-            // Python/JS/TS
-            "class_definition" | "class_declaration" => {
-                if let Some(name_node) = parent.child_by_field_name("name") {
-                    return name_node
-                        .utf8_text(content.as_bytes())
-                        .ok()
-                        .map(String::from);
-                }
-            }
-            // Go
-            "type_declaration" => {
-                // Go type declarations are structured differently
-                for child in parent.children(&mut parent.walk()) {
-                    if child.kind() == "type_spec" {
-                        if let Some(name_node) = child.child_by_field_name("name") {
-                            return name_node
-                                .utf8_text(content.as_bytes())
-                                .ok()
-                                .map(String::from);
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-        current = parent.parent();
-    }
-    None
 }
 
 fn determine_symbol_kind_from_node(node: tree_sitter::Node) -> crate::files::SymbolKind {

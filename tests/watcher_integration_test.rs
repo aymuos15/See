@@ -141,14 +141,6 @@ fn test_event_classification() {
     let temp_dir = TempDir::new().unwrap();
     let current_dir = temp_dir.path();
     let file_in_dir = current_dir.join("file.txt");
-    let preview_file = current_dir.join("preview.txt");
-
-    // Create test event for file in directory
-    let event = NotifyEvent {
-        kind: EventKind::Create(notify::event::CreateKind::File),
-        paths: vec![file_in_dir.clone()],
-        attrs: Default::default(),
-    };
 
     // Check if parent matches
     if let Some(parent) = file_in_dir.parent() {

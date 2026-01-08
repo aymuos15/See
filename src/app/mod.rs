@@ -211,23 +211,6 @@ impl App {
     pub fn toggle_theme_preview(&mut self) {
         self.theme_preview_mode = !self.theme_preview_mode;
     }
-
-    /// Cycle to the next available theme
-    #[allow(dead_code)]
-    pub fn cycle_theme(&mut self) {
-        if self.available_themes.is_empty() {
-            return;
-        }
-
-        let current_idx = self
-            .available_themes
-            .iter()
-            .position(|t| t == &self.current_theme_name)
-            .unwrap_or(0);
-        let next_idx = (current_idx + 1) % self.available_themes.len();
-        let next_theme = self.available_themes[next_idx].clone();
-        let _ = self.switch_theme(&next_theme);
-    }
 }
 
 #[cfg(test)]
