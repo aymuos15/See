@@ -14,6 +14,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
 
     // Store area for coordinate mapping
     app.last_preview_area = Some(inner_area);
+    app.last_pane_areas = vec![(0, inner_area)];
 
     // Use shared_preview_content (Rc) for better performance
     if let Some(preview) = &app.shared_preview_content {

@@ -12,6 +12,7 @@ use crate::app::App;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph};
 
+#[allow(clippy::too_many_lines)]
 pub fn render(frame: &mut Frame, app: &mut App) {
     // Fill entire frame with background color first
     let bg_block = Block::default().style(Style::default().bg(app.config.theme.bg_main));
@@ -26,7 +27,12 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     if let Some(file_list_area) = layout.file_list_area {
         file_list::render(frame, app, file_list_area);
+        app.last_file_list_area = Some(file_list_area);
+    } else {
+        app.last_file_list_area = None;
     }
+
+    app.last_pane_areas.clone_from(&layout.pane_areas);
 
     if let Some(ref split_layout) = app.split_layout {
         tab_bar::render(frame, split_layout, layout.tab_bar_area, &app.config.theme);

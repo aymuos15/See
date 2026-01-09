@@ -95,7 +95,17 @@ impl App {
     }
 
     pub(super) fn scroll_preview_page_down(&mut self) {
-        if let Some(preview) = &self.shared_preview_content {
+        if let Some(ref mut layout) = self.split_layout {
+            if let Some(pane) = layout.get_active_pane_mut() {
+                if let Some(preview) = &pane.preview_content {
+                    if !preview.lines.is_empty() {
+                        let max_scroll = preview.lines.len().saturating_sub(1);
+                        pane.scroll = (pane.scroll + PREVIEW_PAGE_SCROLL_LINES)
+                            .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                    }
+                }
+            }
+        } else if let Some(preview) = &self.shared_preview_content {
             if !preview.lines.is_empty() {
                 let max_scroll = preview.lines.len().saturating_sub(1);
                 self.preview_scroll = (self.preview_scroll + PREVIEW_PAGE_SCROLL_LINES)
@@ -106,9 +116,15 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn scroll_preview_page_up(&mut self) {
-        self.preview_scroll = self
-            .preview_scroll
-            .saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
+        if let Some(ref mut layout) = self.split_layout {
+            if let Some(pane) = layout.get_active_pane_mut() {
+                pane.scroll = pane.scroll.saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
+            }
+        } else {
+            self.preview_scroll = self
+                .preview_scroll
+                .saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
+        }
     }
 
     pub(super) fn shrink_file_list(&mut self) {

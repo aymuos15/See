@@ -262,6 +262,9 @@ impl App {
             AppEvent::CopySelection => {
                 self.copy_selection();
             }
+            AppEvent::SelectAll => {
+                self.select_all();
+            }
             AppEvent::ToggleWrap => {
                 self.config.wrap = !self.config.wrap;
             }

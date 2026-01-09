@@ -16,76 +16,184 @@ impl App {
                 let relative_row = row.saturating_sub(file_list_area.y) as usize;
                 if relative_row < self.files.len() {
                     self.file_list_state.select(Some(relative_row));
-                    self.preview_scroll = 0;
-                    self.selection = None;
+                    if let Some(split_layout) = &mut self.split_layout {
+                        if let Some(pane) = split_layout.get_active_pane_mut() {
+                            pane.scroll = 0;
+                            pane.selection = None;
+                        }
+                    } else {
+                        self.preview_scroll = 0;
+                        self.selection = None;
+                    }
                     self.load_preview();
                 }
                 return;
             }
         }
 
-        // Check if click is in preview area for text selection
-        let Some(preview_area) = self.last_preview_area else {
-            return;
-        };
-        let Some(preview) = &self.shared_preview_content else {
-            return;
-        };
+        // Check if click is in any pane area
+        let mut clicked_pane_id = None;
+        let mut clicked_area = None;
 
-        let pos = screen_to_text_position(
-            column,
-            row,
-            preview_area,
-            self.preview_scroll,
-            preview.raw_lines.len(),
-            &preview.raw_lines,
-        );
+        for (id, area) in &self.last_pane_areas {
+            if column >= area.x
+                && column < area.x + area.width
+                && row >= area.y
+                && row < area.y + area.height
+            {
+                clicked_pane_id = Some(*id);
+                clicked_area = Some(*area);
+                break;
+            }
+        }
 
-        if let Some(pos) = pos {
-            self.selection = Some(TextSelection::new(pos));
-            self.highlighted_word = get_word_at(&preview.raw_lines, pos);
-        } else {
-            // Clicked outside content area, clear selection
-            self.selection = None;
-            self.highlighted_word = None;
+        if let Some(pane_id) = clicked_pane_id {
+            let area = clicked_area.expect("Area must exist if pane_id exists");
+
+            // Update active pane if split layout exists
+            if let Some(split_layout) = &mut self.split_layout {
+                split_layout.active_pane_index = pane_id;
+
+                if let Some(pane) = split_layout.get_active_pane_mut() {
+                    if let Some(preview) = &pane.preview_content {
+                        let pos = screen_to_text_position(
+                            column,
+                            row,
+                            area,
+                            pane.scroll,
+                            preview.raw_lines.len(),
+                            &preview.raw_lines,
+                        );
+
+                        if let Some(pos) = pos {
+                            pane.selection = Some(TextSelection::new(pos));
+                            self.highlighted_word = get_word_at(&preview.raw_lines, pos);
+                        } else {
+                            pane.selection = None;
+                            self.highlighted_word = None;
+                        }
+                    }
+                }
+            } else if let Some(preview) = &self.shared_preview_content {
+                // Single pane mode
+                let pos = screen_to_text_position(
+                    column,
+                    row,
+                    area,
+                    self.preview_scroll,
+                    preview.raw_lines.len(),
+                    &preview.raw_lines,
+                );
+
+                if let Some(pos) = pos {
+                    self.selection = Some(TextSelection::new(pos));
+                    self.highlighted_word = get_word_at(&preview.raw_lines, pos);
+                } else {
+                    self.selection = None;
+                    self.highlighted_word = None;
+                }
+            }
         }
     }
 
     pub fn handle_mouse_drag(&mut self, column: u16, row: u16) {
-        let Some(selection) = self.selection.as_mut() else {
-            return;
-        };
-        if !selection.active {
-            return;
-        }
+        if let Some(split_layout) = &mut self.split_layout {
+            let active_id = split_layout.active_pane_index;
+            if let Some(pane) = split_layout.get_active_pane_mut() {
+                let Some(selection) = pane.selection.as_mut() else {
+                    return;
+                };
+                if !selection.active {
+                    return;
+                }
 
-        let Some(preview_area) = self.last_preview_area else {
-            return;
-        };
-        let Some(preview) = &self.shared_preview_content else {
-            return;
-        };
+                // Find the area for the active pane
+                let area = self
+                    .last_pane_areas
+                    .iter()
+                    .find(|(id, _)| *id == active_id)
+                    .map(|(_, area)| *area);
 
-        if let Some(pos) = screen_to_text_position(
-            column,
-            row,
-            preview_area,
-            self.preview_scroll,
-            preview.raw_lines.len(),
-            &preview.raw_lines,
-        ) {
-            selection.cursor = pos;
+                let Some(area) = area else {
+                    return;
+                };
+
+                let Some(preview) = &pane.preview_content else {
+                    return;
+                };
+
+                if let Some(pos) = screen_to_text_position(
+                    column,
+                    row,
+                    area,
+                    pane.scroll,
+                    preview.raw_lines.len(),
+                    &preview.raw_lines,
+                ) {
+                    selection.cursor = pos;
+                }
+            }
+        } else {
+            let Some(selection) = self.selection.as_mut() else {
+                return;
+            };
+            if !selection.active {
+                return;
+            }
+
+            let Some(preview_area) = self.last_preview_area else {
+                return;
+            };
+            let Some(preview) = &self.shared_preview_content else {
+                return;
+            };
+
+            if let Some(pos) = screen_to_text_position(
+                column,
+                row,
+                preview_area,
+                self.preview_scroll,
+                preview.raw_lines.len(),
+                &preview.raw_lines,
+            ) {
+                selection.cursor = pos;
+            }
         }
     }
 
     #[allow(clippy::missing_const_for_fn)]
     pub fn handle_mouse_up(&mut self, _column: u16, _row: u16) {
-        if let Some(selection) = self.selection.as_mut() {
+        if let Some(split_layout) = &mut self.split_layout {
+            if let Some(pane) = split_layout.get_active_pane_mut() {
+                if let Some(selection) = pane.selection.as_mut() {
+                    selection.active = false;
+                }
+            }
+        } else if let Some(selection) = self.selection.as_mut() {
             selection.active = false;
         }
     }
 
     pub fn copy_selection(&mut self) -> bool {
+        if let Some(split_layout) = &mut self.split_layout {
+            if let Some(pane) = split_layout.get_active_pane() {
+                let Some(selection) = &pane.selection else {
+                    return false;
+                };
+                if selection.is_empty() {
+                    return false;
+                }
+
+                let Some(preview) = &pane.preview_content else {
+                    return false;
+                };
+
+                let text = selection.extract_text(&preview.raw_lines);
+                return self.clipboard.copy_text(&text);
+            }
+            return false;
+        }
+
         let Some(selection) = &self.selection else {
             return false;
         };
@@ -99,6 +207,47 @@ impl App {
 
         let text = selection.extract_text(&preview.raw_lines);
         self.clipboard.copy_text(&text)
+    }
+
+    pub fn select_all(&mut self) {
+        if let Some(split_layout) = &mut self.split_layout {
+            if let Some(pane) = split_layout.get_active_pane_mut() {
+                let Some(preview) = &pane.preview_content else {
+                    return;
+                };
+
+                if preview.raw_lines.is_empty() {
+                    return;
+                }
+
+                let last_line = preview.raw_lines.len() - 1;
+                let last_col = preview.raw_lines.last().map_or(0, String::len);
+
+                pane.selection = Some(TextSelection {
+                    anchor: crate::app::selection::TextPosition::new(0, 0),
+                    cursor: crate::app::selection::TextPosition::new(last_line, last_col),
+                    active: false,
+                });
+            }
+            return;
+        }
+
+        let Some(preview) = &self.shared_preview_content else {
+            return;
+        };
+
+        if preview.raw_lines.is_empty() {
+            return;
+        }
+
+        let last_line = preview.raw_lines.len() - 1;
+        let last_col = preview.raw_lines.last().map_or(0, String::len);
+
+        self.selection = Some(TextSelection {
+            anchor: crate::app::selection::TextPosition::new(0, 0),
+            cursor: crate::app::selection::TextPosition::new(last_line, last_col),
+            active: false,
+        });
     }
 }
 

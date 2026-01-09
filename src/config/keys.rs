@@ -117,6 +117,7 @@ pub struct KeyBindingsConfig {
     pub toggle_help: Option<Vec<String>>,
     pub cycle_pane: Option<Vec<String>>,
     pub copy_selection: Option<Vec<String>>,
+    pub select_all: Option<Vec<String>>,
     pub toggle_wrap: Option<Vec<String>>,
 
     // Split pane controls (Alt-based by default)
@@ -162,6 +163,7 @@ pub struct KeyBindings {
     pub toggle_help: Vec<KeyBinding>,
     pub cycle_pane: Vec<KeyBinding>,
     pub copy_selection: Vec<KeyBinding>,
+    pub select_all: Vec<KeyBinding>,
     pub toggle_wrap: Vec<KeyBinding>,
 
     // Split pane controls
@@ -211,6 +213,7 @@ pub enum Action {
     ToggleHelp,
     CyclePane,
     CopySelection,
+    SelectAll,
     ToggleWrap,
 
     // Split pane controls
@@ -267,6 +270,7 @@ impl Default for KeyBindings {
             toggle_help: vec![KeyBinding::key(KeyCode::Char('?'))],
             cycle_pane: vec![KeyBinding::key(KeyCode::Tab)],
             copy_selection: vec![KeyBinding::ctrl(KeyCode::Char('c'))],
+            select_all: vec![KeyBinding::ctrl(KeyCode::Char('a'))],
             toggle_wrap: vec![KeyBinding::key(KeyCode::Char('w'))],
 
             // Split pane controls (Alt-based)
@@ -370,6 +374,7 @@ impl KeyBindings {
         apply_config_keys(&mut bindings.toggle_help, cfg.toggle_help.clone());
         apply_config_keys(&mut bindings.cycle_pane, cfg.cycle_pane.clone());
         apply_config_keys(&mut bindings.copy_selection, cfg.copy_selection.clone());
+        apply_config_keys(&mut bindings.select_all, cfg.select_all.clone());
         apply_config_keys(&mut bindings.toggle_wrap, cfg.toggle_wrap.clone());
     }
 
@@ -508,6 +513,11 @@ impl KeyBindings {
         );
         insert_bindings(
             &mut self.normal_mode_map,
+            &self.select_all,
+            Action::SelectAll,
+        );
+        insert_bindings(
+            &mut self.normal_mode_map,
             &self.toggle_wrap,
             Action::ToggleWrap,
         );
@@ -583,11 +593,16 @@ impl KeyBindings {
             &self.search_navigate_down,
             Action::SearchNavigateDown,
         );
-        // Copy selection works in both modes
+        // Copy selection and Select all work in both modes
         insert_bindings(
             &mut self.search_mode_map,
             &self.copy_selection,
             Action::CopySelection,
+        );
+        insert_bindings(
+            &mut self.search_mode_map,
+            &self.select_all,
+            Action::SelectAll,
         );
     }
 
@@ -693,6 +708,12 @@ mod tests {
         assert_eq!(
             bindings.lookup_normal(KeyCode::Char('k'), KeyModifiers::NONE),
             Some(Action::ScrollPreviewUp)
+        );
+
+        // Test selection
+        assert_eq!(
+            bindings.lookup_normal(KeyCode::Char('a'), KeyModifiers::CONTROL),
+            Some(Action::SelectAll)
         );
 
         // Test Alt bindings

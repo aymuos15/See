@@ -77,6 +77,7 @@ pub struct App {
     pub selection: Option<TextSelection>,
     pub highlighted_word: Option<String>,
     pub last_preview_area: Option<Rect>,
+    pub last_pane_areas: Vec<(usize, Rect)>,
     pub last_file_list_area: Option<Rect>,
     clipboard: ClipboardManager,
     // Git highlighting
@@ -175,6 +176,7 @@ impl App {
             selection: None,
             highlighted_word: None,
             last_preview_area: None,
+            last_pane_areas: Vec::new(),
             last_file_list_area: None,
             clipboard: ClipboardManager::new(),
             git_highlight_enabled: false,
