@@ -12,7 +12,10 @@ pub const MAX_SPLIT_PERCENT: u16 = 80;
 /// Increment/decrement for split resize operations
 pub const SPLIT_RESIZE_STEP: u16 = 5;
 
-/// Number of lines to scroll per page down/up
+/// Number of lines to scroll per mouse wheel tick
+pub const MOUSE_SCROLL_LINES: u16 = 3;
+
+/// Fallback number of lines to scroll per page down/up when viewport is unknown
 pub const PREVIEW_PAGE_SCROLL_LINES: u16 = 10;
 
 /// Maximum file size to preview (1 MB)

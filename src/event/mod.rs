@@ -19,6 +19,8 @@ pub enum AppEvent {
     ScrollPreviewDown,
     ScrollPreviewPageUp,
     ScrollPreviewPageDown,
+    MouseScrollUp,
+    MouseScrollDown,
     ShrinkFileList,
     GrowFileList,
     Enter,
@@ -98,8 +100,8 @@ pub fn poll_event(
             }
             Event::Mouse(mouse) => {
                 return Ok(match mouse.kind {
-                    MouseEventKind::ScrollDown => AppEvent::ScrollPreviewDown,
-                    MouseEventKind::ScrollUp => AppEvent::ScrollPreviewUp,
+                    MouseEventKind::ScrollDown => AppEvent::MouseScrollDown,
+                    MouseEventKind::ScrollUp => AppEvent::MouseScrollUp,
                     MouseEventKind::Down(MouseButton::Left) => AppEvent::MouseDown {
                         column: mouse.column,
                         row: mouse.row,

@@ -1,5 +1,6 @@
 use crate::constants::{
-    MAX_SPLIT_PERCENT, MIN_SPLIT_PERCENT, PREVIEW_PAGE_SCROLL_LINES, SPLIT_RESIZE_STEP,
+    MAX_SPLIT_PERCENT, MIN_SPLIT_PERCENT, MOUSE_SCROLL_LINES, PREVIEW_PAGE_SCROLL_LINES,
+    SPLIT_RESIZE_STEP,
 };
 use std::rc::Rc;
 
@@ -94,13 +95,13 @@ impl App {
         }
     }
 
-    pub(super) fn scroll_preview_page_down(&mut self) {
+    pub(super) fn mouse_scroll_down(&mut self) {
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 if let Some(preview) = &pane.preview_content {
                     if !preview.lines.is_empty() {
                         let max_scroll = preview.lines.len().saturating_sub(1);
-                        pane.scroll = (pane.scroll + PREVIEW_PAGE_SCROLL_LINES)
+                        pane.scroll = (pane.scroll + MOUSE_SCROLL_LINES)
                             .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
                     }
                 }
@@ -108,7 +109,46 @@ impl App {
         } else if let Some(preview) = &self.shared_preview_content {
             if !preview.lines.is_empty() {
                 let max_scroll = preview.lines.len().saturating_sub(1);
-                self.preview_scroll = (self.preview_scroll + PREVIEW_PAGE_SCROLL_LINES)
+                self.preview_scroll = (self.preview_scroll + MOUSE_SCROLL_LINES)
+                    .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+            }
+        }
+    }
+
+    #[allow(clippy::missing_const_for_fn)]
+    pub(super) fn mouse_scroll_up(&mut self) {
+        if let Some(ref mut layout) = self.split_layout {
+            if let Some(pane) = layout.get_active_pane_mut() {
+                pane.scroll = pane.scroll.saturating_sub(MOUSE_SCROLL_LINES);
+            }
+        } else {
+            self.preview_scroll = self.preview_scroll.saturating_sub(MOUSE_SCROLL_LINES);
+        }
+    }
+
+    fn get_page_scroll_amount(&self) -> u16 {
+        self.last_preview_area
+            .map_or(PREVIEW_PAGE_SCROLL_LINES, |area| {
+                area.height.saturating_sub(2).max(1)
+            })
+    }
+
+    pub(super) fn scroll_preview_page_down(&mut self) {
+        let scroll_amount = self.get_page_scroll_amount();
+        if let Some(ref mut layout) = self.split_layout {
+            if let Some(pane) = layout.get_active_pane_mut() {
+                if let Some(preview) = &pane.preview_content {
+                    if !preview.lines.is_empty() {
+                        let max_scroll = preview.lines.len().saturating_sub(1);
+                        pane.scroll = (pane.scroll + scroll_amount)
+                            .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                    }
+                }
+            }
+        } else if let Some(preview) = &self.shared_preview_content {
+            if !preview.lines.is_empty() {
+                let max_scroll = preview.lines.len().saturating_sub(1);
+                self.preview_scroll = (self.preview_scroll + scroll_amount)
                     .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
             }
         }
@@ -116,14 +156,13 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn scroll_preview_page_up(&mut self) {
+        let scroll_amount = self.get_page_scroll_amount();
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
-                pane.scroll = pane.scroll.saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
+                pane.scroll = pane.scroll.saturating_sub(scroll_amount);
             }
         } else {
-            self.preview_scroll = self
-                .preview_scroll
-                .saturating_sub(PREVIEW_PAGE_SCROLL_LINES);
+            self.preview_scroll = self.preview_scroll.saturating_sub(scroll_amount);
         }
     }
 

@@ -170,6 +170,16 @@ impl App {
                     self.scroll_preview_page_up();
                 }
             }
+            AppEvent::MouseScrollDown => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.mouse_scroll_down();
+                }
+            }
+            AppEvent::MouseScrollUp => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.mouse_scroll_up();
+                }
+            }
             AppEvent::ShrinkFileList => {
                 if !self.search_mode && !self.symbol_search_mode {
                     self.shrink_file_list();
