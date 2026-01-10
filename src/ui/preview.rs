@@ -7,19 +7,18 @@ use ratatui::widgets::{Block, Paragraph, Wrap};
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = &app.config.theme;
 
-    let block = Block::default().style(Style::default().bg(theme.bg_main));
+    // Fill background without using Block wrapper (no implicit margins)
+    let bg = Block::default().style(Style::default().bg(theme.bg_main));
+    frame.render_widget(bg, area);
 
-    let inner_area = block.inner(area);
-    frame.render_widget(block, area);
-
-    // Store area for coordinate mapping
-    app.last_preview_area = Some(inner_area);
-    app.last_pane_areas = vec![(0, inner_area)];
+    // Store area for coordinate mapping (use full area, no inner)
+    app.last_preview_area = Some(area);
+    app.last_pane_areas = vec![(0, area)];
 
     // Use shared_preview_content (Rc) for better performance
     if let Some(preview) = &app.shared_preview_content {
         let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(1)]);
-        let [line_num_area, content_area] = horizontal.areas(inner_area);
+        let [line_num_area, content_area] = horizontal.areas(area);
 
         let visible_height = content_area.height as usize;
         let start = app.preview_scroll as usize;
@@ -69,7 +68,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
             .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
             .alignment(Alignment::Center);
 
-        frame.render_widget(placeholder, inner_area);
+        frame.render_widget(placeholder, area);
     }
 }
 
@@ -95,8 +94,8 @@ pub fn apply_selection_to_lines<'a>(
                 return line.clone();
             }
 
-            // Get the raw line for bounds checking
-            let raw_line = raw_lines.get(i).map_or(0, String::len);
+            // Get the raw line length for bounds checking
+            let raw_line_len = raw_lines.get(i).map_or(0, String::len);
 
             // Calculate selection bounds for this line
             let start_col = if line_idx == sel_start.line {
@@ -107,7 +106,7 @@ pub fn apply_selection_to_lines<'a>(
             let end_col = if line_idx == sel_end.line {
                 sel_end.column
             } else {
-                raw_line
+                raw_line_len
             };
 
             // Apply selection style to spans
@@ -184,8 +183,7 @@ pub fn apply_word_highlights<'a>(
 
     let highlight_style = Style::default()
         .bg(theme.bg_selection)
-        .add_modifier(Modifier::BOLD)
-        .add_modifier(Modifier::UNDERLINED);
+        .add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
 
     let word_lower = word.to_lowercase();
 
@@ -206,11 +204,9 @@ pub fn apply_word_highlights<'a>(
                 let absolute_end = absolute_start + word.len();
 
                 // Check if it's a whole word match
-                let before_char = if absolute_start > 0 {
-                    raw_line.chars().nth(absolute_start - 1)
-                } else {
-                    None
-                };
+                let before_char = absolute_start
+                    .checked_sub(1)
+                    .and_then(|i| raw_line.chars().nth(i));
                 let after_char = raw_line.chars().nth(absolute_end);
 
                 let is_whole_word = before_char.is_none_or(|c| !c.is_alphanumeric() && c != '_')

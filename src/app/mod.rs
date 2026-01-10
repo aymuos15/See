@@ -471,7 +471,7 @@ mod tests {
     fn test_search_mode_entry_exit() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         assert!(!app.search_mode);
         assert!(app.search_query.is_empty());
@@ -487,7 +487,7 @@ mod tests {
     fn test_search_input() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         app.enter_search_mode();
         app.search_input('f');
@@ -502,7 +502,7 @@ mod tests {
     fn test_search_backspace() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         app.enter_search_mode();
         app.search_input('t');
@@ -523,7 +523,7 @@ mod tests {
     fn test_fuzzy_filter() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         // Build search index
         app.search_index = vec![
@@ -543,7 +543,7 @@ mod tests {
     fn test_fuzzy_filter_no_matches() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         app.search_index = vec![
             FileEntry::new(temp_dir.path().join("root/file1.txt")),
@@ -561,7 +561,7 @@ mod tests {
     fn test_navigate_up_wraps_around() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         // Start at first item
         app.file_list_state.select(Some(0));
@@ -576,7 +576,7 @@ mod tests {
     fn test_navigate_down_wraps_around() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         // Set to last item
         let last_idx = app.files.len() - 1;
@@ -592,7 +592,7 @@ mod tests {
     fn test_load_preview_for_file() {
         let temp_dir = create_test_dir_structure().unwrap();
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path).unwrap();
+        let mut app = App::new(root_path.clone()).unwrap();
 
         // Select first file
         if let Some(first) = app.files.first() {

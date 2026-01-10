@@ -7,7 +7,10 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 pub enum WorkerRequest {
-    IndexSymbols { root_dir: Box<Path>, config: Box<Config> },
+    IndexSymbols {
+        root_dir: Box<Path>,
+        config: Box<Config>,
+    },
     Shutdown,
 }
 
