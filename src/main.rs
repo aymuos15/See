@@ -12,6 +12,7 @@ mod highlight;
 mod theme;
 mod tui;
 mod ui;
+mod worker;
 
 #[derive(Parser)]
 #[command(name = "viewer")]

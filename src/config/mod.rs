@@ -39,6 +39,7 @@ pub struct ThemeConfig {
     pub line_num: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct Config {
     pub exclude_set: GlobSet,
     pub theme: Theme,

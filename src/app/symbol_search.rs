@@ -1,4 +1,3 @@
-use crate::files::{extract_symbols, find_all_files_recursive};
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher};
 use std::collections::HashMap;
@@ -11,20 +10,11 @@ impl App {
         self.symbol_search_query.clear();
         self.symbol_search_selected = 0;
 
-        // Build symbol index on first entry
-        if self.symbol_index.is_empty() {
-            if let Ok(all_files) = find_all_files_recursive(&self.root_dir, &self.config) {
-                let mut symbols = Vec::new();
-                for file_entry in all_files {
-                    if file_entry.is_file {
-                        if let Ok(content) = std::fs::read_to_string(&file_entry.path) {
-                            let file_symbols = extract_symbols(&file_entry.path, &content);
-                            symbols.extend(file_symbols);
-                        }
-                    }
-                }
-                self.symbol_index = symbols;
-            }
+        // Request background indexing if not already indexed
+        if self.symbol_index.is_empty() && self.symbol_indexing_progress.is_none() {
+            self.symbol_indexing_progress = Some((0, 0));
+            self.worker
+                .request_symbol_indexing(&self.root_dir, self.config.clone());
         }
 
         self.apply_symbol_filter();

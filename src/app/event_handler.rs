@@ -1,4 +1,5 @@
 use crate::event::{poll_event, AppEvent};
+use crate::worker::WorkerResponse;
 use std::time::Duration;
 
 use super::App;
@@ -7,10 +8,28 @@ impl App {
     pub fn run(&mut self, terminal: &mut crate::tui::Tui) -> anyhow::Result<()> {
         while !self.should_quit {
             terminal.draw(|frame| crate::ui::render(frame, self))?;
+            self.poll_worker_responses();
             self.handle_next_event()?;
         }
 
         Ok(())
+    }
+
+    fn poll_worker_responses(&mut self) {
+        while let Some(response) = self.worker.poll_response() {
+            match response {
+                WorkerResponse::SymbolsIndexed(symbols) => {
+                    self.symbol_index = symbols;
+                    self.symbol_indexing_progress = None;
+                    if self.symbol_search_mode {
+                        self.apply_symbol_filter();
+                    }
+                }
+                WorkerResponse::IndexingProgress { processed, total } => {
+                    self.symbol_indexing_progress = Some((processed, total));
+                }
+            }
+        }
     }
 
     #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]

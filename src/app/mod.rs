@@ -19,6 +19,7 @@ use crate::files::{read_directory, FileEntry, Symbol};
 use crate::git::GitStatus;
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
+use crate::worker::BackgroundWorker;
 use ratatui::prelude::Rect;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
@@ -94,6 +95,9 @@ pub struct App {
     pub help_mode: bool,
     // Split layout
     pub split_layout: Option<SplitLayout>,
+    // Background worker
+    worker: BackgroundWorker,
+    pub symbol_indexing_progress: Option<(usize, usize)>,
 }
 
 /// Main application state for the TUI file viewer.
@@ -147,6 +151,9 @@ impl App {
         let file_watcher = FileWatcher::new(&current_dir)?;
         let search_index_timer = RefreshTimer::new();
 
+        // Spawn background worker
+        let worker = BackgroundWorker::spawn();
+
         let mut app = Self {
             root_dir,
             current_dir,
@@ -191,6 +198,8 @@ impl App {
             theme_preview_mode: false,
             help_mode: false,
             split_layout: None,
+            worker,
+            symbol_indexing_progress: None,
         };
 
         if !app.files.is_empty() {
