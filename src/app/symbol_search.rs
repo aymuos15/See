@@ -84,7 +84,7 @@ impl App {
                     self.preview_scroll = 0;
                     self.load_preview();
 
-                    // Scroll to the symbol's line in the preview
+                    // Scroll to the symbol's line in the preview (only for text content)
                     self.jump_to_line(symbol_line);
 
                     // Update watcher for new directory
@@ -97,8 +97,11 @@ impl App {
 
     pub fn jump_to_line(&mut self, line: usize) {
         if let Some(content) = &self.shared_preview_content {
-            if line < content.lines.len() {
-                self.preview_scroll = u16::try_from(line).unwrap_or(u16::MAX);
+            // Only jump to line for text content, not images
+            if let crate::app::content::PreviewContentType::Text { lines, .. } = content.as_ref() {
+                if line < lines.len() {
+                    self.preview_scroll = u16::try_from(line).unwrap_or(u16::MAX);
+                }
             }
         }
     }

@@ -1,3 +1,5 @@
+mod content;
+pub use content::{PreviewContentType, SharedPreviewContent};
 mod diff;
 mod directory;
 mod event_handler;
@@ -21,24 +23,11 @@ use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
 use crate::worker::BackgroundWorker;
 use ratatui::prelude::Rect;
-use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use selection::TextSelection;
 use split::SplitLayout;
-
-/// Content displayed in the preview pane with syntax highlighting.
-pub struct PreviewContent {
-    /// Syntax-highlighted lines for rendering.
-    pub lines: Vec<Line<'static>>,
-    /// Raw text lines without highlighting (for copying).
-    pub raw_lines: Vec<String>,
-}
-
-/// Reference-counted preview content for efficient sharing between panes.
-pub type SharedPreviewContent = Rc<PreviewContent>;
 
 /// Main application state for the TUI file viewer.
 #[allow(clippy::struct_excessive_bools)]
@@ -47,8 +36,7 @@ pub struct App {
     pub current_dir: PathBuf,
     pub files: Vec<FileEntry>,
     pub file_list_state: ListState,
-    pub preview_content: Option<PreviewContent>,
-    /// Shared preview content for efficient pane sharing (avoids cloning).
+    /// Shared preview content (text or image) for efficient pane sharing.
     pub shared_preview_content: Option<SharedPreviewContent>,
     pub preview_scroll: u16,
     pub highlighter: SyntaxHighlighter,
@@ -98,6 +86,11 @@ pub struct App {
     // Background worker
     worker: BackgroundWorker,
     pub symbol_indexing_progress: Option<(usize, usize)>,
+    // Image protocol cache (by canonical path)
+    pub image_protocols:
+        std::collections::HashMap<PathBuf, ratatui_image::protocol::StatefulProtocol>,
+    // Image picker (initialized once at startup)
+    image_picker: Option<ratatui_image::picker::Picker>,
 }
 
 /// Main application state for the TUI file viewer.
@@ -106,6 +99,23 @@ impl App {
     /// Returns the root directory being browsed.
     pub fn root_dir(&self) -> &Path {
         &self.root_dir
+    }
+
+    /// Initialize the image picker after TUI setup
+    /// This must be called after entering alternate screen but before event loop
+    pub fn init_image_picker(&mut self) {
+        if self.image_picker.is_none() {
+            match ratatui_image::picker::Picker::from_query_stdio() {
+                Ok(picker) => {
+                    self.image_picker = Some(picker);
+                }
+                Err(_e) => {
+                    // Image picker failed - likely no TTY or graphics protocol unsupported
+                    // Image files will show dimensions but not render
+                    self.image_picker = None;
+                }
+            }
+        }
     }
 
     /// Returns the index of all files for searching.
@@ -159,7 +169,6 @@ impl App {
             current_dir,
             files,
             file_list_state: ListState::default(),
-            preview_content: None,
             shared_preview_content: None,
             preview_scroll: 0,
             highlighter,
@@ -200,6 +209,8 @@ impl App {
             split_layout: None,
             worker,
             symbol_indexing_progress: None,
+            image_protocols: std::collections::HashMap::new(),
+            image_picker: None, // Will be initialized after TUI setup
         };
 
         if !app.files.is_empty() {
@@ -228,6 +239,20 @@ impl App {
     #[allow(clippy::missing_const_for_fn)]
     pub fn toggle_theme_preview(&mut self) {
         self.theme_preview_mode = !self.theme_preview_mode;
+    }
+
+    /// Handle image loaded from background worker
+    pub fn handle_image_loaded(
+        &mut self,
+        path: &Path,
+        result: &anyhow::Result<image::DynamicImage>,
+    ) {
+        if let (Ok(dyn_img), Some(ref picker)) = (result, &self.image_picker) {
+            let protocol = picker.new_resize_protocol(dyn_img.clone());
+            // Store protocol by canonical path for consistent lookup
+            let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+            self.image_protocols.insert(canonical_path, protocol);
+        }
     }
 }
 
@@ -603,7 +628,10 @@ mod tests {
                 // Should have loaded preview content
                 assert!(app.shared_preview_content.is_some());
                 if let Some(content) = &app.shared_preview_content {
-                    assert!(!content.lines.is_empty());
+                    // For text files, lines should not be empty
+                    if let PreviewContentType::Text { lines, .. } = content.as_ref() {
+                        assert!(!lines.is_empty());
+                    }
                 }
             }
         }

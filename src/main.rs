@@ -31,6 +31,9 @@ fn main() -> anyhow::Result<()> {
 
     let mut terminal = tui::init()?;
 
+    // Initialize image picker AFTER entering alternate screen
+    app.init_image_picker();
+
     let result = app.run(&mut terminal);
 
     tui::restore()?;

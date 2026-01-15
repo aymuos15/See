@@ -21,6 +21,9 @@ pub const PREVIEW_PAGE_SCROLL_LINES: u16 = 10;
 /// Maximum file size to preview (1 MB)
 pub const MAX_FILE_SIZE: u64 = 1024 * 1024;
 
+/// Maximum image file size to preview (10 MB)
+pub const MAX_IMAGE_SIZE: u64 = 10 * 1024 * 1024;
+
 /// Number of bytes to check for binary file detection
 pub const BINARY_DETECTION_BYTES: usize = 8000;
 
@@ -44,3 +47,8 @@ pub const SEARCH_POPUP_MARGIN: u16 = 1;
 
 /// Default syntax highlighting theme name
 pub const DEFAULT_SYNTAX_THEME: &str = "base16-eighties.dark";
+
+/// Supported image file extensions
+pub const IMAGE_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff", "ico", "tga",
+];

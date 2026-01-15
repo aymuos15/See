@@ -11,12 +11,22 @@ pub enum WorkerRequest {
         root_dir: Box<Path>,
         config: Box<Config>,
     },
+    LoadImage {
+        path: Box<Path>,
+    },
     Shutdown,
 }
 
 pub enum WorkerResponse {
     SymbolsIndexed(Vec<Symbol>),
-    IndexingProgress { processed: usize, total: usize },
+    IndexingProgress {
+        processed: usize,
+        total: usize,
+    },
+    ImageLoaded {
+        path: Box<Path>,
+        result: anyhow::Result<image::DynamicImage>,
+    },
 }
 
 pub struct BackgroundWorker {
@@ -48,6 +58,12 @@ impl BackgroundWorker {
         });
     }
 
+    pub fn request_image_load(&self, path: &Path) {
+        let _ = self
+            .request_tx
+            .send(WorkerRequest::LoadImage { path: path.into() });
+    }
+
     pub fn poll_response(&self) -> Option<WorkerResponse> {
         self.response_rx.try_recv().ok()
     }
@@ -68,6 +84,9 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
         match request {
             WorkerRequest::IndexSymbols { root_dir, config } => {
                 index_symbols(&root_dir, &config, response_tx);
+            }
+            WorkerRequest::LoadImage { path } => {
+                load_image(&path, response_tx);
             }
             WorkerRequest::Shutdown => break,
         }
@@ -99,4 +118,19 @@ fn index_symbols(root_dir: &Path, config: &Config, response_tx: &Sender<WorkerRe
     }
 
     let _ = response_tx.send(WorkerResponse::SymbolsIndexed(symbols));
+}
+
+fn load_image(path: &Path, response_tx: &Sender<WorkerResponse>) {
+    let result: anyhow::Result<image::DynamicImage> = image::ImageReader::open(path)
+        .map_err(|e| anyhow::anyhow!("Failed to open image: {e}"))
+        .and_then(|reader| {
+            reader
+                .decode()
+                .map_err(|e| anyhow::anyhow!("Failed to decode image: {e}"))
+        });
+
+    let _ = response_tx.send(WorkerResponse::ImageLoaded {
+        path: path.into(),
+        result,
+    });
 }

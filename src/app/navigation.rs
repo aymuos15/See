@@ -1,3 +1,4 @@
+use crate::app::content::PreviewContentType;
 use crate::constants::{
     MAX_SPLIT_PERCENT, MIN_SPLIT_PERCENT, MOUSE_SCROLL_LINES, PREVIEW_PAGE_SCROLL_LINES,
     SPLIT_RESIZE_STEP,
@@ -64,22 +65,34 @@ impl App {
         }
     }
 
+    /// Get the number of text lines if content is text, otherwise None
+    const fn get_text_lines(content: &PreviewContentType) -> Option<usize> {
+        match content {
+            PreviewContentType::Text { lines, .. } => Some(lines.len()),
+            PreviewContentType::Image { .. } => None,
+        }
+    }
+
     pub(super) fn scroll_preview_down(&mut self) {
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
-                if let Some(preview) = &pane.preview_content {
-                    if !preview.lines.is_empty() {
-                        let max_scroll = preview.lines.len().saturating_sub(1);
-                        pane.scroll =
-                            (pane.scroll + 1).min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                if let Some(content) = &pane.preview_content {
+                    if let Some(lines) = Self::get_text_lines(content) {
+                        if lines > 0 {
+                            let max_scroll = lines.saturating_sub(1);
+                            pane.scroll = (pane.scroll + 1)
+                                .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                        }
                     }
                 }
             }
-        } else if let Some(preview) = &self.shared_preview_content {
-            if !preview.lines.is_empty() {
-                let max_scroll = preview.lines.len().saturating_sub(1);
-                self.preview_scroll =
-                    (self.preview_scroll + 1).min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+        } else if let Some(content) = &self.shared_preview_content {
+            if let Some(lines) = Self::get_text_lines(content) {
+                if lines > 0 {
+                    let max_scroll = lines.saturating_sub(1);
+                    self.preview_scroll = (self.preview_scroll + 1)
+                        .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                }
             }
         }
     }
@@ -98,19 +111,23 @@ impl App {
     pub(super) fn mouse_scroll_down(&mut self) {
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
-                if let Some(preview) = &pane.preview_content {
-                    if !preview.lines.is_empty() {
-                        let max_scroll = preview.lines.len().saturating_sub(1);
-                        pane.scroll = (pane.scroll + MOUSE_SCROLL_LINES)
-                            .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                if let Some(content) = &pane.preview_content {
+                    if let Some(lines) = Self::get_text_lines(content) {
+                        if lines > 0 {
+                            let max_scroll = lines.saturating_sub(1);
+                            pane.scroll = (pane.scroll + MOUSE_SCROLL_LINES)
+                                .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                        }
                     }
                 }
             }
-        } else if let Some(preview) = &self.shared_preview_content {
-            if !preview.lines.is_empty() {
-                let max_scroll = preview.lines.len().saturating_sub(1);
-                self.preview_scroll = (self.preview_scroll + MOUSE_SCROLL_LINES)
-                    .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+        } else if let Some(content) = &self.shared_preview_content {
+            if let Some(lines) = Self::get_text_lines(content) {
+                if lines > 0 {
+                    let max_scroll = lines.saturating_sub(1);
+                    self.preview_scroll = (self.preview_scroll + MOUSE_SCROLL_LINES)
+                        .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                }
             }
         }
     }
@@ -137,19 +154,23 @@ impl App {
         let scroll_amount = self.get_page_scroll_amount();
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
-                if let Some(preview) = &pane.preview_content {
-                    if !preview.lines.is_empty() {
-                        let max_scroll = preview.lines.len().saturating_sub(1);
-                        pane.scroll = (pane.scroll + scroll_amount)
-                            .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                if let Some(content) = &pane.preview_content {
+                    if let Some(lines) = Self::get_text_lines(content) {
+                        if lines > 0 {
+                            let max_scroll = lines.saturating_sub(1);
+                            pane.scroll = (pane.scroll + scroll_amount)
+                                .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                        }
                     }
                 }
             }
-        } else if let Some(preview) = &self.shared_preview_content {
-            if !preview.lines.is_empty() {
-                let max_scroll = preview.lines.len().saturating_sub(1);
-                self.preview_scroll = (self.preview_scroll + scroll_amount)
-                    .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+        } else if let Some(content) = &self.shared_preview_content {
+            if let Some(lines) = Self::get_text_lines(content) {
+                if lines > 0 {
+                    let max_scroll = lines.saturating_sub(1);
+                    self.preview_scroll = (self.preview_scroll + scroll_amount)
+                        .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+                }
             }
         }
     }

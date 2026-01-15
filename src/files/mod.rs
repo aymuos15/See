@@ -8,7 +8,23 @@ pub use loader::read_file_content;
 pub use symbol::{Symbol, SymbolKind};
 pub use symbol_extractor::extract_symbols;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// Check if a file is an image based on its extension
+pub fn is_image_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| {
+            crate::constants::IMAGE_EXTENSIONS.contains(&ext.to_lowercase().as_str())
+        })
+}
+
+/// Get image dimensions (width, height) from file path
+pub fn get_image_dimensions(path: &Path) -> anyhow::Result<(u32, u32)> {
+    let reader = image::ImageReader::open(path)?;
+    let dimensions = reader.into_dimensions()?;
+    Ok(dimensions)
+}
 
 /// Represents a file or directory entry in the file browser.
 #[derive(Debug, Clone)]

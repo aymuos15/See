@@ -28,6 +28,9 @@ impl App {
                 WorkerResponse::IndexingProgress { processed, total } => {
                     self.symbol_indexing_progress = Some((processed, total));
                 }
+                WorkerResponse::ImageLoaded { path, result } => {
+                    self.handle_image_loaded(&path, &result);
+                }
             }
         }
     }

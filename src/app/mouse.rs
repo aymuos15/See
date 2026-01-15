@@ -1,7 +1,16 @@
+use crate::app::content::PreviewContentType;
 use crate::ui::coordinates::screen_to_text_position;
 
 use super::selection::{get_word_at, TextSelection};
 use super::App;
+
+/// Get raw lines from content if it's text, otherwise return None
+fn get_raw_lines(content: &PreviewContentType) -> Option<&[String]> {
+    match content {
+        PreviewContentType::Text { raw_lines, .. } => Some(raw_lines),
+        PreviewContentType::Image { .. } => None,
+    }
+}
 
 impl App {
     pub fn handle_mouse_down(&mut self, column: u16, row: u16) {
@@ -55,42 +64,46 @@ impl App {
                 split_layout.active_pane_index = pane_id;
 
                 if let Some(pane) = split_layout.get_active_pane_mut() {
-                    if let Some(preview) = &pane.preview_content {
-                        let pos = screen_to_text_position(
-                            column,
-                            row,
-                            area,
-                            pane.scroll,
-                            preview.raw_lines.len(),
-                            &preview.raw_lines,
-                        );
+                    if let Some(content) = &pane.preview_content {
+                        if let Some(raw_lines) = get_raw_lines(content) {
+                            let pos = screen_to_text_position(
+                                column,
+                                row,
+                                area,
+                                pane.scroll,
+                                raw_lines.len(),
+                                raw_lines,
+                            );
 
-                        if let Some(pos) = pos {
-                            pane.selection = Some(TextSelection::new(pos));
-                            self.highlighted_word = get_word_at(&preview.raw_lines, pos);
-                        } else {
-                            pane.selection = None;
-                            self.highlighted_word = None;
+                            if let Some(pos) = pos {
+                                pane.selection = Some(TextSelection::new(pos));
+                                self.highlighted_word = get_word_at(raw_lines, pos);
+                            } else {
+                                pane.selection = None;
+                                self.highlighted_word = None;
+                            }
                         }
                     }
                 }
-            } else if let Some(preview) = &self.shared_preview_content {
+            } else if let Some(content) = &self.shared_preview_content {
                 // Single pane mode
-                let pos = screen_to_text_position(
-                    column,
-                    row,
-                    area,
-                    self.preview_scroll,
-                    preview.raw_lines.len(),
-                    &preview.raw_lines,
-                );
+                if let Some(raw_lines) = get_raw_lines(content) {
+                    let pos = screen_to_text_position(
+                        column,
+                        row,
+                        area,
+                        self.preview_scroll,
+                        raw_lines.len(),
+                        raw_lines,
+                    );
 
-                if let Some(pos) = pos {
-                    self.selection = Some(TextSelection::new(pos));
-                    self.highlighted_word = get_word_at(&preview.raw_lines, pos);
-                } else {
-                    self.selection = None;
-                    self.highlighted_word = None;
+                    if let Some(pos) = pos {
+                        self.selection = Some(TextSelection::new(pos));
+                        self.highlighted_word = get_word_at(raw_lines, pos);
+                    } else {
+                        self.selection = None;
+                        self.highlighted_word = None;
+                    }
                 }
             }
         }
@@ -118,19 +131,21 @@ impl App {
                     return;
                 };
 
-                let Some(preview) = &pane.preview_content else {
+                let Some(content) = &pane.preview_content else {
                     return;
                 };
 
-                if let Some(pos) = screen_to_text_position(
-                    column,
-                    row,
-                    area,
-                    pane.scroll,
-                    preview.raw_lines.len(),
-                    &preview.raw_lines,
-                ) {
-                    selection.cursor = pos;
+                if let Some(raw_lines) = get_raw_lines(content) {
+                    if let Some(pos) = screen_to_text_position(
+                        column,
+                        row,
+                        area,
+                        pane.scroll,
+                        raw_lines.len(),
+                        raw_lines,
+                    ) {
+                        selection.cursor = pos;
+                    }
                 }
             }
         } else {
@@ -144,19 +159,21 @@ impl App {
             let Some(preview_area) = self.last_preview_area else {
                 return;
             };
-            let Some(preview) = &self.shared_preview_content else {
+            let Some(content) = &self.shared_preview_content else {
                 return;
             };
 
-            if let Some(pos) = screen_to_text_position(
-                column,
-                row,
-                preview_area,
-                self.preview_scroll,
-                preview.raw_lines.len(),
-                &preview.raw_lines,
-            ) {
-                selection.cursor = pos;
+            if let Some(raw_lines) = get_raw_lines(content) {
+                if let Some(pos) = screen_to_text_position(
+                    column,
+                    row,
+                    preview_area,
+                    self.preview_scroll,
+                    raw_lines.len(),
+                    raw_lines,
+                ) {
+                    selection.cursor = pos;
+                }
             }
         }
     }
@@ -184,12 +201,15 @@ impl App {
                     return false;
                 }
 
-                let Some(preview) = &pane.preview_content else {
+                let Some(content) = &pane.preview_content else {
                     return false;
                 };
 
-                let text = selection.extract_text(&preview.raw_lines);
-                return self.clipboard.copy_text(&text);
+                if let Some(raw_lines) = get_raw_lines(content) {
+                    let text = selection.extract_text(raw_lines);
+                    return self.clipboard.copy_text(&text);
+                }
+                return false;
             }
             return false;
         }
@@ -201,27 +221,34 @@ impl App {
             return false;
         }
 
-        let Some(preview) = &self.shared_preview_content else {
+        let Some(content) = &self.shared_preview_content else {
             return false;
         };
 
-        let text = selection.extract_text(&preview.raw_lines);
-        self.clipboard.copy_text(&text)
+        if let Some(raw_lines) = get_raw_lines(content) {
+            let text = selection.extract_text(raw_lines);
+            return self.clipboard.copy_text(&text);
+        }
+        false
     }
 
     pub fn select_all(&mut self) {
         if let Some(split_layout) = &mut self.split_layout {
             if let Some(pane) = split_layout.get_active_pane_mut() {
-                let Some(preview) = &pane.preview_content else {
+                let Some(content) = &pane.preview_content else {
                     return;
                 };
 
-                if preview.raw_lines.is_empty() {
+                let Some(raw_lines) = get_raw_lines(content) else {
+                    return;
+                };
+
+                if raw_lines.is_empty() {
                     return;
                 }
 
-                let last_line = preview.raw_lines.len() - 1;
-                let last_col = preview.raw_lines.last().map_or(0, String::len);
+                let last_line = raw_lines.len() - 1;
+                let last_col = raw_lines.last().map_or(0, String::len);
 
                 pane.selection = Some(TextSelection {
                     anchor: crate::app::selection::TextPosition::new(0, 0),
@@ -232,16 +259,20 @@ impl App {
             return;
         }
 
-        let Some(preview) = &self.shared_preview_content else {
+        let Some(content) = &self.shared_preview_content else {
             return;
         };
 
-        if preview.raw_lines.is_empty() {
+        let Some(raw_lines) = get_raw_lines(content) else {
+            return;
+        };
+
+        if raw_lines.is_empty() {
             return;
         }
 
-        let last_line = preview.raw_lines.len() - 1;
-        let last_col = preview.raw_lines.last().map_or(0, String::len);
+        let last_line = raw_lines.len() - 1;
+        let last_col = raw_lines.last().map_or(0, String::len);
 
         self.selection = Some(TextSelection {
             anchor: crate::app::selection::TextPosition::new(0, 0),

@@ -46,6 +46,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     pane.id == split_layout.active_pane_index,
                     app.config.wrap,
                     app.highlighted_word.as_deref(),
+                    &mut app.image_protocols,
                 );
             }
         }

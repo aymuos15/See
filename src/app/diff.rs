@@ -1,4 +1,4 @@
-use super::{App, PreviewContent};
+use super::{App, PreviewContentType};
 use crate::files::read_file_content;
 use crate::git::generate_diff_lines;
 use ratatui::style::{Color, Modifier, Style};
@@ -62,7 +62,7 @@ impl App {
                     let styled_lines = Self::style_diff_lines(&diff_lines);
 
                     // Update preview content with diff
-                    self.shared_preview_content = Some(Rc::new(PreviewContent {
+                    self.shared_preview_content = Some(Rc::new(PreviewContentType::Text {
                         lines: styled_lines,
                         raw_lines: diff_lines,
                     }));

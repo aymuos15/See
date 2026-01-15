@@ -1,11 +1,12 @@
 use crate::app::selection::TextSelection;
 use crate::app::App;
+use crate::app::PreviewContentType;
 use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Wrap};
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
-    let theme = &app.config.theme;
+    let theme = app.config.theme.clone();
 
     // Fill background without using Block wrapper (no implicit margins)
     let bg = Block::default().style(Style::default().bg(theme.bg_main));
@@ -16,58 +17,104 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     app.last_pane_areas = vec![(0, area)];
 
     // Use shared_preview_content (Rc) for better performance
-    if let Some(preview) = &app.shared_preview_content {
-        let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(1)]);
-        let [line_num_area, content_area] = horizontal.areas(area);
-
-        let visible_height = content_area.height as usize;
-        let start = app.preview_scroll as usize;
-        let end = (start + visible_height).min(preview.lines.len());
-
-        // Line numbers
-        let line_numbers: Vec<Line> = (start + 1..=end)
-            .map(|n| {
-                Line::from(format!("{n:>4} "))
-                    .style(Style::default().fg(theme.line_num).bg(theme.bg_main))
-            })
-            .collect();
-
-        let line_num_paragraph =
-            Paragraph::new(line_numbers).style(Style::default().bg(theme.bg_main));
-        frame.render_widget(line_num_paragraph, line_num_area);
-
-        // Content with selection highlighting
-        let mut visible_lines: Vec<Line> = app.selection.as_ref().map_or_else(
-            || preview.lines[start..end].to_vec(),
-            |selection| {
-                apply_selection_to_lines(
-                    &preview.lines[start..end],
-                    &preview.raw_lines[start..end],
-                    selection,
-                    start,
-                    theme,
-                )
-            },
-        );
-
-        // Apply word highlights if active
-        if let Some(word) = &app.highlighted_word {
-            visible_lines =
-                apply_word_highlights(&visible_lines, &preview.raw_lines[start..end], word, theme);
+    if let Some(content) = app.shared_preview_content.clone() {
+        match content.as_ref() {
+            PreviewContentType::Text { lines, raw_lines } => {
+                render_text_content(frame, app, area, &theme, lines, raw_lines);
+            }
+            PreviewContentType::Image {
+                path, dimensions, ..
+            } => {
+                // Look up protocol from cache (need mutable access for rendering)
+                let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
+                let protocol = app.image_protocols.get_mut(&canonical_path);
+                render_image_content(frame, area, *dimensions, protocol);
+            }
         }
-
-        let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
-        let content = if app.config.wrap {
-            content.wrap(Wrap { trim: false })
-        } else {
-            content
-        };
-        frame.render_widget(content, content_area);
     } else {
         let placeholder = Paragraph::new("Select a file to preview")
             .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
             .alignment(Alignment::Center);
 
+        frame.render_widget(placeholder, area);
+    }
+}
+
+fn render_text_content(
+    frame: &mut Frame,
+    app: &App,
+    area: Rect,
+    theme: &Theme,
+    lines: &[Line<'static>],
+    raw_lines: &[String],
+) {
+    let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(1)]);
+    let [line_num_area, content_area] = horizontal.areas(area);
+
+    let visible_height = content_area.height as usize;
+    let start = app.preview_scroll as usize;
+    let end = (start + visible_height).min(lines.len());
+
+    // Line numbers
+    let line_numbers: Vec<Line> = (start + 1..=end)
+        .map(|n| {
+            Line::from(format!("{n:>4} "))
+                .style(Style::default().fg(theme.line_num).bg(theme.bg_main))
+        })
+        .collect();
+
+    let line_num_paragraph = Paragraph::new(line_numbers).style(Style::default().bg(theme.bg_main));
+    frame.render_widget(line_num_paragraph, line_num_area);
+
+    // Content with selection highlighting
+    let mut visible_lines: Vec<Line> = app.selection.as_ref().map_or_else(
+        || lines[start..end].to_vec(),
+        |selection| {
+            apply_selection_to_lines(
+                &lines[start..end],
+                &raw_lines[start..end],
+                selection,
+                start,
+                theme,
+            )
+        },
+    );
+
+    // Apply word highlights if active
+    if let Some(word) = &app.highlighted_word {
+        visible_lines = apply_word_highlights(&visible_lines, &raw_lines[start..end], word, theme);
+    }
+
+    let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
+    let content = if app.config.wrap {
+        content.wrap(Wrap { trim: false })
+    } else {
+        content
+    };
+    frame.render_widget(content, content_area);
+}
+
+fn render_image_content(
+    frame: &mut Frame,
+    area: Rect,
+    dimensions: (u32, u32),
+    protocol: Option<&mut ratatui_image::protocol::StatefulProtocol>,
+) {
+    use ratatui_image::StatefulImage;
+
+    if let Some(protocol) = protocol {
+        let image_widget = StatefulImage::default();
+        frame.render_stateful_widget(image_widget, area, protocol);
+    } else {
+        // Show placeholder with dimensions while image loads
+        // or if graphics protocol is not available
+        let dimensions_text = format!(
+            "Image Preview\n\n{}x{} pixels\n\n[Graphics protocol unavailable]\n[Kitty graphics required]",
+            dimensions.0, dimensions.1
+        );
+        let placeholder = Paragraph::new(dimensions_text)
+            .style(Style::default().fg(Theme::default().fg_text))
+            .alignment(Alignment::Center);
         frame.render_widget(placeholder, area);
     }
 }

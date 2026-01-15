@@ -1,7 +1,8 @@
-use crate::files::{read_directory, read_file_content};
+use crate::app::content::PreviewContentType;
+use crate::files::read_directory;
 use std::rc::Rc;
 
-use super::{App, PreviewContent};
+use super::App;
 
 impl App {
     pub(super) fn enter_directory(&mut self) {
@@ -56,17 +57,32 @@ impl App {
         if let Some(idx) = self.file_list_state.selected() {
             if let Some(entry) = self.files.get(idx) {
                 if entry.is_file {
-                    if let Ok(content) = read_file_content(&entry.path) {
-                        let lines = self.highlighter.highlight(&entry.path, &content);
-                        let raw_lines: Vec<String> = content.lines().map(String::from).collect();
-                        let preview = PreviewContent { lines, raw_lines };
+                    if let Ok(content) = crate::files::loader::load_preview_content(&entry.path) {
+                        // Handle text content with syntax highlighting
+                        let content = match &content {
+                            PreviewContentType::Text { raw_lines, .. } => {
+                                let text = raw_lines.join("\n");
+                                let lines = self.highlighter.highlight(&entry.path, &text);
+                                PreviewContentType::Text {
+                                    lines,
+                                    raw_lines: raw_lines.clone(),
+                                }
+                            }
+                            PreviewContentType::Image {
+                                path, dimensions, ..
+                            } => {
+                                // Request background image loading for images
+                                self.worker.request_image_load(path);
+                                PreviewContentType::Image {
+                                    path: path.clone(),
+                                    dimensions: *dimensions,
+                                }
+                            }
+                        };
+
                         // Create shared reference for panes (Rc::clone is O(1))
-                        let shared = Rc::new(preview);
-                        self.shared_preview_content = Some(Rc::clone(&shared));
-                        // For backward compatibility, we need to keep preview_content
-                        // But we can't easily convert Rc back, so we'll use shared_preview_content
-                        // in the rendering code instead
-                        self.preview_content = None;
+                        let shared = Rc::new(content);
+                        self.shared_preview_content = Some(shared);
                         // Watch this file for changes
                         let _ = self.file_watcher.watch_preview_file(Some(&entry.path));
                         // Clear selection when loading new file
@@ -79,7 +95,6 @@ impl App {
         }
         // No preview, stop watching preview file
         let _ = self.file_watcher.watch_preview_file(None);
-        self.preview_content = None;
         self.shared_preview_content = None;
     }
 
@@ -120,22 +135,52 @@ impl App {
         if let Some(idx) = self.file_list_state.selected() {
             if let Some(entry) = self.files.get(idx) {
                 if entry.is_file {
-                    if let Ok(content) = read_file_content(&entry.path) {
-                        let raw_lines: Vec<String> = content.lines().map(String::from).collect();
+                    // Use load_preview_content to handle both images and text
+                    if let Ok(content) = crate::files::loader::load_preview_content(&entry.path) {
+                        match content {
+                            PreviewContentType::Text { raw_lines, .. } => {
+                                // Check if content actually changed
+                                let content_changed = self
+                                    .shared_preview_content
+                                    .as_ref()
+                                    .is_none_or(|prev| match prev.as_ref() {
+                                        PreviewContentType::Text {
+                                            raw_lines: prev_lines,
+                                            ..
+                                        } => prev_lines != &raw_lines,
+                                        PreviewContentType::Image { .. } => true,
+                                    });
 
-                        // Check if content actually changed
-                        let content_changed = self
-                            .shared_preview_content
-                            .as_ref()
-                            .is_none_or(|prev| prev.raw_lines != raw_lines);
-
-                        if content_changed {
-                            let lines = self.highlighter.highlight(&entry.path, &content);
-                            self.shared_preview_content =
-                                Some(Rc::new(PreviewContent { lines, raw_lines }));
-                            // Only clear selection if content changed
-                            self.selection = None;
-                            // Keep highlighted_word for cross-file search persistence
+                                if content_changed {
+                                    let lines = self
+                                        .highlighter
+                                        .highlight(&entry.path, &raw_lines.join("\n"));
+                                    self.shared_preview_content =
+                                        Some(Rc::new(PreviewContentType::Text {
+                                            lines,
+                                            raw_lines,
+                                        }));
+                                    // Only clear selection if content changed
+                                    self.selection = None;
+                                    // Keep highlighted_word for cross-file search persistence
+                                }
+                            }
+                            PreviewContentType::Image { path, dimensions } => {
+                                // For images, just keep the existing preview
+                                // Don't reload unless the file was actually modified
+                                // (size/mtime check would be needed for proper detection)
+                                if self.shared_preview_content.as_ref().is_none_or(|prev| {
+                                    !matches!(prev.as_ref(), PreviewContentType::Image { .. })
+                                }) {
+                                    // Changed from non-image to image, reload
+                                    self.worker.request_image_load(&path);
+                                    self.shared_preview_content =
+                                        Some(Rc::new(PreviewContentType::Image {
+                                            path,
+                                            dimensions,
+                                        }));
+                                }
+                            }
                         }
                         return;
                     }
