@@ -101,10 +101,10 @@ mod tests {
 
     #[test]
     fn test_read_directory_basic() {
-        let temp = create_test_structure().unwrap();
+        let temp = create_test_structure().expect("operation failed");
         let config = Config::default();
 
-        let entries = read_directory(temp.path(), temp.path(), &config).unwrap();
+        let entries = read_directory(temp.path(), temp.path(), &config).expect("operation failed");
 
         // Should have file1.txt, file2.log, subdir (and possibly .hidden since read_directory doesn't filter)
         assert!(entries.len() >= 3);
@@ -117,10 +117,10 @@ mod tests {
 
     #[test]
     fn test_read_directory_filters_by_config() {
-        let temp = create_test_structure().unwrap();
+        let temp = create_test_structure().expect("operation failed");
         let config = Config::default();
 
-        let entries = read_directory(temp.path(), temp.path(), &config).unwrap();
+        let entries = read_directory(temp.path(), temp.path(), &config).expect("operation failed");
 
         // Verify it at least loads files
         assert!(!entries.is_empty());
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_read_directory_respects_config_exclusions() {
-        let temp = create_test_structure().unwrap();
+        let temp = create_test_structure().expect("operation failed");
 
         let patterns = vec!["*.log".to_string()];
         let mut builder = globset::GlobSetBuilder::new();
@@ -137,13 +137,13 @@ mod tests {
                 builder.add(glob);
             }
         }
-        let exclude_set = builder.build().unwrap();
+        let exclude_set = builder.build().expect("operation failed");
         let config = Config {
             exclude_set,
             ..Default::default()
         };
 
-        let entries = read_directory(temp.path(), temp.path(), &config).unwrap();
+        let entries = read_directory(temp.path(), temp.path(), &config).expect("operation failed");
 
         let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
         assert!(names.contains(&"file1.txt"));
@@ -152,10 +152,10 @@ mod tests {
 
     #[test]
     fn test_read_directory_sorts_directories_first() {
-        let temp = create_test_structure().unwrap();
+        let temp = create_test_structure().expect("operation failed");
         let config = Config::default();
 
-        let entries = read_directory(temp.path(), temp.path(), &config).unwrap();
+        let entries = read_directory(temp.path(), temp.path(), &config).expect("operation failed");
 
         // First non-hidden entry should be directory (subdir)
         let first_is_dir = !entries[0].is_file;
@@ -164,10 +164,10 @@ mod tests {
 
     #[test]
     fn test_find_all_files_recursive_basic() {
-        let temp = create_test_structure().unwrap();
+        let temp = create_test_structure().expect("operation failed");
         let config = Config::default();
 
-        let entries = find_all_files_recursive(temp.path(), &config).unwrap();
+        let entries = find_all_files_recursive(temp.path(), &config).expect("operation failed");
 
         let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
 
@@ -184,10 +184,10 @@ mod tests {
 
     #[test]
     fn test_find_all_files_recursive_sorts() {
-        let temp = create_test_structure().unwrap();
+        let temp = create_test_structure().expect("operation failed");
         let config = Config::default();
 
-        let entries = find_all_files_recursive(temp.path(), &config).unwrap();
+        let entries = find_all_files_recursive(temp.path(), &config).expect("operation failed");
 
         let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
 

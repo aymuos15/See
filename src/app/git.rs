@@ -42,8 +42,8 @@ mod tests {
 
     #[test]
     fn test_toggle_git_highlight() {
-        let temp_dir = TempDir::new().unwrap();
-        let app = App::new(temp_dir.path().to_path_buf()).unwrap();
+        let temp_dir = TempDir::new().expect("operation failed");
+        let app = App::new(temp_dir.path().to_path_buf()).expect("operation failed");
 
         assert!(!app.git_highlight_enabled);
         assert!(app.git_status.is_none());
@@ -51,8 +51,8 @@ mod tests {
 
     #[test]
     fn test_is_file_modified_when_disabled() {
-        let temp_dir = TempDir::new().unwrap();
-        let app = App::new(temp_dir.path().to_path_buf()).unwrap();
+        let temp_dir = TempDir::new().expect("operation failed");
+        let app = App::new(temp_dir.path().to_path_buf()).expect("operation failed");
 
         assert!(!app.is_file_modified(temp_dir.path()));
     }

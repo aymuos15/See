@@ -78,9 +78,8 @@ fn test_fixed_debouncing_logic() {
 
                         if elapsed < Duration::from_millis(FILE_EVENT_DEBOUNCE_MS) {
                             eprintln!(
-                                "  [DEBOUNCED] elapsed={:?}ms < {}ms",
+                                "  [DEBOUNCED] elapsed={:?}ms < {FILE_EVENT_DEBOUNCE_MS}ms",
                                 elapsed.as_millis(),
-                                FILE_EVENT_DEBOUNCE_MS
                             );
                             continue;
                         }
@@ -88,7 +87,7 @@ fn test_fixed_debouncing_logic() {
                         // Update debounce timer only for relevant, non-debounced events
                         self.last_event_time = now;
                         eprintln!("  [ACCEPTED] Event accepted!");
-                        results.push(classification.unwrap());
+                        results.push(classification.expect("classification checked above"));
                     }
                     Ok(Err(_)) => {}
                     Err(mpsc::TryRecvError::Empty) => break,
@@ -101,17 +100,17 @@ fn test_fixed_debouncing_logic() {
     }
 
     // Create test directory
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path();
 
-    eprintln!("\n=== Creating watcher for: {:?}", watch_path);
-    let mut watcher = FixedWatcher::new(watch_path).unwrap();
+    eprintln!("\n=== Creating watcher for: {watch_path:?}");
+    let mut watcher = FixedWatcher::new(watch_path).expect("Failed to create file watcher");
 
     thread::sleep(Duration::from_millis(200));
 
     eprintln!("\n=== TEST 1: Creating file (should get Create event)");
     let test_file = watch_path.join("test.txt");
-    fs::write(&test_file, "hello world").unwrap();
+    fs::write(&test_file, "hello world").expect("Failed to write test file");
     thread::sleep(Duration::from_millis(500));
 
     let results = watcher.poll_with_fixed_logic();
@@ -129,7 +128,7 @@ fn test_fixed_debouncing_logic() {
     thread::sleep(Duration::from_millis(150));
 
     eprintln!("\n=== TEST 2: Modifying file (should get Modify event after debounce window)");
-    fs::write(&test_file, "modified content").unwrap();
+    fs::write(&test_file, "modified content").expect("Failed to modify test file");
     thread::sleep(Duration::from_millis(500));
 
     let results = watcher.poll_with_fixed_logic();
@@ -143,7 +142,7 @@ fn test_fixed_debouncing_logic() {
     thread::sleep(Duration::from_millis(150));
 
     eprintln!("\n=== TEST 3: Deleting file (should get Remove event)");
-    fs::remove_file(&test_file).unwrap();
+    fs::remove_file(&test_file).expect("Failed to delete test file");
     thread::sleep(Duration::from_millis(500));
 
     let results = watcher.poll_with_fixed_logic();

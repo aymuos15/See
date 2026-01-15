@@ -194,7 +194,7 @@ mod tests {
     fn test_parse_hex_color_valid() {
         let color = parser::parse_hex_color("#FF00AA");
         assert!(color.is_some());
-        match color.unwrap() {
+        match color.expect("operation failed") {
             Color::Rgb(r, g, b) => {
                 assert_eq!(r, 255);
                 assert_eq!(g, 0);
@@ -208,7 +208,7 @@ mod tests {
     fn test_parse_hex_color_lowercase() {
         let color = parser::parse_hex_color("#ff00aa");
         assert!(color.is_some());
-        match color.unwrap() {
+        match color.expect("operation failed") {
             Color::Rgb(r, g, b) => {
                 assert_eq!(r, 255);
                 assert_eq!(g, 0);
@@ -222,7 +222,7 @@ mod tests {
     fn test_parse_hex_color_no_hash() {
         let color = parser::parse_hex_color("FF00AA");
         assert!(color.is_some());
-        match color.unwrap() {
+        match color.expect("operation failed") {
             Color::Rgb(r, g, b) => {
                 assert_eq!(r, 255);
                 assert_eq!(g, 0);
@@ -236,7 +236,7 @@ mod tests {
     fn test_parse_hex_color_black() {
         let color = parser::parse_hex_color("#000000");
         assert!(color.is_some());
-        match color.unwrap() {
+        match color.expect("operation failed") {
             Color::Rgb(r, g, b) => {
                 assert_eq!(r, 0);
                 assert_eq!(g, 0);
@@ -250,7 +250,7 @@ mod tests {
     fn test_parse_hex_color_white() {
         let color = parser::parse_hex_color("#FFFFFF");
         assert!(color.is_some());
-        match color.unwrap() {
+        match color.expect("operation failed") {
             Color::Rgb(r, g, b) => {
                 assert_eq!(r, 255);
                 assert_eq!(g, 255);
@@ -286,7 +286,7 @@ mod tests {
         let result = parser::parse_theme("");
         assert!(result.is_ok());
         // Should return default theme on empty input
-        let theme = result.unwrap();
+        let theme = result.expect("operation failed");
         assert!(!matches!(theme.bg_main, Color::Reset));
     }
 

@@ -47,19 +47,18 @@ fn test_real_file_watcher_from_codebase() {
                     Ok(Ok(event)) => {
                         let msg = format!("[EVENT] kind={:?}, paths={:?}", event.kind, event.paths);
                         results.push(msg.clone());
-                        eprintln!("{}", msg);
+                        eprintln!("{msg}");
 
                         // Check debouncing
                         let now = Instant::now();
                         let elapsed = now.duration_since(self.last_event_time);
                         if elapsed < Duration::from_millis(FILE_EVENT_DEBOUNCE_MS) {
                             let msg = format!(
-                                "[DEBOUNCED] elapsed={:?}ms < {}ms",
+                                "[DEBOUNCED] elapsed={:?}ms < {FILE_EVENT_DEBOUNCE_MS}ms",
                                 elapsed.as_millis(),
-                                FILE_EVENT_DEBOUNCE_MS
                             );
                             results.push(msg.clone());
-                            eprintln!("{}", msg);
+                            eprintln!("{msg}");
                             continue;
                         }
                         self.last_event_time = now;
@@ -71,9 +70,9 @@ fn test_real_file_watcher_from_codebase() {
                         );
 
                         if !relevant {
-                            let msg = format!("[FILTERED] Event kind not relevant");
+                            let msg = "[FILTERED] Event kind not relevant".to_string();
                             results.push(msg.clone());
-                            eprintln!("{}", msg);
+                            eprintln!("{msg}");
                             continue;
                         }
 
@@ -81,30 +80,30 @@ fn test_real_file_watcher_from_codebase() {
                         for path in &event.paths {
                             if let Some(parent) = path.parent() {
                                 if parent == self.current_dir {
-                                    let msg = format!("[MATCHED] Path is in current directory!");
+                                    let msg = "[MATCHED] Path is in current directory!".to_string();
                                     results.push(msg.clone());
-                                    eprintln!("{}", msg);
+                                    eprintln!("{msg}");
                                 } else {
                                     let msg = format!(
-                                        "[NO MATCH] parent={:?} != current_dir={:?}",
-                                        parent, self.current_dir
+                                        "[NO MATCH] parent={parent:?} != current_dir={:?}",
+                                        self.current_dir
                                     );
                                     results.push(msg.clone());
-                                    eprintln!("{}", msg);
+                                    eprintln!("{msg}");
                                 }
                             }
                         }
                     }
                     Ok(Err(e)) => {
-                        let msg = format!("[ERROR] {:?}", e);
+                        let msg = format!("[ERROR] {e:?}");
                         results.push(msg.clone());
-                        eprintln!("{}", msg);
+                        eprintln!("{msg}");
                     }
                     Err(mpsc::TryRecvError::Empty) => break,
                     Err(mpsc::TryRecvError::Disconnected) => {
                         let msg = "[DISCONNECTED]".to_string();
                         results.push(msg.clone());
-                        eprintln!("{}", msg);
+                        eprintln!("{msg}");
                         break;
                     }
                 }
@@ -115,18 +114,18 @@ fn test_real_file_watcher_from_codebase() {
     }
 
     // Create test directory
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path();
 
-    eprintln!("\n=== Creating watcher for: {:?}", watch_path);
-    let mut watcher = TestWatcher::new(watch_path).unwrap();
+    eprintln!("\n=== Creating watcher for: {watch_path:?}");
+    let mut watcher = TestWatcher::new(watch_path).expect("Failed to create file watcher");
 
     // Give watcher time to initialize
     thread::sleep(Duration::from_millis(200));
 
     eprintln!("\n=== Creating file...");
     let test_file = watch_path.join("test.txt");
-    fs::write(&test_file, "hello world").unwrap();
+    fs::write(&test_file, "hello world").expect("Failed to write test file");
 
     // Wait for events to propagate
     thread::sleep(Duration::from_millis(500));
@@ -187,21 +186,21 @@ fn test_event_types_for_file_operations() {
     use notify::{Event as NotifyEvent, RecursiveMode, Watcher};
     use std::sync::mpsc;
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path();
 
     let (tx, rx) = mpsc::channel::<Result<NotifyEvent, notify::Error>>();
-    let mut watcher = notify::recommended_watcher(tx).unwrap();
+    let mut watcher = notify::recommended_watcher(tx).expect("Failed to create file watcher");
     watcher
         .watch(watch_path, RecursiveMode::NonRecursive)
-        .unwrap();
+        .expect("Failed to watch directory");
 
     thread::sleep(Duration::from_millis(100));
 
     // Test 1: Create file
     eprintln!("\n=== TEST: Creating file");
     let file1 = watch_path.join("create_test.txt");
-    fs::write(&file1, "content").unwrap();
+    fs::write(&file1, "content").expect("Failed to write test file");
     thread::sleep(Duration::from_millis(300));
 
     let mut events = Vec::new();
@@ -213,7 +212,7 @@ fn test_event_types_for_file_operations() {
 
     // Test 2: Modify file
     eprintln!("\n=== TEST: Modifying file");
-    fs::write(&file1, "modified content").unwrap();
+    fs::write(&file1, "modified content").expect("Failed to modify test file");
     thread::sleep(Duration::from_millis(300));
 
     events.clear();
@@ -225,7 +224,7 @@ fn test_event_types_for_file_operations() {
 
     // Test 3: Delete file
     eprintln!("\n=== TEST: Deleting file");
-    fs::remove_file(&file1).unwrap();
+    fs::remove_file(&file1).expect("Failed to delete test file");
     thread::sleep(Duration::from_millis(300));
 
     events.clear();

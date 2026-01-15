@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum SymbolKind {
     Function,
     Struct,

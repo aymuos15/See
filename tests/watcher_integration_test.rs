@@ -10,25 +10,25 @@ use notify::{Event as NotifyEvent, EventKind, RecommendedWatcher, RecursiveMode,
 /// Test that notify v7.0 works with mpsc::Sender directly
 #[test]
 fn test_notify_with_channel_sender() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path().to_path_buf();
 
     let (tx, rx) = mpsc::channel::<Result<NotifyEvent, notify::Error>>();
 
     // This is the pattern used in the viewer code
-    let mut watcher = notify::recommended_watcher(tx).unwrap();
+    let mut watcher = notify::recommended_watcher(tx).expect("Failed to create file watcher");
 
     // Watch the directory
     watcher
         .watch(&watch_path, RecursiveMode::NonRecursive)
-        .unwrap();
+        .expect("Failed to watch directory");
 
     // Give watcher time to initialize
     thread::sleep(Duration::from_millis(100));
 
     // Create a file in the watched directory
     let test_file = watch_path.join("test.txt");
-    fs::write(&test_file, "hello").unwrap();
+    fs::write(&test_file, "hello").expect("Failed to write test file");
 
     // Wait for events
     thread::sleep(Duration::from_millis(500));
@@ -41,7 +41,7 @@ fn test_notify_with_channel_sender() {
 
     println!("Received {} events", received_events.len());
     for (i, event) in received_events.iter().enumerate() {
-        println!("Event {}: {:?}", i, event);
+        println!("Event {i}: {event:?}");
     }
 
     // We should have received at least one event
@@ -86,13 +86,13 @@ fn test_viewer_watcher_pattern() {
             Ok(())
         }
 
-        fn poll_events(&mut self) -> Vec<NotifyEvent> {
+        fn poll_events(&self) -> Vec<NotifyEvent> {
             let mut events = Vec::new();
             loop {
                 match self.receiver.try_recv() {
                     Ok(Ok(event)) => events.push(event),
                     Ok(Err(e)) => {
-                        eprintln!("Error event: {:?}", e);
+                        eprintln!("Error event: {e:?}");
                     }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => {
@@ -105,17 +105,17 @@ fn test_viewer_watcher_pattern() {
         }
     }
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path().to_path_buf();
 
-    let mut watcher = TestFileWatcher::new(&watch_path).unwrap();
+    let watcher = TestFileWatcher::new(&watch_path).expect("Failed to create file watcher");
 
     // Give watcher time to initialize
     thread::sleep(Duration::from_millis(100));
 
     println!("Creating test file...");
     let test_file = watch_path.join("test.txt");
-    fs::write(&test_file, "hello").unwrap();
+    fs::write(&test_file, "hello").expect("Failed to write test file");
 
     // Wait for events
     thread::sleep(Duration::from_millis(500));
@@ -124,8 +124,8 @@ fn test_viewer_watcher_pattern() {
     println!("Received {} events", events.len());
     for (i, event) in events.iter().enumerate() {
         println!(
-            "Event {}: kind={:?}, paths={:?}",
-            i, event.kind, event.paths
+            "Event {i}: kind={:?}, paths={:?}",
+            event.kind, event.paths
         );
     }
 
@@ -138,7 +138,7 @@ fn test_viewer_watcher_pattern() {
 /// Test event classification logic
 #[test]
 fn test_event_classification() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let current_dir = temp_dir.path();
     let file_in_dir = current_dir.join("file.txt");
 
@@ -185,15 +185,15 @@ fn test_event_classification() {
 fn test_debouncing() {
     use std::time::Instant;
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path().to_path_buf();
 
     let (tx, rx) = mpsc::channel::<Result<NotifyEvent, notify::Error>>();
-    let mut watcher = notify::recommended_watcher(tx).unwrap();
+    let mut watcher = notify::recommended_watcher(tx).expect("Failed to create file watcher");
 
     watcher
         .watch(&watch_path, RecursiveMode::NonRecursive)
-        .unwrap();
+        .expect("Failed to watch directory");
 
     thread::sleep(Duration::from_millis(100));
 
@@ -201,9 +201,9 @@ fn test_debouncing() {
     println!("Creating files rapidly...");
     let start = Instant::now();
     for i in 0..5 {
-        let test_file = watch_path.join(format!("test{}.txt", i));
-        fs::write(&test_file, format!("content {}", i)).unwrap();
-        println!("Created file {} at {:?}", i, start.elapsed());
+        let test_file = watch_path.join(format!("test{i}.txt"));
+        fs::write(&test_file, format!("content {i}")).expect("Failed to write test file");
+        println!("Created file {i} at {:?}", start.elapsed());
     }
 
     // Wait for all events
@@ -218,7 +218,7 @@ fn test_debouncing() {
 
     println!("Received {} events for 5 file creations", events.len());
     for (i, event) in events.iter().enumerate() {
-        println!("Event {}: {:?}", i, event);
+        println!("Event {i}: {event:?}");
     }
 
     // We should get multiple events since files are created with different names
@@ -231,25 +231,25 @@ fn test_debouncing() {
 /// Test watching file modifications
 #[test]
 fn test_file_modification() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     let watch_path = temp_dir.path().to_path_buf();
     let test_file = watch_path.join("test.txt");
 
     // Create file first
-    fs::write(&test_file, "initial content").unwrap();
+    fs::write(&test_file, "initial content").expect("Failed to write test file");
 
     let (tx, rx) = mpsc::channel::<Result<NotifyEvent, notify::Error>>();
-    let mut watcher = notify::recommended_watcher(tx).unwrap();
+    let mut watcher = notify::recommended_watcher(tx).expect("Failed to create file watcher");
 
     // Watch the specific file
     watcher
         .watch(&test_file, RecursiveMode::NonRecursive)
-        .unwrap();
+        .expect("Failed to watch file");
 
     thread::sleep(Duration::from_millis(100));
 
     println!("Modifying file...");
-    fs::write(&test_file, "modified content").unwrap();
+    fs::write(&test_file, "modified content").expect("Failed to modify test file");
 
     thread::sleep(Duration::from_millis(500));
 

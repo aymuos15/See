@@ -295,19 +295,19 @@ mod tests {
 
     #[test]
     fn test_app_new_with_valid_directory() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
 
-        let app = App::new(root_path.clone()).unwrap();
+        let app = App::new(root_path.clone()).expect("test setup failed");
 
         assert_eq!(
             app.root_dir,
-            root_path.canonicalize().unwrap(),
+            root_path.canonicalize().expect("test setup failed"),
             "Root dir should be canonicalized path"
         );
         assert_eq!(
             app.current_dir,
-            root_path.canonicalize().unwrap(),
+            root_path.canonicalize().expect("test setup failed"),
             "Current dir should start at root"
         );
         assert!(!app.files.is_empty(), "Files should be loaded");
@@ -318,7 +318,7 @@ mod tests {
         let result = App::new(PathBuf::from("/nonexistent/path/that/does/not/exist"));
 
         assert!(result.is_err(), "Should fail with nonexistent path");
-        let err_msg = result.err().unwrap().to_string();
+        let err_msg = result.err().expect("test setup failed").to_string();
         assert!(
             err_msg.contains("Path does not exist"),
             "Error message should mention path doesn't exist"
@@ -327,13 +327,13 @@ mod tests {
 
     #[test]
     fn test_app_new_with_file_path() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let file_path = temp_dir.path().join("root/file1.txt");
 
-        let app = App::new(file_path).unwrap();
+        let app = App::new(file_path).expect("test setup failed");
 
         // Should use parent directory (root) as the root_dir
-        let expected_root = temp_dir.path().join("root").canonicalize().unwrap();
+        let expected_root = temp_dir.path().join("root").canonicalize().expect("test setup failed");
         assert_eq!(
             app.root_dir, expected_root,
             "Should use parent directory as root"
@@ -346,10 +346,10 @@ mod tests {
 
     #[test]
     fn test_go_back_at_root_boundary() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
 
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
         let initial_dir = app.current_dir.clone();
 
         // Try to go back when already at root
@@ -363,11 +363,11 @@ mod tests {
 
     #[test]
     fn test_navigation_within_root_boundary() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
 
-        let mut app = App::new(root_path.clone()).unwrap();
-        let root_canonical = root_path.canonicalize().unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
+        let root_canonical = root_path.canonicalize().expect("test setup failed");
 
         // Navigate into subdir1
         let subdir1_idx = app
@@ -422,10 +422,10 @@ mod tests {
 
     #[test]
     fn test_root_dir_immutable() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
 
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
         let initial_root = app.root_dir.clone();
 
         // Navigate around
@@ -455,14 +455,14 @@ mod tests {
     #[test]
     fn test_relative_path_canonicalization() {
         // Create temp dir and navigate to it
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
 
         // Get the canonical path first
-        let canonical_root = root_path.canonicalize().unwrap();
+        let canonical_root = root_path.canonicalize().expect("test setup failed");
 
         // Create app with absolute path
-        let app = App::new(root_path).unwrap();
+        let app = App::new(root_path).expect("test setup failed");
 
         assert_eq!(
             app.root_dir, canonical_root,
@@ -472,11 +472,11 @@ mod tests {
 
     #[test]
     fn test_starting_from_nested_directory() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let nested_path = temp_dir.path().join("root/subdir1/subdir2");
 
-        let mut app = App::new(nested_path.clone()).unwrap();
-        let nested_canonical = nested_path.canonicalize().unwrap();
+        let mut app = App::new(nested_path.clone()).expect("test setup failed");
+        let nested_canonical = nested_path.canonicalize().expect("test setup failed");
 
         // Root should be the nested directory, not the top-level root
         assert_eq!(
@@ -494,9 +494,9 @@ mod tests {
 
     #[test]
     fn test_search_mode_entry_exit() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         assert!(!app.search_mode);
         assert!(app.search_query.is_empty());
@@ -510,9 +510,9 @@ mod tests {
 
     #[test]
     fn test_search_input() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         app.enter_search_mode();
         app.search_input('f');
@@ -525,9 +525,9 @@ mod tests {
 
     #[test]
     fn test_search_backspace() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         app.enter_search_mode();
         app.search_input('t');
@@ -546,9 +546,9 @@ mod tests {
 
     #[test]
     fn test_fuzzy_filter() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         // Build search index
         app.search_index = vec![
@@ -566,9 +566,9 @@ mod tests {
 
     #[test]
     fn test_fuzzy_filter_no_matches() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         app.search_index = vec![
             FileEntry::new(temp_dir.path().join("root/file1.txt")),
@@ -584,9 +584,9 @@ mod tests {
 
     #[test]
     fn test_navigate_up_wraps_around() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         // Start at first item
         app.file_list_state.select(Some(0));
@@ -599,9 +599,9 @@ mod tests {
 
     #[test]
     fn test_navigate_down_wraps_around() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         // Set to last item
         let last_idx = app.files.len() - 1;
@@ -615,9 +615,9 @@ mod tests {
 
     #[test]
     fn test_load_preview_for_file() {
-        let temp_dir = create_test_dir_structure().unwrap();
+        let temp_dir = create_test_dir_structure().expect("test setup failed");
         let root_path = temp_dir.path().join("root");
-        let mut app = App::new(root_path.clone()).unwrap();
+        let mut app = App::new(root_path.clone()).expect("test setup failed");
 
         // Select first file
         if let Some(first) = app.files.first() {

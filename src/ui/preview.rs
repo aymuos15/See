@@ -418,6 +418,6 @@ mod tests {
         // "App" should also be highlighted (case-insensitive)
         let app_capital_span = result[0].spans.iter().find(|s| s.content == "App");
         assert!(app_capital_span.is_some());
-        assert!(app_capital_span.unwrap().style.bg.is_some());
+        assert!(app_capital_span.expect("operation failed").style.bg.is_some());
     }
 }
