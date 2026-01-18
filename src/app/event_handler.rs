@@ -9,6 +9,7 @@ impl App {
         while !self.should_quit {
             terminal.draw(|frame| crate::ui::render(frame, self))?;
             self.poll_worker_responses();
+            self.check_pending_full_quality();
             self.handle_next_event()?;
         }
 
@@ -30,6 +31,9 @@ impl App {
                 }
                 WorkerResponse::ImageLoaded { path, result } => {
                     self.handle_image_loaded(&path, &result);
+                }
+                WorkerResponse::ThumbnailLoaded { path, result } => {
+                    self.handle_thumbnail_loaded(&path, &result);
                 }
             }
         }

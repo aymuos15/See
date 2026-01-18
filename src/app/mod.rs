@@ -15,7 +15,7 @@ mod theme_search;
 
 use crate::clipboard::ClipboardManager;
 use crate::config::Config;
-use crate::constants::INITIAL_SPLIT_PERCENT;
+use crate::constants::{FULL_IMAGE_DELAY_MS, INITIAL_SPLIT_PERCENT};
 use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
 use crate::git::GitStatus;
@@ -24,7 +24,9 @@ use crate::theme::Theme;
 use crate::worker::BackgroundWorker;
 use ratatui::prelude::Rect;
 use ratatui::widgets::ListState;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use selection::TextSelection;
 use split::SplitLayout;
@@ -91,6 +93,10 @@ pub struct App {
         std::collections::HashMap<PathBuf, ratatui_image::protocol::StatefulProtocol>,
     // Image picker (initialized once at startup)
     image_picker: Option<ratatui_image::picker::Picker>,
+    // Track which images have full quality loaded (vs thumbnail)
+    full_quality_images: HashSet<PathBuf>,
+    // Pending full-quality image load (path, timestamp when to load)
+    pending_full_quality: Option<(PathBuf, Instant)>,
 }
 
 /// Main application state for the TUI file viewer.
@@ -211,6 +217,8 @@ impl App {
             symbol_indexing_progress: None,
             image_protocols: std::collections::HashMap::new(),
             image_picker: None, // Will be initialized after TUI setup
+            full_quality_images: HashSet::new(),
+            pending_full_quality: None,
         };
 
         if !app.files.is_empty() {
@@ -241,7 +249,7 @@ impl App {
         self.theme_preview_mode = !self.theme_preview_mode;
     }
 
-    /// Handle image loaded from background worker
+    /// Handle image loaded from background worker (full quality)
     pub fn handle_image_loaded(
         &mut self,
         path: &Path,
@@ -251,8 +259,58 @@ impl App {
             let protocol = picker.new_resize_protocol(dyn_img.clone());
             // Store protocol by canonical path for consistent lookup
             let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-            self.image_protocols.insert(canonical_path, protocol);
+            self.image_protocols.insert(canonical_path.clone(), protocol);
+            // Mark as full quality
+            self.full_quality_images.insert(canonical_path);
         }
+    }
+
+    /// Handle thumbnail loaded from background worker
+    pub fn handle_thumbnail_loaded(
+        &mut self,
+        path: &Path,
+        result: &anyhow::Result<image::DynamicImage>,
+    ) {
+        let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+
+        // Only use thumbnail if we don't already have full quality
+        if self.full_quality_images.contains(&canonical_path) {
+            return;
+        }
+
+        if let (Ok(dyn_img), Some(ref picker)) = (result, &self.image_picker) {
+            let protocol = picker.new_resize_protocol(dyn_img.clone());
+            self.image_protocols.insert(canonical_path.clone(), protocol);
+            // Schedule full quality load
+            self.schedule_full_quality_load(&canonical_path);
+        }
+    }
+
+    /// Schedule a full quality image load after the debounce delay
+    pub fn schedule_full_quality_load(&mut self, path: &Path) {
+        let deadline = Instant::now() + std::time::Duration::from_millis(FULL_IMAGE_DELAY_MS);
+        self.pending_full_quality = Some((path.to_path_buf(), deadline));
+    }
+
+    /// Check if pending full quality load should be triggered
+    /// Returns true if a full quality load was requested
+    pub fn check_pending_full_quality(&mut self) -> bool {
+        if let Some((ref path, deadline)) = self.pending_full_quality {
+            if Instant::now() >= deadline {
+                // Don't reload if already full quality
+                if !self.full_quality_images.contains(path) {
+                    self.worker.request_image_load(path);
+                }
+                self.pending_full_quality = None;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Cancel pending full quality load (called on navigation)
+    pub fn cancel_pending_full_quality(&mut self) {
+        self.pending_full_quality = None;
     }
 }
 

@@ -52,3 +52,9 @@ pub const DEFAULT_SYNTAX_THEME: &str = "base16-eighties.dark";
 pub const IMAGE_EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff", "ico", "tga",
 ];
+
+/// Thumbnail size for fast preview (pixels)
+pub const THUMBNAIL_SIZE: u32 = 256;
+
+/// Delay before loading full-quality image after navigation stops (milliseconds)
+pub const FULL_IMAGE_DELAY_MS: u64 = 150;

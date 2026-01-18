@@ -54,48 +54,71 @@ impl App {
         self.diff_mode = false;
         self.original_preview_content = None;
 
-        if let Some(idx) = self.file_list_state.selected() {
-            if let Some(entry) = self.files.get(idx) {
+        // Extract entry info before mutable borrows
+        let entry_info = self.file_list_state.selected().and_then(|idx| {
+            self.files.get(idx).and_then(|entry| {
                 if entry.is_file {
-                    if let Ok(content) = crate::files::loader::load_preview_content(&entry.path) {
-                        // Handle text content with syntax highlighting
-                        let content = match &content {
-                            PreviewContentType::Text { raw_lines, .. } => {
-                                let text = raw_lines.join("\n");
-                                let lines = self.highlighter.highlight(&entry.path, &text);
-                                PreviewContentType::Text {
-                                    lines,
-                                    raw_lines: raw_lines.clone(),
-                                }
-                            }
-                            PreviewContentType::Image {
-                                path, dimensions, ..
-                            } => {
-                                // Request background image loading for images
-                                self.worker.request_image_load(path);
-                                PreviewContentType::Image {
-                                    path: path.clone(),
-                                    dimensions: *dimensions,
-                                }
-                            }
-                        };
+                    Some(entry.path.clone())
+                } else {
+                    None
+                }
+            })
+        });
 
-                        // Create shared reference for panes (Rc::clone is O(1))
-                        let shared = Rc::new(content);
-                        self.shared_preview_content = Some(shared);
-                        // Watch this file for changes
-                        let _ = self.file_watcher.watch_preview_file(Some(&entry.path));
-                        // Clear selection when loading new file
-                        self.selection = None;
-                        // Keep highlighted_word for cross-file search persistence
-                        return;
-                    }
+        let Some(entry_path) = entry_info else {
+            // No valid preview
+            let _ = self.file_watcher.watch_preview_file(None);
+            self.shared_preview_content = None;
+            return;
+        };
+
+        let Ok(content) = crate::files::loader::load_preview_content(&entry_path) else {
+            let _ = self.file_watcher.watch_preview_file(None);
+            self.shared_preview_content = None;
+            return;
+        };
+
+        // Handle text content with syntax highlighting
+        let content = match &content {
+            PreviewContentType::Text { raw_lines, .. } => {
+                let text = raw_lines.join("\n");
+                let lines = self.highlighter.highlight(&entry_path, &text);
+                PreviewContentType::Text {
+                    lines,
+                    raw_lines: raw_lines.clone(),
                 }
             }
-        }
-        // No preview, stop watching preview file
-        let _ = self.file_watcher.watch_preview_file(None);
-        self.shared_preview_content = None;
+            PreviewContentType::Image { path, dimensions } => {
+                // Cancel any pending full quality load from previous image
+                self.cancel_pending_full_quality();
+
+                // Check if we already have full quality cached
+                let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+                if self.full_quality_images.contains(&canonical) {
+                    // Already have full quality, no need to load
+                } else if self.image_protocols.contains_key(&canonical) {
+                    // Have thumbnail cached, schedule full quality
+                    self.schedule_full_quality_load(&canonical);
+                } else {
+                    // No cache, request thumbnail (fast) first
+                    self.worker.request_thumbnail_load(path);
+                }
+
+                PreviewContentType::Image {
+                    path: path.clone(),
+                    dimensions: *dimensions,
+                }
+            }
+        };
+
+        // Create shared reference for panes (Rc::clone is O(1))
+        let shared = Rc::new(content);
+        self.shared_preview_content = Some(shared);
+        // Watch this file for changes
+        let _ = self.file_watcher.watch_preview_file(Some(&entry_path));
+        // Clear selection when loading new file
+        self.selection = None;
+        // Keep highlighted_word for cross-file search persistence
     }
 
     /// Refresh the file list for the current directory

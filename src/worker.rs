@@ -1,7 +1,9 @@
 //! Background worker for CPU-intensive tasks
 
 use crate::config::Config;
+use crate::constants::THUMBNAIL_SIZE;
 use crate::files::{extract_symbols, find_all_files_recursive, Symbol};
+use image::imageops::FilterType;
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -14,6 +16,9 @@ pub enum WorkerRequest {
     LoadImage {
         path: Box<Path>,
     },
+    LoadThumbnail {
+        path: Box<Path>,
+    },
     Shutdown,
 }
 
@@ -24,6 +29,10 @@ pub enum WorkerResponse {
         total: usize,
     },
     ImageLoaded {
+        path: Box<Path>,
+        result: anyhow::Result<image::DynamicImage>,
+    },
+    ThumbnailLoaded {
         path: Box<Path>,
         result: anyhow::Result<image::DynamicImage>,
     },
@@ -64,6 +73,12 @@ impl BackgroundWorker {
             .send(WorkerRequest::LoadImage { path: path.into() });
     }
 
+    pub fn request_thumbnail_load(&self, path: &Path) {
+        let _ = self
+            .request_tx
+            .send(WorkerRequest::LoadThumbnail { path: path.into() });
+    }
+
     pub fn poll_response(&self) -> Option<WorkerResponse> {
         self.response_rx.try_recv().ok()
     }
@@ -87,6 +102,9 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
             }
             WorkerRequest::LoadImage { path } => {
                 load_image(&path, response_tx);
+            }
+            WorkerRequest::LoadThumbnail { path } => {
+                load_thumbnail(&path, response_tx);
             }
             WorkerRequest::Shutdown => break,
         }
@@ -130,6 +148,25 @@ fn load_image(path: &Path, response_tx: &Sender<WorkerResponse>) {
         });
 
     let _ = response_tx.send(WorkerResponse::ImageLoaded {
+        path: path.into(),
+        result,
+    });
+}
+
+fn load_thumbnail(path: &Path, response_tx: &Sender<WorkerResponse>) {
+    let result: anyhow::Result<image::DynamicImage> = image::ImageReader::open(path)
+        .map_err(|e| anyhow::anyhow!("Failed to open image: {e}"))
+        .and_then(|reader| {
+            reader
+                .decode()
+                .map_err(|e| anyhow::anyhow!("Failed to decode image: {e}"))
+        })
+        .map(|img| {
+            // Use nearest neighbor filter for speed (fastest option)
+            img.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, FilterType::Nearest)
+        });
+
+    let _ = response_tx.send(WorkerResponse::ThumbnailLoaded {
         path: path.into(),
         result,
     });
