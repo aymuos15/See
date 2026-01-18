@@ -45,6 +45,10 @@ See [`config.example.toml`](config.example.toml) for all available options inclu
 - Theme configuration (Helix themes or custom colors)
 - Customizable key bindings
 
+## Key Features
+
+- Image and PDF support through kitty protocol
+
 ## Auto-Refresh
 
 The viewer automatically watches for file changes:

@@ -66,6 +66,11 @@ pub enum AppEvent {
     ResizeSplitLeft,
     ResizeSplitRight,
     ToggleWrap,
+    // PDF navigation
+    PdfNextPage,
+    PdfPrevPage,
+    PdfFirstPage,
+    PdfLastPage,
     None,
 }
 
@@ -193,6 +198,10 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::SearchBackspace => AppEvent::SearchBackspace,
         Action::SearchNavigateUp => AppEvent::SearchNavigateUp,
         Action::SearchNavigateDown => AppEvent::SearchNavigateDown,
+        Action::PdfNextPage => AppEvent::PdfNextPage,
+        Action::PdfPrevPage => AppEvent::PdfPrevPage,
+        Action::PdfFirstPage => AppEvent::PdfFirstPage,
+        Action::PdfLastPage => AppEvent::PdfLastPage,
     }
 }
 

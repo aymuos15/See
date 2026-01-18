@@ -35,6 +35,17 @@ impl App {
                 WorkerResponse::ThumbnailLoaded { path, result } => {
                     self.handle_thumbnail_loaded(&path, &result);
                 }
+                WorkerResponse::PdfPageLoaded {
+                    path,
+                    page,
+                    total_pages,
+                    result,
+                } => {
+                    self.handle_pdf_page_loaded(&path, page, total_pages, &result);
+                }
+                WorkerResponse::PdfInfoLoaded { path, total_pages } => {
+                    self.handle_pdf_info_loaded(&path, total_pages);
+                }
             }
         }
     }
@@ -303,6 +314,26 @@ impl App {
             }
             AppEvent::ToggleWrap => {
                 self.config.wrap = !self.config.wrap;
+            }
+            AppEvent::PdfNextPage => {
+                if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
+                    self.pdf_next_page();
+                }
+            }
+            AppEvent::PdfPrevPage => {
+                if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
+                    self.pdf_prev_page();
+                }
+            }
+            AppEvent::PdfFirstPage => {
+                if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
+                    self.pdf_first_page();
+                }
+            }
+            AppEvent::PdfLastPage => {
+                if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
+                    self.pdf_last_page();
+                }
             }
             AppEvent::None => {}
         }

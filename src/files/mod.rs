@@ -19,6 +19,13 @@ pub fn is_image_file(path: &Path) -> bool {
         })
 }
 
+/// Check if a file is a PDF based on its extension
+pub fn is_pdf_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("pdf"))
+}
+
 /// Get image dimensions (width, height) from file path
 pub fn get_image_dimensions(path: &Path) -> anyhow::Result<(u32, u32)> {
     let reader = image::ImageReader::open(path)?;

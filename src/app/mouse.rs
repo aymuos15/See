@@ -8,7 +8,7 @@ use super::App;
 fn get_raw_lines(content: &PreviewContentType) -> Option<&[String]> {
     match content {
         PreviewContentType::Text { raw_lines, .. } => Some(raw_lines),
-        PreviewContentType::Image { .. } => None,
+        PreviewContentType::Image { .. } | PreviewContentType::Pdf { .. } => None,
     }
 }
 

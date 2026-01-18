@@ -58,3 +58,9 @@ pub const THUMBNAIL_SIZE: u32 = 256;
 
 /// Delay before loading full-quality image after navigation stops (milliseconds)
 pub const FULL_IMAGE_DELAY_MS: u64 = 150;
+
+/// Maximum PDF file size to preview (50 MB)
+pub const MAX_PDF_SIZE: u64 = 50 * 1024 * 1024;
+
+/// Default PDF render resolution (pixels per point, 1.5 = 108 DPI)
+pub const PDF_RENDER_SCALE: f32 = 2.0;

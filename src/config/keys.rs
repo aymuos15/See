@@ -137,6 +137,12 @@ pub struct KeyBindingsConfig {
     pub search_backspace: Option<Vec<String>>,
     pub search_navigate_up: Option<Vec<String>>,
     pub search_navigate_down: Option<Vec<String>>,
+
+    // PDF navigation
+    pub pdf_next_page: Option<Vec<String>>,
+    pub pdf_prev_page: Option<Vec<String>>,
+    pub pdf_first_page: Option<Vec<String>>,
+    pub pdf_last_page: Option<Vec<String>>,
 }
 
 /// Parsed keybindings ready for use
@@ -183,6 +189,12 @@ pub struct KeyBindings {
     pub search_backspace: Vec<KeyBinding>,
     pub search_navigate_up: Vec<KeyBinding>,
     pub search_navigate_down: Vec<KeyBinding>,
+
+    // PDF navigation
+    pub pdf_next_page: Vec<KeyBinding>,
+    pub pdf_prev_page: Vec<KeyBinding>,
+    pub pdf_first_page: Vec<KeyBinding>,
+    pub pdf_last_page: Vec<KeyBinding>,
 
     // Lookup table for quick matching
     normal_mode_map: HashMap<KeyBinding, Action>,
@@ -233,6 +245,12 @@ pub enum Action {
     SearchBackspace,
     SearchNavigateUp,
     SearchNavigateDown,
+
+    // PDF navigation
+    PdfNextPage,
+    PdfPrevPage,
+    PdfFirstPage,
+    PdfLastPage,
 }
 
 impl Default for KeyBindings {
@@ -299,6 +317,18 @@ impl Default for KeyBindings {
             search_navigate_up: vec![KeyBinding::key(KeyCode::Up)],
             search_navigate_down: vec![KeyBinding::key(KeyCode::Down)],
 
+            // PDF navigation defaults (n/p for next/prev, g/G for first/last)
+            pdf_next_page: vec![
+                KeyBinding::key(KeyCode::Char('n')),
+                KeyBinding::key(KeyCode::PageDown),
+            ],
+            pdf_prev_page: vec![
+                KeyBinding::key(KeyCode::Char('p')),
+                KeyBinding::key(KeyCode::PageUp),
+            ],
+            pdf_first_page: vec![KeyBinding::key(KeyCode::Home)],
+            pdf_last_page: vec![KeyBinding::key(KeyCode::End)],
+
             // Initialize empty maps
             normal_mode_map: HashMap::new(),
             search_mode_map: HashMap::new(),
@@ -334,6 +364,7 @@ impl KeyBindings {
             Self::apply_normal_mode_config(&mut bindings, &cfg);
             Self::apply_split_config(&mut bindings, &cfg);
             Self::apply_search_config(&mut bindings, &cfg);
+            Self::apply_pdf_config(&mut bindings, &cfg);
         }
 
         bindings.rebuild_maps();
@@ -424,6 +455,13 @@ impl KeyBindings {
         );
     }
 
+    fn apply_pdf_config(bindings: &mut Self, cfg: &KeyBindingsConfig) {
+        apply_config_keys(&mut bindings.pdf_next_page, cfg.pdf_next_page.clone());
+        apply_config_keys(&mut bindings.pdf_prev_page, cfg.pdf_prev_page.clone());
+        apply_config_keys(&mut bindings.pdf_first_page, cfg.pdf_first_page.clone());
+        apply_config_keys(&mut bindings.pdf_last_page, cfg.pdf_last_page.clone());
+    }
+
     /// Rebuild the lookup maps after modifying bindings
     fn rebuild_maps(&mut self) {
         self.normal_mode_map.clear();
@@ -432,6 +470,7 @@ impl KeyBindings {
         self.build_normal_mode_map();
         self.build_split_map();
         self.build_search_mode_map();
+        self.build_pdf_map();
     }
 
     fn build_normal_mode_map(&mut self) {
@@ -611,6 +650,29 @@ impl KeyBindings {
             &mut self.search_mode_map,
             &self.select_all,
             Action::SelectAll,
+        );
+    }
+
+    fn build_pdf_map(&mut self) {
+        insert_bindings(
+            &mut self.normal_mode_map,
+            &self.pdf_next_page,
+            Action::PdfNextPage,
+        );
+        insert_bindings(
+            &mut self.normal_mode_map,
+            &self.pdf_prev_page,
+            Action::PdfPrevPage,
+        );
+        insert_bindings(
+            &mut self.normal_mode_map,
+            &self.pdf_first_page,
+            Action::PdfFirstPage,
+        );
+        insert_bindings(
+            &mut self.normal_mode_map,
+            &self.pdf_last_page,
+            Action::PdfLastPage,
         );
     }
 

@@ -1,6 +1,6 @@
 use crate::app::PreviewContentType;
-use crate::constants::{BINARY_DETECTION_BYTES, MAX_FILE_SIZE, MAX_IMAGE_SIZE};
-use crate::files::is_image_file;
+use crate::constants::{BINARY_DETECTION_BYTES, MAX_FILE_SIZE, MAX_IMAGE_SIZE, MAX_PDF_SIZE};
+use crate::files::{is_image_file, is_pdf_file};
 use std::fs;
 use std::path::Path;
 
@@ -27,7 +27,28 @@ pub fn read_file_content(path: &Path) -> anyhow::Result<String> {
 pub fn load_preview_content(path: &Path) -> anyhow::Result<PreviewContentType> {
     let metadata = fs::metadata(path)?;
 
-    // Check for image file first
+    // Check for PDF file first
+    if is_pdf_file(path) {
+        if metadata.len() > MAX_PDF_SIZE {
+            return Ok(PreviewContentType::Text {
+                lines: vec![ratatui::text::Line::from(format!(
+                    "[PDF too large to preview: {} bytes (max: {} MB)]",
+                    metadata.len(),
+                    MAX_PDF_SIZE / 1024 / 1024
+                ))],
+                raw_lines: vec![],
+            });
+        }
+
+        // Return PDF content type - actual rendering happens via worker
+        return Ok(PreviewContentType::Pdf {
+            path: path.to_path_buf(),
+            current_page: 0,
+            total_pages: 0, // Will be updated when worker responds
+        });
+    }
+
+    // Check for image file
     if is_image_file(path) {
         if metadata.len() > MAX_IMAGE_SIZE {
             return Ok(PreviewContentType::Text {

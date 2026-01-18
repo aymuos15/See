@@ -53,6 +53,8 @@ impl App {
         // Exit diff mode when loading new file
         self.diff_mode = false;
         self.original_preview_content = None;
+        // Clear any previous PDF error
+        self.pdf_error = None;
 
         // Extract entry info before mutable borrows
         let entry_info = self.file_list_state.selected().and_then(|idx| {
@@ -107,6 +109,16 @@ impl App {
                 PreviewContentType::Image {
                     path: path.clone(),
                     dimensions: *dimensions,
+                }
+            }
+            PreviewContentType::Pdf { path, .. } => {
+                // Request first page render from worker
+                self.worker.request_pdf_page(path, 0);
+
+                PreviewContentType::Pdf {
+                    path: path.clone(),
+                    current_page: 0,
+                    total_pages: 0,
                 }
             }
         };
@@ -171,7 +183,8 @@ impl App {
                                             raw_lines: prev_lines,
                                             ..
                                         } => prev_lines != &raw_lines,
-                                        PreviewContentType::Image { .. } => true,
+                                        PreviewContentType::Image { .. }
+                                        | PreviewContentType::Pdf { .. } => true,
                                     });
 
                                 if content_changed {
@@ -201,6 +214,21 @@ impl App {
                                         Some(Rc::new(PreviewContentType::Image {
                                             path,
                                             dimensions,
+                                        }));
+                                }
+                            }
+                            PreviewContentType::Pdf { path, .. } => {
+                                // For PDFs, keep the existing preview
+                                if self.shared_preview_content.as_ref().is_none_or(|prev| {
+                                    !matches!(prev.as_ref(), PreviewContentType::Pdf { .. })
+                                }) {
+                                    // Changed from non-PDF to PDF, reload first page
+                                    self.worker.request_pdf_page(&path, 0);
+                                    self.shared_preview_content =
+                                        Some(Rc::new(PreviewContentType::Pdf {
+                                            path,
+                                            current_page: 0,
+                                            total_pages: 0,
                                         }));
                                 }
                             }

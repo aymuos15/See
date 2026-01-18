@@ -69,7 +69,7 @@ impl App {
     const fn get_text_lines(content: &PreviewContentType) -> Option<usize> {
         match content {
             PreviewContentType::Text { lines, .. } => Some(lines.len()),
-            PreviewContentType::Image { .. } => None,
+            PreviewContentType::Image { .. } | PreviewContentType::Pdf { .. } => None,
         }
     }
 
