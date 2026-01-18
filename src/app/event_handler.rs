@@ -43,9 +43,6 @@ impl App {
                 } => {
                     self.handle_pdf_page_loaded(&path, page, total_pages, &result);
                 }
-                WorkerResponse::PdfInfoLoaded { path, total_pages } => {
-                    self.handle_pdf_info_loaded(&path, total_pages);
-                }
             }
         }
     }

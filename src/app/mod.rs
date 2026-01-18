@@ -363,31 +363,6 @@ impl App {
         }
     }
 
-    /// Handle PDF info loaded from background worker
-    pub fn handle_pdf_info_loaded(&mut self, path: &Path, total_pages: usize) {
-        // Update the preview content with total_pages if this is the current file
-        let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-
-        if let Some(ref content) = self.shared_preview_content {
-            if let PreviewContentType::Pdf {
-                path: content_path,
-                current_page,
-                ..
-            } = content.as_ref()
-            {
-                let content_canonical =
-                    content_path.canonicalize().unwrap_or_else(|_| content_path.clone());
-                if content_canonical == canonical_path {
-                    self.shared_preview_content = Some(std::rc::Rc::new(PreviewContentType::Pdf {
-                        path: content_path.clone(),
-                        current_page: *current_page,
-                        total_pages,
-                    }));
-                }
-            }
-        }
-    }
-
     /// Generate a unique key for PDF page caching
     fn pdf_page_key(path: &Path, page: usize) -> PathBuf {
         let mut key = path.to_path_buf();

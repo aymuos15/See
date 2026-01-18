@@ -143,8 +143,7 @@ fn render_pdf_content(
     let [content_area, indicator_area] = layout.areas(area);
 
     // Look up the rendered page from cache
-    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    let mut page_key = canonical_path.clone();
+    let mut page_key = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     page_key.set_extension(format!("pdf.page{current_page}"));
 
     let protocol = app.image_protocols.get_mut(&page_key);

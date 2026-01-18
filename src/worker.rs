@@ -25,10 +25,6 @@ pub enum WorkerRequest {
         path: Box<Path>,
         page: usize,
     },
-    /// Get PDF metadata (page count)
-    LoadPdfInfo {
-        path: Box<Path>,
-    },
     Shutdown,
 }
 
@@ -52,11 +48,6 @@ pub enum WorkerResponse {
         page: usize,
         total_pages: usize,
         result: anyhow::Result<image::DynamicImage>,
-    },
-    /// PDF info loaded (just page count, no rendering)
-    PdfInfoLoaded {
-        path: Box<Path>,
-        total_pages: usize,
     },
 }
 
@@ -108,12 +99,6 @@ impl BackgroundWorker {
         });
     }
 
-    pub fn request_pdf_info(&self, path: &Path) {
-        let _ = self
-            .request_tx
-            .send(WorkerRequest::LoadPdfInfo { path: path.into() });
-    }
-
     pub fn poll_response(&self) -> Option<WorkerResponse> {
         self.response_rx.try_recv().ok()
     }
@@ -146,9 +131,6 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
             }
             WorkerRequest::LoadPdfPage { path, page } => {
                 load_pdf_page(&path, page, pdfium.as_ref(), response_tx);
-            }
-            WorkerRequest::LoadPdfInfo { path } => {
-                load_pdf_info(&path, pdfium.as_ref(), response_tx);
             }
             WorkerRequest::Shutdown => break,
         }
@@ -283,26 +265,6 @@ fn load_pdf_page(
         total_pages,
         result: result.map(|(img, _)| img),
     });
-}
-
-fn load_pdf_info(path: &Path, pdfium: Option<&Pdfium>, response_tx: &Sender<WorkerResponse>) {
-    let total_pages = get_pdf_page_count(path, pdfium).unwrap_or(0);
-
-    let _ = response_tx.send(WorkerResponse::PdfInfoLoaded {
-        path: path.into(),
-        total_pages,
-    });
-}
-
-/// Get the page count of a PDF without rendering
-fn get_pdf_page_count(path: &Path, pdfium: Option<&Pdfium>) -> anyhow::Result<usize> {
-    let pdfium = pdfium.ok_or_else(|| anyhow::anyhow!("PDFium library not available"))?;
-
-    let document = pdfium
-        .load_pdf_from_file(path, None)
-        .map_err(|e| anyhow::anyhow!("Failed to load PDF: {e}"))?;
-
-    Ok(document.pages().len() as usize)
 }
 
 /// Render a specific page of a PDF to an image

@@ -27,17 +27,5 @@ pub enum PreviewContentType {
     },
 }
 
-impl PreviewContentType {
-    #[allow(dead_code)]
-    pub const fn is_image(&self) -> bool {
-        matches!(self, Self::Image { .. })
-    }
-
-    #[allow(dead_code)]
-    pub const fn is_pdf(&self) -> bool {
-        matches!(self, Self::Pdf { .. })
-    }
-}
-
 /// Reference-counted preview content for efficient sharing between panes
 pub type SharedPreviewContent = std::rc::Rc<PreviewContentType>;
