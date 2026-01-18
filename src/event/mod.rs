@@ -265,11 +265,11 @@ mod tests {
     fn test_handle_key_normal_mode_resize() {
         let keys = default_keys();
         assert!(matches!(
-            handle_key(KeyCode::Char('H'), NO_MODS, false, &keys),
+            handle_key(KeyCode::Char('H'), KeyModifiers::SHIFT, false, &keys),
             AppEvent::ShrinkFileList
         ));
         assert!(matches!(
-            handle_key(KeyCode::Char('L'), NO_MODS, false, &keys),
+            handle_key(KeyCode::Char('L'), KeyModifiers::SHIFT, false, &keys),
             AppEvent::GrowFileList
         ));
     }

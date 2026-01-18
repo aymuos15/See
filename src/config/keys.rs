@@ -259,8 +259,16 @@ impl Default for KeyBindings {
             scroll_preview_down: vec![KeyBinding::key(KeyCode::Char('j'))],
             scroll_preview_page_up: vec![KeyBinding::key(KeyCode::PageUp)],
             scroll_preview_page_down: vec![KeyBinding::key(KeyCode::PageDown)],
-            shrink_file_list: vec![KeyBinding::key(KeyCode::Char('H'))],
-            grow_file_list: vec![KeyBinding::key(KeyCode::Char('L'))],
+            shrink_file_list: vec![
+                KeyBinding::new(KeyCode::Char('H'), KeyModifiers::SHIFT),
+                KeyBinding::new(KeyCode::Char('h'), KeyModifiers::SHIFT),
+                KeyBinding::key(KeyCode::Char('H')),
+            ],
+            grow_file_list: vec![
+                KeyBinding::new(KeyCode::Char('L'), KeyModifiers::SHIFT),
+                KeyBinding::new(KeyCode::Char('l'), KeyModifiers::SHIFT),
+                KeyBinding::key(KeyCode::Char('L')),
+            ],
             open_search: vec![KeyBinding::key(KeyCode::Char('/'))],
             open_find: vec![KeyBinding::key(KeyCode::Char('\\'))],
             open_symbol_search: vec![KeyBinding::key(KeyCode::Char('f'))],
