@@ -5,8 +5,10 @@ mod directory;
 mod event_handler;
 mod git;
 mod help;
+mod image;
 mod mouse;
 mod navigation;
+mod pdf;
 mod search;
 pub mod selection;
 pub mod split;
@@ -15,7 +17,7 @@ mod theme_search;
 
 use crate::clipboard::ClipboardManager;
 use crate::config::Config;
-use crate::constants::{FULL_IMAGE_DELAY_MS, INITIAL_SPLIT_PERCENT};
+use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
 use crate::git::GitStatus;
@@ -250,221 +252,6 @@ impl App {
     #[allow(clippy::missing_const_for_fn)]
     pub fn toggle_theme_preview(&mut self) {
         self.theme_preview_mode = !self.theme_preview_mode;
-    }
-
-    /// Handle image loaded from background worker (full quality)
-    pub fn handle_image_loaded(
-        &mut self,
-        path: &Path,
-        result: &anyhow::Result<image::DynamicImage>,
-    ) {
-        if let (Ok(dyn_img), Some(ref picker)) = (result, &self.image_picker) {
-            let protocol = picker.new_resize_protocol(dyn_img.clone());
-            // Store protocol by canonical path for consistent lookup
-            let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-            self.image_protocols.insert(canonical_path.clone(), protocol);
-            // Mark as full quality
-            self.full_quality_images.insert(canonical_path);
-        }
-    }
-
-    /// Handle thumbnail loaded from background worker
-    pub fn handle_thumbnail_loaded(
-        &mut self,
-        path: &Path,
-        result: &anyhow::Result<image::DynamicImage>,
-    ) {
-        let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-
-        // Only use thumbnail if we don't already have full quality
-        if self.full_quality_images.contains(&canonical_path) {
-            return;
-        }
-
-        if let (Ok(dyn_img), Some(ref picker)) = (result, &self.image_picker) {
-            let protocol = picker.new_resize_protocol(dyn_img.clone());
-            self.image_protocols.insert(canonical_path.clone(), protocol);
-            // Schedule full quality load
-            self.schedule_full_quality_load(&canonical_path);
-        }
-    }
-
-    /// Schedule a full quality image load after the debounce delay
-    pub fn schedule_full_quality_load(&mut self, path: &Path) {
-        let deadline = Instant::now() + std::time::Duration::from_millis(FULL_IMAGE_DELAY_MS);
-        self.pending_full_quality = Some((path.to_path_buf(), deadline));
-    }
-
-    /// Check if pending full quality load should be triggered
-    /// Returns true if a full quality load was requested
-    pub fn check_pending_full_quality(&mut self) -> bool {
-        if let Some((ref path, deadline)) = self.pending_full_quality {
-            if Instant::now() >= deadline {
-                // Don't reload if already full quality
-                if !self.full_quality_images.contains(path) {
-                    self.worker.request_image_load(path);
-                }
-                self.pending_full_quality = None;
-                return true;
-            }
-        }
-        false
-    }
-
-    /// Cancel pending full quality load (called on navigation)
-    pub fn cancel_pending_full_quality(&mut self) {
-        self.pending_full_quality = None;
-    }
-
-    /// Handle PDF page loaded from background worker
-    pub fn handle_pdf_page_loaded(
-        &mut self,
-        path: &Path,
-        page: usize,
-        total_pages: usize,
-        result: &anyhow::Result<image::DynamicImage>,
-    ) {
-        match result {
-            Ok(dyn_img) => {
-                // Clear any previous error
-                self.pdf_error = None;
-
-                if let Some(ref picker) = self.image_picker {
-                    let protocol = picker.new_resize_protocol(dyn_img.clone());
-                    // Store protocol by page-specific key
-                    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-                    let page_key = Self::pdf_page_key(&canonical_path, page);
-                    self.image_protocols.insert(page_key, protocol);
-
-                    // Update the preview content with total_pages if this is the current file
-                    if let Some(ref content) = self.shared_preview_content {
-                        if let PreviewContentType::Pdf {
-                            path: content_path, ..
-                        } = content.as_ref()
-                        {
-                            let content_canonical =
-                                content_path.canonicalize().unwrap_or_else(|_| content_path.clone());
-                            if content_canonical == canonical_path {
-                                self.shared_preview_content =
-                                    Some(std::rc::Rc::new(PreviewContentType::Pdf {
-                                        path: content_path.clone(),
-                                        current_page: page,
-                                        total_pages,
-                                    }));
-                            }
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                // Store error message for display
-                self.pdf_error = Some(e.to_string());
-            }
-        }
-    }
-
-    /// Generate a unique key for PDF page caching
-    fn pdf_page_key(path: &Path, page: usize) -> PathBuf {
-        let mut key = path.to_path_buf();
-        key.set_extension(format!("pdf.page{page}"));
-        key
-    }
-
-    /// Navigate to next PDF page
-    pub fn pdf_next_page(&mut self) {
-        if let Some(ref content) = self.shared_preview_content.clone() {
-            if let PreviewContentType::Pdf {
-                path,
-                current_page,
-                total_pages,
-            } = content.as_ref()
-            {
-                if *total_pages == 0 {
-                    return;
-                }
-                let next_page = (*current_page + 1).min(*total_pages - 1);
-                if next_page != *current_page {
-                    self.load_pdf_page(path, next_page, *total_pages);
-                }
-            }
-        }
-    }
-
-    /// Navigate to previous PDF page
-    pub fn pdf_prev_page(&mut self) {
-        if let Some(ref content) = self.shared_preview_content.clone() {
-            if let PreviewContentType::Pdf {
-                path,
-                current_page,
-                total_pages,
-            } = content.as_ref()
-            {
-                if *current_page > 0 {
-                    let prev_page = current_page - 1;
-                    self.load_pdf_page(path, prev_page, *total_pages);
-                }
-            }
-        }
-    }
-
-    /// Navigate to first PDF page
-    pub fn pdf_first_page(&mut self) {
-        if let Some(ref content) = self.shared_preview_content.clone() {
-            if let PreviewContentType::Pdf {
-                path,
-                current_page,
-                total_pages,
-            } = content.as_ref()
-            {
-                if *current_page != 0 {
-                    self.load_pdf_page(path, 0, *total_pages);
-                }
-            }
-        }
-    }
-
-    /// Navigate to last PDF page
-    pub fn pdf_last_page(&mut self) {
-        if let Some(ref content) = self.shared_preview_content.clone() {
-            if let PreviewContentType::Pdf {
-                path,
-                current_page,
-                total_pages,
-            } = content.as_ref()
-            {
-                if *total_pages > 0 {
-                    let last_page = *total_pages - 1;
-                    if *current_page != last_page {
-                        self.load_pdf_page(path, last_page, *total_pages);
-                    }
-                }
-            }
-        }
-    }
-
-    /// Load a specific PDF page
-    fn load_pdf_page(&mut self, path: &Path, page: usize, total_pages: usize) {
-        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-        let page_key = Self::pdf_page_key(&canonical, page);
-
-        // Check if page is already cached
-        if !self.image_protocols.contains_key(&page_key) {
-            self.worker.request_pdf_page(path, page);
-        }
-
-        // Update current page in preview content
-        self.shared_preview_content = Some(std::rc::Rc::new(PreviewContentType::Pdf {
-            path: path.to_path_buf(),
-            current_page: page,
-            total_pages,
-        }));
-    }
-
-    /// Check if currently viewing a PDF
-    pub fn is_viewing_pdf(&self) -> bool {
-        self.shared_preview_content
-            .as_ref()
-            .is_some_and(|c| matches!(c.as_ref(), PreviewContentType::Pdf { .. }))
     }
 }
 
