@@ -23,9 +23,16 @@ impl SyntaxHighlighter {
     pub fn highlight(&self, path: &Path, content: &str) -> Vec<Line<'static>> {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("txt");
 
+        // TOML files use INI syntax (similar structure: [sections] and key = value)
+        let ext_for_lookup = if extension == "toml" {
+            "ini"
+        } else {
+            extension
+        };
+
         let syntax = self
             .syntax_set
-            .find_syntax_by_extension(extension)
+            .find_syntax_by_extension(ext_for_lookup)
             .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text());
 
         let theme = &self.theme_set.themes[DEFAULT_SYNTAX_THEME];
