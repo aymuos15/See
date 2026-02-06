@@ -159,4 +159,22 @@ fn main() {
         let lines = highlighter.highlight(Path::new("file.txt"), code);
         assert!(!lines.is_empty());
     }
+
+    #[test]
+    fn test_highlight_toml() {
+        let highlighter = SyntaxHighlighter::new();
+        let code = r#"[package]
+name = "viewer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.30"
+"#;
+
+        let lines = highlighter.highlight(Path::new("Cargo.toml"), code);
+        assert!(!lines.is_empty());
+        // Should produce highlighted output with multiple lines
+        assert!(lines.len() > 1);
+    }
 }
