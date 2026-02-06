@@ -61,11 +61,4 @@ The viewer automatically watches for file changes:
 
 ### Pre-commit Hooks
 
-Install pre-commit hooks to run formatting and linting checks before each commit:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
-
-This will run `cargo fmt`, `cargo clippy`, and other checks automatically on commit.
+Use prek! https://github.com/j178/prek
