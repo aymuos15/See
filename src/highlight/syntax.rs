@@ -23,9 +23,9 @@ impl SyntaxHighlighter {
     pub fn highlight(&self, path: &Path, content: &str) -> Vec<Line<'static>> {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("txt");
 
-        // TOML files use INI syntax (similar structure: [sections] and key = value)
+        // Map TOML to JSON for syntax highlighting (similar enough for now)
         let ext_for_lookup = if extension == "toml" {
-            "ini"
+            "json"
         } else {
             extension
         };
