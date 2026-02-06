@@ -3,6 +3,7 @@ use crate::constants::{
     SEARCH_INPUT_HEIGHT, SEARCH_POPUP_HEIGHT_PERCENT, SEARCH_POPUP_MARGIN,
     SEARCH_POPUP_WIDTH_PERCENT,
 };
+use crate::ui::popup;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
@@ -20,29 +21,17 @@ pub fn render(frame: &mut Frame, app: &App) {
 /// Creates a centered popup area and clears it for rendering.
 fn create_popup_area(frame: &mut Frame, bg_color: Color) -> (Rect, Rect) {
     let area = frame.area();
+    let popup_area = popup::centered_popup(
+        area,
+        SEARCH_POPUP_WIDTH_PERCENT,
+        SEARCH_POPUP_HEIGHT_PERCENT,
+    );
+    popup::render_popup_background(frame, popup_area, bg_color);
 
-    let popup_width = (area.width * SEARCH_POPUP_WIDTH_PERCENT) / 100;
-    let popup_height = (area.height * SEARCH_POPUP_HEIGHT_PERCENT) / 100;
-    let popup_x = (area.width - popup_width) / 2;
-    let popup_y = (area.height - popup_height) / 2;
+    let inner = popup::popup_inner(popup_area, SEARCH_POPUP_MARGIN);
+    let (input_area, results_area) = popup::split_popup(inner, SEARCH_INPUT_HEIGHT);
 
-    let popup_area = Rect {
-        x: popup_x,
-        y: popup_y,
-        width: popup_width,
-        height: popup_height,
-    };
-
-    frame.render_widget(Clear, popup_area);
-    let block = Block::default().style(Style::default().bg(bg_color));
-    frame.render_widget(block, popup_area);
-
-    let inner = popup_area.inner(Margin::new(SEARCH_POPUP_MARGIN, SEARCH_POPUP_MARGIN));
-    let [input_area, results_area] =
-        Layout::vertical([Constraint::Length(SEARCH_INPUT_HEIGHT), Constraint::Min(0)])
-            .areas(inner);
-
-    [input_area, results_area].into()
+    (input_area, results_area)
 }
 
 /// Renders the search input field.

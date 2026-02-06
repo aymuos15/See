@@ -3,8 +3,9 @@ use crate::constants::{
     SEARCH_INPUT_HEIGHT, SEARCH_POPUP_HEIGHT_PERCENT, SEARCH_POPUP_MARGIN,
     SEARCH_POPUP_WIDTH_PERCENT,
 };
+use crate::ui::popup;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Clear, List, ListItem, Paragraph};
+use ratatui::widgets::{List, ListItem, Paragraph};
 
 /// Renders the theme picker popup.
 pub fn render(frame: &mut Frame, app: &App) {
@@ -12,28 +13,16 @@ pub fn render(frame: &mut Frame, app: &App) {
     let theme = &app.config.theme;
 
     // Calculate centered popup size
-    let popup_width = (area.width * SEARCH_POPUP_WIDTH_PERCENT) / 100;
-    let popup_height = (area.height * SEARCH_POPUP_HEIGHT_PERCENT) / 100;
-    let popup_x = (area.width - popup_width) / 2;
-    let popup_y = (area.height - popup_height) / 2;
-
-    let popup_area = Rect {
-        x: popup_x,
-        y: popup_y,
-        width: popup_width,
-        height: popup_height,
-    };
-
-    // Clear area and render opaque popup block
-    frame.render_widget(Clear, popup_area);
-    let block = Block::default().style(Style::default().bg(theme.bg_search));
-    frame.render_widget(block, popup_area);
+    let popup_area = popup::centered_popup(
+        area,
+        SEARCH_POPUP_WIDTH_PERCENT,
+        SEARCH_POPUP_HEIGHT_PERCENT,
+    );
+    popup::render_popup_background(frame, popup_area, theme.bg_search);
 
     // Calculate inner areas
-    let inner = popup_area.inner(Margin::new(SEARCH_POPUP_MARGIN, SEARCH_POPUP_MARGIN));
-    let [header_area, themes_area] =
-        Layout::vertical([Constraint::Length(SEARCH_INPUT_HEIGHT), Constraint::Min(0)])
-            .areas(inner);
+    let inner = popup::popup_inner(popup_area, SEARCH_POPUP_MARGIN);
+    let (header_area, themes_area) = popup::split_popup(inner, SEARCH_INPUT_HEIGHT);
 
     // Render header
     let header =

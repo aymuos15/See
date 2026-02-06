@@ -1,35 +1,18 @@
 use crate::app::App;
 use crate::constants::{SEARCH_INPUT_HEIGHT, SEARCH_POPUP_HEIGHT_PERCENT, SEARCH_POPUP_MARGIN};
+use crate::ui::popup;
 use ratatui::prelude::*;
-use ratatui::widgets::{Clear, Paragraph};
+use ratatui::widgets::Paragraph;
 
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let theme = &app.config.theme;
 
     // Calculate centered popup size
-    let popup_width = (area.width * 70) / 100; // 70% width for help
-    let popup_height = (area.height * SEARCH_POPUP_HEIGHT_PERCENT) / 100;
-    let popup_x = (area.width - popup_width) / 2;
-    let popup_y = (area.height - popup_height) / 2;
+    let popup_area = popup::centered_popup(area, 70, SEARCH_POPUP_HEIGHT_PERCENT);
+    popup::render_popup_background(frame, popup_area, theme.bg_search);
 
-    let popup_area = Rect {
-        x: popup_x,
-        y: popup_y,
-        width: popup_width,
-        height: popup_height,
-    };
-
-    // Clear area and render opaque popup block
-    frame.render_widget(Clear, popup_area);
-    frame.render_widget(
-        ratatui::widgets::Block::default().style(Style::default().bg(theme.bg_search)),
-        popup_area,
-    );
-
-    let inner = popup_area.inner(Margin::new(SEARCH_POPUP_MARGIN, SEARCH_POPUP_MARGIN));
-    let [header_area, shortcuts_area] =
-        Layout::vertical([Constraint::Length(SEARCH_INPUT_HEIGHT), Constraint::Min(0)])
-            .areas(inner);
+    let inner = popup::popup_inner(popup_area, SEARCH_POPUP_MARGIN);
+    let (header_area, shortcuts_area) = popup::split_popup(inner, SEARCH_INPUT_HEIGHT);
 
     // Render header
     let header = Paragraph::new("Keyboard Shortcuts")

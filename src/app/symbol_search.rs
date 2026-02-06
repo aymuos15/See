@@ -1,6 +1,4 @@
-use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
-use nucleo_matcher::{Config, Matcher};
-use std::collections::HashMap;
+use crate::util::fuzzy;
 
 use super::App;
 
@@ -42,19 +40,22 @@ impl App {
     #[allow(clippy::missing_const_for_fn)]
     pub fn symbol_search_navigate_up(&mut self) {
         if !self.symbol_search_results.is_empty() {
-            self.symbol_search_selected = if self.symbol_search_selected == 0 {
-                self.symbol_search_results.len() - 1
-            } else {
-                self.symbol_search_selected - 1
-            };
+            self.symbol_search_selected = fuzzy::move_selection(
+                self.symbol_search_selected,
+                self.symbol_search_results.len(),
+                -1,
+            );
         }
     }
 
     #[allow(clippy::missing_const_for_fn)]
     pub fn symbol_search_navigate_down(&mut self) {
         if !self.symbol_search_results.is_empty() {
-            self.symbol_search_selected =
-                (self.symbol_search_selected + 1) % self.symbol_search_results.len();
+            self.symbol_search_selected = fuzzy::move_selection(
+                self.symbol_search_selected,
+                self.symbol_search_results.len(),
+                1,
+            );
         }
     }
 
@@ -107,33 +108,7 @@ impl App {
     }
 
     pub(super) fn apply_symbol_filter(&mut self) {
-        if self.symbol_search_query.is_empty() {
-            self.symbol_search_results = (0..self.symbol_index.len()).collect();
-            return;
-        }
-
-        let mut matcher = Matcher::new(Config::DEFAULT);
-        let pattern = Pattern::parse(
-            &self.symbol_search_query,
-            CaseMatching::Ignore,
-            Normalization::Smart,
-        );
-
-        let names: Vec<&str> = self.symbol_index.iter().map(|s| s.name.as_str()).collect();
-        let matched_names = pattern.match_list(&names, &mut matcher);
-
-        // Build index map for O(1) lookup
-        let name_to_idx: HashMap<&str, usize> = self
-            .symbol_index
-            .iter()
-            .enumerate()
-            .map(|(i, s)| (s.name.as_str(), i))
-            .collect();
-
-        // matched_names is Vec<(&str, u32)> sorted by score descending
-        self.symbol_search_results = matched_names
-            .into_iter()
-            .filter_map(|(name, _score)| name_to_idx.get(name).copied())
-            .collect();
+        self.symbol_search_results =
+            fuzzy::fuzzy_filter_indices(&self.symbol_search_query, &self.symbol_index, |s| &s.name);
     }
 }

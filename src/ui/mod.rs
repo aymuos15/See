@@ -3,6 +3,7 @@ pub mod file_list;
 pub mod help;
 pub mod layout;
 pub mod pane;
+pub mod popup;
 pub mod preview;
 pub mod search;
 pub mod tab_bar;

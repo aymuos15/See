@@ -12,6 +12,7 @@ mod highlight;
 mod theme;
 mod tui;
 mod ui;
+mod util;
 mod worker;
 
 #[derive(Parser)]

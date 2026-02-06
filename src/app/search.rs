@@ -1,7 +1,5 @@
 use crate::files::{find_all_files_recursive, read_directory};
-use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
-use nucleo_matcher::{Config, Matcher};
-use std::collections::HashMap;
+use crate::util::fuzzy;
 
 use super::App;
 
@@ -43,18 +41,16 @@ impl App {
     #[allow(clippy::missing_const_for_fn)]
     pub fn search_navigate_up(&mut self) {
         if !self.search_results.is_empty() {
-            self.search_selected = if self.search_selected == 0 {
-                self.search_results.len() - 1
-            } else {
-                self.search_selected - 1
-            };
+            self.search_selected =
+                fuzzy::move_selection(self.search_selected, self.search_results.len(), -1);
         }
     }
 
     #[allow(clippy::missing_const_for_fn)]
     pub fn search_navigate_down(&mut self) {
         if !self.search_results.is_empty() {
-            self.search_selected = (self.search_selected + 1) % self.search_results.len();
+            self.search_selected =
+                fuzzy::move_selection(self.search_selected, self.search_results.len(), 1);
         }
     }
 
@@ -91,35 +87,8 @@ impl App {
     }
 
     pub(super) fn apply_fuzzy_filter(&mut self) {
-        if self.search_query.is_empty() {
-            self.search_results = (0..self.search_index.len()).collect();
-            return;
-        }
-
-        let mut matcher = Matcher::new(Config::DEFAULT);
-        let pattern = Pattern::parse(
-            &self.search_query,
-            CaseMatching::Ignore,
-            Normalization::Smart,
-        );
-
-        let names: Vec<&str> = self.search_index.iter().map(|f| f.name.as_str()).collect();
-        let matched_names = pattern.match_list(&names, &mut matcher);
-
-        // Build index map for O(1) lookup instead of O(n) position search
-        let name_to_idx: HashMap<&str, usize> = self
-            .search_index
-            .iter()
-            .enumerate()
-            .map(|(i, f)| (f.name.as_str(), i))
-            .collect();
-
-        // matched_names is Vec<(&str, u32)> sorted by score descending
-        // Map back to indices using HashMap for O(n) instead of O(n*m)
-        self.search_results = matched_names
-            .into_iter()
-            .filter_map(|(name, _score)| name_to_idx.get(name).copied())
-            .collect();
+        self.search_results =
+            fuzzy::fuzzy_filter_indices(&self.search_query, &self.search_index, |f| &f.name);
     }
 
     /// Refresh the search index with all files under root
