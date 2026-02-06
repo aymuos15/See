@@ -106,7 +106,9 @@ mod tests {
     fn test_read_file_content() {
         let mut temp_file = NamedTempFile::new().expect("operation failed");
         let content = "Hello, world!";
-        temp_file.write_all(content.as_bytes()).expect("operation failed");
+        temp_file
+            .write_all(content.as_bytes())
+            .expect("operation failed");
 
         let result = read_file_content(temp_file.path()).expect("operation failed");
         assert_eq!(result, content);
@@ -121,7 +123,9 @@ mod tests {
     #[test]
     fn test_read_binary_file_detection() {
         let mut temp_file = NamedTempFile::new().expect("operation failed");
-        temp_file.write_all(&[0u8, 1, 2, 3]).expect("operation failed");
+        temp_file
+            .write_all(&[0u8, 1, 2, 3])
+            .expect("operation failed");
 
         let result = read_file_content(temp_file.path()).expect("operation failed");
         assert_eq!(result, "[Binary file - cannot preview]");

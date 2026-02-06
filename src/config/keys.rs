@@ -318,14 +318,8 @@ impl Default for KeyBindings {
             search_navigate_down: vec![KeyBinding::key(KeyCode::Down)],
 
             // PDF navigation defaults (n/p for next/prev, g/G for first/last)
-            pdf_next_page: vec![
-                KeyBinding::key(KeyCode::Char('n')),
-                KeyBinding::key(KeyCode::PageDown),
-            ],
-            pdf_prev_page: vec![
-                KeyBinding::key(KeyCode::Char('p')),
-                KeyBinding::key(KeyCode::PageUp),
-            ],
+            pdf_next_page: vec![KeyBinding::key(KeyCode::Char('n'))],
+            pdf_prev_page: vec![KeyBinding::key(KeyCode::Char('p'))],
             pdf_first_page: vec![KeyBinding::key(KeyCode::Home)],
             pdf_last_page: vec![KeyBinding::key(KeyCode::End)],
 

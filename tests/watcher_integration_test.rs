@@ -123,10 +123,7 @@ fn test_viewer_watcher_pattern() {
     let events = watcher.poll_events();
     println!("Received {} events", events.len());
     for (i, event) in events.iter().enumerate() {
-        println!(
-            "Event {i}: kind={:?}, paths={:?}",
-            event.kind, event.paths
-        );
+        println!("Event {i}: kind={:?}, paths={:?}", event.kind, event.paths);
     }
 
     assert!(

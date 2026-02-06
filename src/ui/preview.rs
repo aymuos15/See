@@ -151,8 +151,7 @@ fn render_pdf_content(
     // Check for PDF loading error first
     if let Some(ref error) = app.pdf_error {
         let error_text = format!(
-            "PDF Error\n\n{}\n\nTo view PDFs, install the PDFium library:\n\n  - Linux: Install libpdfium-dev or download from\n    https://github.com/nicbarker/pdfium-binaries/releases\n  - macOS: brew install nicbarker/pdfium-binaries/pdfium\n  - Windows: Download pdfium.dll from the releases page",
-            error
+            "PDF Error\n\n{error}\n\nTo view PDFs, install the PDFium library:\n\n  - Linux: Install libpdfium-dev or download from\n    https://github.com/nicbarker/pdfium-binaries/releases\n  - macOS: brew install nicbarker/pdfium-binaries/pdfium\n  - Windows: Download pdfium.dll from the releases page"
         );
         let placeholder = Paragraph::new(error_text)
             .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
@@ -186,7 +185,11 @@ fn render_pdf_content(
     let page_text = if app.pdf_error.is_some() {
         " PDF Error - PDFium library not available ".to_string()
     } else if total_pages > 0 {
-        format!(" Page {}/{} | n:next p:prev Home:first End:last ", current_page + 1, total_pages)
+        format!(
+            " Page {}/{} | n:next p:prev Home:first End:last ",
+            current_page + 1,
+            total_pages
+        )
     } else {
         " Loading... ".to_string()
     };
@@ -496,6 +499,10 @@ mod tests {
         // "App" should also be highlighted (case-insensitive)
         let app_capital_span = result[0].spans.iter().find(|s| s.content == "App");
         assert!(app_capital_span.is_some());
-        assert!(app_capital_span.expect("operation failed").style.bg.is_some());
+        assert!(app_capital_span
+            .expect("operation failed")
+            .style
+            .bg
+            .is_some());
     }
 }

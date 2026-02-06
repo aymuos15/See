@@ -17,7 +17,8 @@ impl App {
             let protocol = picker.new_resize_protocol(dyn_img.clone());
             // Store protocol by canonical path for consistent lookup
             let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-            self.image_protocols.insert(canonical_path.clone(), protocol);
+            self.image_protocols
+                .insert(canonical_path.clone(), protocol);
             // Mark as full quality
             self.full_quality_images.insert(canonical_path);
         }
@@ -38,7 +39,8 @@ impl App {
 
         if let (Ok(dyn_img), Some(ref picker)) = (result, &self.image_picker) {
             let protocol = picker.new_resize_protocol(dyn_img.clone());
-            self.image_protocols.insert(canonical_path.clone(), protocol);
+            self.image_protocols
+                .insert(canonical_path.clone(), protocol);
             // Schedule full quality load
             self.schedule_full_quality_load(&canonical_path);
         }

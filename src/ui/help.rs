@@ -36,21 +36,24 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         .style(Style::default().fg(theme.fg_text).bg(theme.bg_search));
     frame.render_widget(header, header_area);
 
-    let help_text = "UP/DOWN, j/k     Scroll file list / preview\n\
-        PgUp/PgDn        Page up/down in preview\n\
-        h/l, ←/→         Go back / Enter directory\n\
+    let help_text = "UP/DOWN, j/k       Scroll file list / preview\n\
+        PgUp/PgDn          Page up/down in preview\n\
+        h/l, ←/→           Go back / Enter directory\n\
         Shift+H / Shift+L  Shrink / Grow file list pane\n\
         \n\
-        /                Open file search\n\
-        f                Open symbol search\n\
-        g                Toggle git highlighting\n\
-        d                Toggle git diff view\n\
-        t                Cycle through themes\n\
-        ?                Show this help\n\
+        /                  Open file search\n\
+        f                  Open symbol search\n\
+        g                  Toggle git highlighting\n\
+        d                  Toggle git diff view\n\
+        t                  Cycle through themes\n\
+        ?                  Show this help\n\
         \n\
-        Click+Drag       Select text in preview\n\
-        Ctrl+c           Copy selected text\n\
-        q, Esc           Quit";
+        Alt+↑/↓/←/→        Split pane up/down/left/right\n\
+        Alt+h / Alt+l      Resize active split left/right\n\
+        \n\
+        Click+Drag         Select text in preview\n\
+        Ctrl+c             Copy selected text\n\
+        q, Esc             Quit";
 
     let paragraph = Paragraph::new(help_text)
         .style(Style::default().fg(theme.fg_text).bg(theme.bg_search))

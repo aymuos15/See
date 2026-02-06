@@ -31,8 +31,9 @@ impl App {
                             path: content_path, ..
                         } = content.as_ref()
                         {
-                            let content_canonical =
-                                content_path.canonicalize().unwrap_or_else(|_| content_path.clone());
+                            let content_canonical = content_path
+                                .canonicalize()
+                                .unwrap_or_else(|_| content_path.clone());
                             if content_canonical == canonical_path {
                                 self.shared_preview_content =
                                     Some(std::rc::Rc::new(PreviewContentType::Pdf {

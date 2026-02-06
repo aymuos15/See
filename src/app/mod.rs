@@ -332,7 +332,11 @@ mod tests {
         let app = App::new(file_path).expect("test setup failed");
 
         // Should use parent directory (root) as the root_dir
-        let expected_root = temp_dir.path().join("root").canonicalize().expect("test setup failed");
+        let expected_root = temp_dir
+            .path()
+            .join("root")
+            .canonicalize()
+            .expect("test setup failed");
         assert_eq!(
             app.root_dir, expected_root,
             "Should use parent directory as root"

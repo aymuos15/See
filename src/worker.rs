@@ -254,10 +254,7 @@ fn load_pdf_page(
     response_tx: &Sender<WorkerResponse>,
 ) {
     let result = render_pdf_page(path, page, pdfium);
-    let total_pages = result
-        .as_ref()
-        .map(|(_, total)| *total)
-        .unwrap_or(0);
+    let total_pages = result.as_ref().map(|(_, total)| *total).unwrap_or(0);
 
     let _ = response_tx.send(WorkerResponse::PdfPageLoaded {
         path: path.into(),
@@ -285,9 +282,12 @@ fn render_pdf_page(
         anyhow::bail!("Page {page} out of range (document has {total_pages} pages)");
     }
 
+    let page_u16 =
+        u16::try_from(page).map_err(|_| anyhow::anyhow!("Page number {page} exceeds u16 range"))?;
+
     let pdf_page = document
         .pages()
-        .get(page as u16)
+        .get(page_u16)
         .map_err(|e| anyhow::anyhow!("Failed to get page {page}: {e}"))?;
 
     // Calculate render size based on page dimensions and scale factor
@@ -295,6 +295,7 @@ fn render_pdf_page(
     let height = pdf_page.height().value * PDF_RENDER_SCALE;
 
     // Render the page to a bitmap
+    #[allow(clippy::cast_possible_truncation)]
     let bitmap = pdf_page
         .render_with_config(
             &PdfRenderConfig::new()

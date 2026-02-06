@@ -5,6 +5,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Wrap};
 use std::path::{Path, PathBuf};
 
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     frame: &mut Frame,
     pane: &Pane,
@@ -13,7 +14,10 @@ pub fn render(
     _is_active: bool,
     wrap: bool,
     highlight_word: Option<&str>,
-    image_protocols: &mut std::collections::HashMap<PathBuf, ratatui_image::protocol::StatefulProtocol>,
+    image_protocols: &mut std::collections::HashMap<
+        PathBuf,
+        ratatui_image::protocol::StatefulProtocol,
+    >,
 ) {
     // No borders - tab bar serves as top separator, divider line between panes drawn separately
     let block = Block::default().style(Style::default().bg(theme.bg_main));
@@ -158,7 +162,10 @@ fn render_pdf_pane(
     path: &Path,
     current_page: usize,
     total_pages: usize,
-    image_protocols: &mut std::collections::HashMap<PathBuf, ratatui_image::protocol::StatefulProtocol>,
+    image_protocols: &mut std::collections::HashMap<
+        PathBuf,
+        ratatui_image::protocol::StatefulProtocol,
+    >,
 ) {
     use ratatui_image::StatefulImage;
 
