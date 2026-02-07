@@ -1,5 +1,6 @@
 pub mod coordinates;
 pub mod file_list;
+pub mod file_tree_popup;
 pub mod help;
 pub mod layout;
 pub mod pane;
@@ -137,5 +138,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     // Render help overlay if active
     if app.help_mode {
         help::render(frame, app, frame.area());
+    }
+
+    // Render file tree popup if active
+    if app.file_tree_popup_mode {
+        file_tree_popup::render(frame, app);
     }
 }

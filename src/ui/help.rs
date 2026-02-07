@@ -29,6 +29,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         g                  Toggle git highlighting\n\
         d                  Toggle git diff view\n\
         t                  Cycle through themes\n\
+        Ctrl+t             Toggle global file tree\n\
         ?                  Show this help\n\
         \n\
         Alt+↑/↓/←/→        Split pane up/down/left/right\n\

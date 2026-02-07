@@ -55,7 +55,8 @@ impl App {
                 || self.find_mode
                 || self.symbol_search_mode
                 || self.theme_preview_mode
-                || self.help_mode,
+                || self.help_mode
+                || self.file_tree_popup_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
             &self.config.keys,
@@ -90,6 +91,8 @@ impl App {
                     self.exit_symbol_search_mode();
                 } else if self.find_mode {
                     self.exit_find_mode();
+                } else if self.file_tree_popup_mode {
+                    self.file_tree_popup_mode = false;
                 } else {
                     self.exit_search_mode();
                 }
@@ -169,18 +172,27 @@ impl App {
             AppEvent::ToggleHelp => {
                 self.toggle_help();
             }
+            AppEvent::ToggleFileTreePopup => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.toggle_file_tree_popup();
+                }
+            }
             AppEvent::SymbolSearchInput(c) => self.symbol_search_input(c),
             AppEvent::SymbolSearchBackspace => self.symbol_search_backspace(),
             AppEvent::SymbolSearchNavigateUp => self.symbol_search_navigate_up(),
             AppEvent::SymbolSearchNavigateDown => self.symbol_search_navigate_down(),
             AppEvent::SymbolSearchConfirm => self.symbol_search_confirm(),
             AppEvent::NavigateDown => {
-                if !self.search_mode && !self.symbol_search_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_navigate_down();
+                } else if !self.search_mode && !self.symbol_search_mode {
                     self.navigate_down();
                 }
             }
             AppEvent::NavigateUp => {
-                if !self.search_mode && !self.symbol_search_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_navigate_up();
+                } else if !self.search_mode && !self.symbol_search_mode {
                     self.navigate_up();
                 }
             }
@@ -225,7 +237,9 @@ impl App {
                 }
             }
             AppEvent::Enter => {
-                if !self.search_mode && !self.symbol_search_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_confirm();
+                } else if !self.search_mode && !self.symbol_search_mode {
                     self.enter_directory();
                 }
             }

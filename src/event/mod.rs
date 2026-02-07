@@ -71,6 +71,10 @@ pub enum AppEvent {
     PdfPrevPage,
     PdfFirstPage,
     PdfLastPage,
+
+    // Popup
+    ToggleFileTreePopup,
+
     None,
 }
 
@@ -202,6 +206,7 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::PdfPrevPage => AppEvent::PdfPrevPage,
         Action::PdfFirstPage => AppEvent::PdfFirstPage,
         Action::PdfLastPage => AppEvent::PdfLastPage,
+        Action::ToggleFileTreePopup => AppEvent::ToggleFileTreePopup,
     }
 }
 

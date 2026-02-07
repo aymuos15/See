@@ -101,6 +101,10 @@ pub struct App {
     pending_full_quality: Option<(PathBuf, Instant)>,
     // PDF loading error message (shown when PDFium fails)
     pub pdf_error: Option<String>,
+    // File tree popup state
+    pub file_tree_popup_mode: bool,
+    pub file_tree_popup_entries: Vec<FileEntry>,
+    pub file_tree_popup_selected: usize,
 }
 
 /// Main application state for the TUI file viewer.
@@ -224,6 +228,9 @@ impl App {
             full_quality_images: HashSet::new(),
             pending_full_quality: None,
             pdf_error: None,
+            file_tree_popup_mode: false,
+            file_tree_popup_entries: Vec::new(),
+            file_tree_popup_selected: 0,
         };
 
         if !app.files.is_empty() {
@@ -232,6 +239,84 @@ impl App {
         }
 
         Ok(app)
+    }
+}
+
+// File tree popup management
+impl App {
+    /// Toggle the file tree popup
+    pub fn toggle_file_tree_popup(&mut self) {
+        self.file_tree_popup_mode = !self.file_tree_popup_mode;
+        if self.file_tree_popup_mode {
+            // Load all files recursively
+            if self.search_index.is_empty() {
+                use crate::files::directory::find_all_files_recursive;
+                if let Ok(all_files) = find_all_files_recursive(&self.root_dir, &self.config) {
+                    self.file_tree_popup_entries = all_files;
+                }
+            } else {
+                self.file_tree_popup_entries = self.search_index.clone();
+            }
+            self.file_tree_popup_selected = 0;
+        }
+    }
+
+    /// Navigate up in the file tree popup
+    pub fn file_tree_popup_navigate_up(&mut self) {
+        if self.file_tree_popup_selected > 0 {
+            self.file_tree_popup_selected -= 1;
+        } else if !self.file_tree_popup_entries.is_empty() {
+            self.file_tree_popup_selected = self.file_tree_popup_entries.len() - 1;
+        }
+    }
+
+    /// Navigate down in the file tree popup
+    pub fn file_tree_popup_navigate_down(&mut self) {
+        if !self.file_tree_popup_entries.is_empty() {
+            if self.file_tree_popup_selected < self.file_tree_popup_entries.len() - 1 {
+                self.file_tree_popup_selected += 1;
+            } else {
+                self.file_tree_popup_selected = 0;
+            }
+        }
+    }
+
+    /// Confirm selection in the file tree popup
+    pub fn file_tree_popup_confirm(&mut self) {
+        if let Some(entry) = self
+            .file_tree_popup_entries
+            .get(self.file_tree_popup_selected)
+        {
+            if entry.is_file {
+                // Navigate to the file's parent directory
+                if let Some(parent) = entry.path.parent() {
+                    self.current_dir = parent.to_path_buf();
+                    // Reload files for the new directory
+                    if let Ok(files) =
+                        read_directory(&self.current_dir, &self.root_dir, &self.config)
+                    {
+                        self.files = files;
+                        // Select the file
+                        if let Some(idx) = self.files.iter().position(|f| f.path == entry.path) {
+                            self.file_list_state.select(Some(idx));
+                            self.load_preview();
+                        }
+                    }
+                }
+            } else {
+                // Navigate into the directory
+                self.current_dir = entry.path.clone();
+                if let Ok(files) = read_directory(&self.current_dir, &self.root_dir, &self.config) {
+                    self.files = files;
+                    self.file_list_state.select(Some(0));
+                    if !self.files.is_empty() {
+                        self.load_preview();
+                    }
+                }
+            }
+        }
+        // Close the popup
+        self.file_tree_popup_mode = false;
     }
 }
 
