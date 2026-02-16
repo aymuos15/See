@@ -1,4 +1,5 @@
 pub mod coordinates;
+pub mod diff;
 pub mod file_list;
 pub mod file_tree_popup;
 pub mod help;
@@ -148,5 +149,13 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     // Render git mode popup if active
     if app.git_mode_state.is_active() {
         crate::git_mode::ui::render(frame, app);
+    }
+
+    // Render diff view popup if active
+    if app.git_diff_mode {
+        let popup_area = popup::centered_popup(frame.area(), 95, 95);
+        popup::render_popup_background(frame, popup_area, app.config.theme.bg_main);
+        let inner = popup::popup_inner(popup_area, 1);
+        diff::render(frame, app, inner);
     }
 }

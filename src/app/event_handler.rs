@@ -57,7 +57,8 @@ impl App {
                 || self.theme_preview_mode
                 || self.help_mode
                 || self.file_tree_popup_mode
-                || self.git_mode_state.is_active(),
+                || self.git_mode_state.is_active()
+                || self.git_diff_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
             &self.config.keys,
@@ -92,6 +93,33 @@ impl App {
                         's' => self.git_mode_show_status(),
                         _ => {}
                     }
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
+
+        // Handle diff mode specially
+        if self.git_diff_mode {
+            match event {
+                AppEvent::ToggleDiff | AppEvent::CloseSearch | AppEvent::Quit => {
+                    self.exit_diff_mode();
+                    return Ok(());
+                }
+                AppEvent::NavigateUp | AppEvent::SearchNavigateUp => {
+                    self.diff_navigate_up();
+                    return Ok(());
+                }
+                AppEvent::NavigateDown | AppEvent::SearchNavigateDown => {
+                    self.diff_navigate_down();
+                    return Ok(());
+                }
+                AppEvent::ScrollPreviewUp => {
+                    self.diff_scroll_up();
+                    return Ok(());
+                }
+                AppEvent::ScrollPreviewDown => {
+                    self.diff_scroll_down();
                     return Ok(());
                 }
                 _ => {}
@@ -197,7 +225,7 @@ impl App {
             }
             AppEvent::ToggleDiff => {
                 if !self.search_mode && !self.symbol_search_mode {
-                    self.toggle_diff();
+                    self.toggle_diff_view();
                 }
             }
             AppEvent::ToggleThemePreview => {
@@ -407,6 +435,22 @@ impl App {
             }
             AppEvent::CloseGitMode => {
                 self.toggle_git_mode();
+            }
+            // Diff view events
+            AppEvent::DiffNavigateUp => {
+                self.diff_navigate_up();
+            }
+            AppEvent::DiffNavigateDown => {
+                self.diff_navigate_down();
+            }
+            AppEvent::DiffScrollUp => {
+                self.diff_scroll_up();
+            }
+            AppEvent::DiffScrollDown => {
+                self.diff_scroll_down();
+            }
+            AppEvent::CloseDiff => {
+                self.exit_diff_mode();
             }
             AppEvent::None => {}
         }

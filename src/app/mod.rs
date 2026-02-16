@@ -1,6 +1,7 @@
 mod content;
 pub use content::{PreviewContentType, SharedPreviewContent};
 mod diff;
+mod diff_view;
 mod directory;
 mod event_handler;
 mod git;
@@ -22,7 +23,7 @@ use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
 use crate::git::GitStatus;
-use crate::git_mode::{GitLog, GitModeState, GitStatusData};
+use crate::git_mode::{GitDiff, GitLog, GitModeState, GitStatusData};
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
 use crate::worker::BackgroundWorker;
@@ -115,6 +116,11 @@ pub struct App {
     pub git_log_list_scroll: usize,
     pub git_status_data: GitStatusData,
     pub git_status_selected: usize,
+    // Diff view state
+    pub git_diff: GitDiff,
+    pub git_diff_selected_file: usize,
+    pub git_diff_scroll: u16,
+    pub git_diff_mode: bool,
 }
 
 /// Main application state for the TUI file viewer.
@@ -249,6 +255,11 @@ impl App {
             git_log_list_scroll: 0,
             git_status_data: GitStatusData::default(),
             git_status_selected: 0,
+            // Diff view state
+            git_diff: GitDiff::new(),
+            git_diff_selected_file: 0,
+            git_diff_scroll: 0,
+            git_diff_mode: false,
         };
 
         if !app.files.is_empty() {

@@ -85,6 +85,13 @@ pub enum AppEvent {
     GitModeScrollDown,
     CloseGitMode,
 
+    // Diff view
+    DiffNavigateUp,
+    DiffNavigateDown,
+    DiffScrollUp,
+    DiffScrollDown,
+    CloseDiff,
+
     None,
 }
 
