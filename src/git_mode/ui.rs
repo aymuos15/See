@@ -15,8 +15,8 @@ use ratatui::widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Tab
 const GIT_BG_COLOR: Color = Color::Rgb(0x20, 0x24, 0x30); // Slightly blue-tinted dark background
 
 /// Renders the git mode popup
-pub fn render(frame: &mut Frame, app: &App) {
-    let theme = &app.config.theme;
+pub fn render(frame: &mut Frame, app: &mut App) {
+    let theme = app.config.theme.clone();
     let area = frame.area();
 
     // Calculate centered popup size
@@ -46,19 +46,25 @@ pub fn render(frame: &mut Frame, app: &App) {
     };
 
     // Render header with mode indicator and help
-    render_header(frame, app, header_area, theme);
+    render_header(frame, app, header_area, &theme);
 
     // Render content based on current view
     match app.git_mode_state {
-        GitModeState::Log => render_log(frame, app, content_area, theme),
-        GitModeState::Status => render_status(frame, app, content_area, theme),
+        GitModeState::Log => render_log(frame, app, content_area, &theme),
+        GitModeState::Status => render_status(frame, app, content_area, &theme),
+        GitModeState::Diff => render_diff(frame, app, content_area, &theme),
         GitModeState::None => {}
     }
 }
 
 fn render_header(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) {
     let view_name = app.git_mode_state.view_name();
-    let help_text = "l: Log | s: Status | Shift+G: Exit";
+    let help_text = match app.git_mode_state {
+        GitModeState::Log => "l: Log | s: Status | d: Diff | Shift+G: Exit",
+        GitModeState::Status => "l: Log | s: Status | Shift+G: Exit",
+        GitModeState::Diff => "↑/↓: Navigate files | PgUp/PgDn: Scroll | d: Back | Shift+G: Exit",
+        GitModeState::None => "",
+    };
 
     let header_block = Block::default()
         .borders(Borders::BOTTOM)
@@ -346,4 +352,157 @@ fn format_timestamp(timestamp: i64) -> String {
             format!("{days} days, {hours:02}:{mins:02}")
         },
     )
+}
+
+fn render_diff(frame: &mut Frame, app: &mut App, area: Rect, theme: &Theme) {
+    let files = app.git_diff.files();
+
+    if files.is_empty() {
+        let no_diff = Paragraph::new("No changes in this commit")
+            .style(Style::default().fg(theme.fg_dim).bg(GIT_BG_COLOR))
+            .alignment(Alignment::Center);
+        frame.render_widget(no_diff, area);
+        return;
+    }
+
+    // Split area into files list (left) and diff content (right)
+    let files_width = (area.width as f32 * 0.3) as u16;
+    let files_area = Rect {
+        x: area.x,
+        y: area.y,
+        width: files_width,
+        height: area.height,
+    };
+
+    let diff_area = Rect {
+        x: area.x + files_width,
+        y: area.y,
+        width: area.width - files_width,
+        height: area.height,
+    };
+
+    // Store areas for mouse support
+    app.last_diff_files_area = Some(files_area);
+    app.last_diff_content_area = Some(diff_area);
+
+    // Render files list
+    render_diff_files_list(frame, app, files_area, theme);
+
+    // Render diff content
+    render_diff_content(frame, app, diff_area, theme);
+}
+
+fn render_diff_files_list(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) {
+    let files = app.git_diff.files();
+
+    let items: Vec<ListItem> = files
+        .iter()
+        .enumerate()
+        .map(|(idx, file)| {
+            let is_selected = idx == app.git_diff_selected_file;
+            let status_char = if file.is_new {
+                'A'
+            } else if file.is_deleted {
+                'D'
+            } else {
+                'M'
+            };
+
+            let file_name = file.path.split('/').last().unwrap_or(&file.path);
+
+            let label = format!(" {} {}", status_char, file_name);
+            let style = if is_selected {
+                Style::default().bg(theme.bg_selected).fg(theme.fg_text)
+            } else {
+                Style::default().fg(theme.fg_text)
+            };
+
+            ListItem::new(label).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.fg_git_refs))
+            .title(" Files ")
+            .title_style(Style::default().fg(theme.fg_git_refs)),
+    );
+
+    frame.render_widget(list, area);
+}
+
+fn render_diff_content(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) {
+    let files = app.git_diff.files();
+
+    if files.is_empty() {
+        return;
+    }
+
+    let selected_file = &files[app.git_diff_selected_file];
+    let total_insertions = app.git_diff.total_insertions();
+    let total_deletions = app.git_diff.total_deletions();
+
+    let mut content = vec![
+        Line::from(vec![Span::styled(
+            format!(
+                " {} (+{} -{}) ",
+                selected_file.path, selected_file.insertions, selected_file.deletions
+            ),
+            Style::default().fg(theme.fg_text).bold(),
+        )]),
+        Line::from(""),
+    ];
+
+    // Parse and color the diff content
+    let diff_lines: Vec<&str> = selected_file.content.lines().collect();
+    let start = (app.git_diff_scroll as usize).min(diff_lines.len());
+    let end = (start + area.height.saturating_sub(2) as usize).min(diff_lines.len());
+
+    // Account for borders (1 char on each side)
+    let available_width = area.width.saturating_sub(4) as usize;
+
+    for line in &diff_lines[start..end] {
+        // Truncate line to fit within available width
+        let truncated_line = if line.len() > available_width {
+            format!("{}…", &line[..available_width.saturating_sub(1)])
+        } else {
+            line.to_string()
+        };
+
+        let styled_line = if line.starts_with('+') && !line.starts_with("+++") {
+            Line::from(Span::styled(
+                truncated_line,
+                Style::default().fg(Color::Green).bg(Color::Rgb(40, 50, 40)),
+            ))
+        } else if line.starts_with('-') && !line.starts_with("---") {
+            Line::from(Span::styled(
+                truncated_line,
+                Style::default().fg(Color::Red).bg(Color::Rgb(50, 40, 40)),
+            ))
+        } else if line.starts_with('@') {
+            Line::from(Span::styled(
+                truncated_line,
+                Style::default().fg(Color::Cyan).bg(Color::Rgb(30, 40, 50)),
+            ))
+        } else {
+            Line::from(truncated_line)
+        };
+        content.push(styled_line);
+    }
+
+    let paragraph = Paragraph::new(content)
+        .style(Style::default().fg(theme.fg_text).bg(GIT_BG_COLOR))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(theme.fg_git_refs))
+                .title(format!(
+                    " Diff (+{} -{}) ",
+                    total_insertions, total_deletions
+                ))
+                .title_style(Style::default().fg(theme.fg_git_refs)),
+        );
+
+    frame.render_widget(paragraph, area);
 }

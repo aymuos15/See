@@ -75,6 +75,9 @@ pub struct App {
     pub last_preview_area: Option<Rect>,
     pub last_pane_areas: Vec<(usize, Rect)>,
     pub last_file_list_area: Option<Rect>,
+    // Git diff view areas (for mouse support)
+    pub last_diff_files_area: Option<Rect>,
+    pub last_diff_content_area: Option<Rect>,
     clipboard: ClipboardManager,
     // Git highlighting
     git_highlight_enabled: bool,
@@ -224,6 +227,8 @@ impl App {
             last_preview_area: None,
             last_pane_areas: Vec::new(),
             last_file_list_area: None,
+            last_diff_files_area: None,
+            last_diff_content_area: None,
             clipboard: ClipboardManager::new(),
             git_highlight_enabled: false,
             git_status: None,

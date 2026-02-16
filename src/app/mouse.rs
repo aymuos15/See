@@ -14,6 +14,24 @@ fn get_raw_lines(content: &PreviewContentType) -> Option<&[String]> {
 
 impl App {
     pub fn handle_mouse_down(&mut self, column: u16, row: u16) {
+        // Check if click is in git diff view
+        if let Some(files_area) = self.last_diff_files_area {
+            if column >= files_area.x
+                && column < files_area.x + files_area.width
+                && row >= files_area.y
+                && row < files_area.y + files_area.height
+            {
+                // Calculate which file was clicked
+                // Account for borders and header
+                let relative_row = row.saturating_sub(files_area.y).saturating_sub(1) as usize;
+                if relative_row < self.git_diff.files().len() {
+                    self.git_diff_selected_file = relative_row;
+                    self.git_diff_scroll = 0;
+                }
+                return;
+            }
+        }
+
         // Check if click is in file list area
         if let Some(file_list_area) = self.last_file_list_area {
             if column >= file_list_area.x

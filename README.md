@@ -48,6 +48,7 @@ See [`config.example.toml`](config.example.toml) for all available options inclu
 ## Key Features
 
 - Image and PDF support through kitty protocol
+- Nice diff viewer now too!
 
 ## Auto-Refresh
 

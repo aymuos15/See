@@ -14,6 +14,8 @@ pub enum GitModeState {
     Log,
     /// Viewing git status
     Status,
+    /// Viewing diff of selected commit
+    Diff,
 }
 
 impl GitModeState {
@@ -30,6 +32,7 @@ impl GitModeState {
             Self::None => "",
             Self::Log => "Log",
             Self::Status => "Status",
+            Self::Diff => "Diff",
         }
     }
 }
@@ -498,6 +501,114 @@ impl GitDiff {
     #[must_use]
     pub const fn total_deletions(&self) -> usize {
         self.total_deletions
+    }
+
+    /// Load git diff for a specific commit hash
+    ///
+    /// # Errors
+    /// Returns an error if the git repository cannot be opened or accessed
+    pub fn load_for_commit(path: &Path, commit_hash: &str) -> anyhow::Result<Self> {
+        let mut files = Vec::new();
+        let mut total_insertions = 0;
+        let mut total_deletions = 0;
+
+        // Get full diff content for the commit
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&["show", "--no-patch", "--format=%H", commit_hash])
+            .current_dir(path)
+            .output()
+        {
+            // First validate the commit exists
+            if !output.status.success() {
+                anyhow::bail!("Invalid commit hash: {}", commit_hash);
+            }
+        }
+
+        // Get diff stats for the commit
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&[
+                "diff",
+                &format!("{}^..{}", commit_hash, commit_hash),
+                "--stat",
+            ])
+            .current_dir(path)
+            .output()
+        {
+            if let Ok(stat_output) = String::from_utf8(output.stdout) {
+                for line in stat_output.lines() {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.is_empty() {
+                        continue;
+                    }
+
+                    let file_path = parts[0].to_string();
+                    let mut insertions = 0;
+                    let mut deletions = 0;
+
+                    // Extract insertion/deletion counts
+                    if parts.len() >= 3 {
+                        let stat_part = parts[parts.len() - 1];
+                        let changes: Vec<&str> =
+                            stat_part.split(|c: char| c == '+' || c == '-').collect();
+
+                        if changes.len() >= 3 {
+                            if let Ok(adds) = changes[1].parse::<usize>() {
+                                insertions = adds;
+                            }
+                            if let Ok(subs) = changes[2].parse::<usize>() {
+                                deletions = subs;
+                            }
+                        }
+                    }
+
+                    total_insertions += insertions;
+                    total_deletions += deletions;
+
+                    files.push(DiffFileStat {
+                        path: file_path,
+                        insertions,
+                        deletions,
+                        is_new: false,
+                        is_deleted: false,
+                        content: String::new(),
+                    });
+                }
+            }
+        }
+
+        // Get full diff content
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&["diff", &format!("{}^..{}", commit_hash, commit_hash)])
+            .current_dir(path)
+            .output()
+        {
+            if let Ok(diff_content) = String::from_utf8(output.stdout) {
+                // Parse the unified diff format and populate file contents
+                let mut current_file: Option<usize> = None;
+
+                for line in diff_content.lines() {
+                    if line.starts_with("diff --git") {
+                        // Extract file path from diff line (typically second path)
+                        let parts: Vec<&str> = line.split_whitespace().collect();
+                        if parts.len() >= 4 {
+                            let file_name = parts[parts.len() - 1];
+                            // Remove leading "b/" if present
+                            let file_name = file_name.strip_prefix("b/").unwrap_or(file_name);
+                            current_file = files.iter().position(|f| f.path.ends_with(file_name));
+                        }
+                    } else if let Some(idx) = current_file {
+                        files[idx].content.push_str(line);
+                        files[idx].content.push('\n');
+                    }
+                }
+            }
+        }
+
+        Ok(Self {
+            files,
+            total_insertions,
+            total_deletions,
+        })
     }
 }
 

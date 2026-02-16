@@ -87,10 +87,19 @@ impl App {
                     self.git_mode_scroll_down();
                     return Ok(());
                 }
+                AppEvent::MouseScrollUp => {
+                    self.git_mode_scroll_up();
+                    return Ok(());
+                }
+                AppEvent::MouseScrollDown => {
+                    self.git_mode_scroll_down();
+                    return Ok(());
+                }
                 AppEvent::SearchInput(c) => {
                     match c {
                         'l' => self.git_mode_show_log(),
                         's' => self.git_mode_show_status(),
+                        'd' => self.git_mode_toggle_diff(),
                         _ => {}
                     }
                     return Ok(());
@@ -119,6 +128,14 @@ impl App {
                     return Ok(());
                 }
                 AppEvent::ScrollPreviewDown => {
+                    self.diff_scroll_down();
+                    return Ok(());
+                }
+                AppEvent::MouseScrollUp => {
+                    self.diff_scroll_up();
+                    return Ok(());
+                }
+                AppEvent::MouseScrollDown => {
                     self.diff_scroll_down();
                     return Ok(());
                 }

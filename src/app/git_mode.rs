@@ -56,7 +56,33 @@ impl App {
         }
     }
 
-    /// Navigate up in git mode
+    /// Toggle between git log and diff view
+    pub fn git_mode_toggle_diff(&mut self) {
+        if self.git_mode_state.is_active() {
+            match self.git_mode_state {
+                GitModeState::Log => {
+                    // Switch to diff view for the selected commit
+                    if self.git_log_selected < self.git_log.entries().len() {
+                        let commit_hash =
+                            self.git_log.entries()[self.git_log_selected].hash.clone();
+                        self.git_mode_state = GitModeState::Diff;
+                        self.git_diff_selected_file = 0;
+                        self.git_diff_scroll = 0;
+                        self.git_diff = crate::git_mode::GitDiff::load_for_commit(
+                            &self.current_dir,
+                            &commit_hash,
+                        )
+                        .unwrap_or_default();
+                    }
+                }
+                GitModeState::Diff => {
+                    // Return to log view
+                    self.git_mode_state = GitModeState::Log;
+                }
+                _ => {}
+            }
+        }
+    }
     pub fn git_mode_navigate_up(&mut self) {
         match self.git_mode_state {
             GitModeState::Log => {
@@ -84,6 +110,14 @@ impl App {
                 } else if !self.git_status_data.entries().is_empty() {
                     self.git_status_selected = self.git_status_data.entries().len() - 1;
                 }
+            }
+            GitModeState::Diff => {
+                if self.git_diff_selected_file > 0 {
+                    self.git_diff_selected_file -= 1;
+                } else if !self.git_diff.files().is_empty() {
+                    self.git_diff_selected_file = self.git_diff.files().len() - 1;
+                }
+                self.git_diff_scroll = 0;
             }
             GitModeState::None => {}
         }
@@ -117,22 +151,48 @@ impl App {
                     }
                 }
             }
+            GitModeState::Diff => {
+                if !self.git_diff.files().is_empty() {
+                    if self.git_diff_selected_file < self.git_diff.files().len() - 1 {
+                        self.git_diff_selected_file += 1;
+                    } else {
+                        self.git_diff_selected_file = 0;
+                    }
+                }
+                self.git_diff_scroll = 0;
+            }
             GitModeState::None => {}
         }
     }
 
     /// Scroll up within the current log entry (for long messages)
     pub fn git_mode_scroll_up(&mut self) {
-        if self.git_mode_state == GitModeState::Log && self.git_log_scroll > 0 {
-            self.git_log_scroll -= 1;
+        match self.git_mode_state {
+            GitModeState::Log => {
+                if self.git_log_scroll > 0 {
+                    self.git_log_scroll -= 1;
+                }
+            }
+            GitModeState::Diff => {
+                if self.git_diff_scroll > 0 {
+                    self.git_diff_scroll -= 1;
+                }
+            }
+            _ => {}
         }
     }
 
     /// Scroll down within the current log entry (for long messages)
     pub fn git_mode_scroll_down(&mut self) {
-        if self.git_mode_state == GitModeState::Log {
-            // Allow scrolling if there might be more content
-            self.git_log_scroll += 1;
+        match self.git_mode_state {
+            GitModeState::Log => {
+                // Allow scrolling if there might be more content
+                self.git_log_scroll += 1;
+            }
+            GitModeState::Diff => {
+                self.git_diff_scroll += 1;
+            }
+            _ => {}
         }
     }
 }
