@@ -144,4 +144,9 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     if app.file_tree_popup_mode {
         file_tree_popup::render(frame, app);
     }
+
+    // Render git mode popup if active
+    if app.git_mode_state.is_active() {
+        crate::git_mode::ui::render(frame, app);
+    }
 }

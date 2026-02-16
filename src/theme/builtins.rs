@@ -4,18 +4,23 @@ use ratatui::style::Color;
 /// Jellybeans theme - dark purple background with cream file list
 pub const fn jellybeans() -> Theme {
     Theme {
-        bg_main: Color::Rgb(0x4c, 0x3d, 0x57), // Jellybeans background (#4c3d57)
-        bg_darker: Color::Rgb(0xe8, 0xe0, 0xd0), // dark cream (#e8e0d0)
-        bg_selected: Color::Rgb(0x29, 0x29, 0x29), // Jellybeans darker
-        bg_search: Color::Rgb(0xcf, 0x6a, 0x4c), // Jellybeans dark orange
-        bg_selection: Color::Rgb(0x37, 0x23, 0x2d), // Jellybeans selection
-        fg_text: Color::Rgb(0x5a, 0x5a, 0x5a), // dark gray
-        fg_selected: Color::Rgb(0xf2, 0xaa, 0xc7), // Jellybeans selection fg
-        fg_dim: Color::Rgb(0x8a, 0x8a, 0x8a),  // medium gray
-        fg_folder: Color::Rgb(0x4a, 0x6a, 0x8a), // dark blue
-        fg_modified: Color::Rgb(0xa8, 0x4a, 0x4a), // dark red
-        border: Color::Rgb(0x6d, 0x6d, 0x6d),  // Jellybeans light gray
-        line_num: Color::Rgb(0x53, 0x53, 0x53), // Jellybeans dark gray
+        bg_main: Color::Rgb(0x15, 0x15, 0x15),      // Dark background
+        bg_darker: Color::Rgb(0x10, 0x10, 0x10),    // Darker background
+        bg_selected: Color::Rgb(0x30, 0x30, 0x30),  // Selection background
+        bg_search: Color::Rgb(0x1c, 0x1c, 0x1c),    // Search background
+        bg_selection: Color::Rgb(0x40, 0x40, 0x40), // Selection highlight
+        fg_text: Color::Rgb(0xe8, 0xe8, 0xe8),      // Light text
+        fg_selected: Color::Rgb(0xff, 0xff, 0xff),  // Selected text
+        fg_dim: Color::Rgb(0x80, 0x80, 0x80),       // Dim text
+        fg_folder: Color::Rgb(0x81, 0xa2, 0xbe),    // Blue folders
+        fg_modified: Color::Rgb(0xcc, 0x66, 0x66),  // Red modified
+        border: Color::Rgb(0x50, 0x50, 0x50),       // Border color
+        line_num: Color::Rgb(0x60, 0x60, 0x60),     // Line numbers
+        // Git colors (like git log --pretty)
+        fg_git_hash: Color::Rgb(0xf0, 0xc6, 0x74), // Yellow hash
+        fg_git_author: Color::Rgb(0x81, 0xa2, 0xbe), // Blue author
+        fg_git_date: Color::Rgb(0xb5, 0xbd, 0x68), // Green date
+        fg_git_refs: Color::Rgb(0xb2, 0x94, 0xbb), // Magenta refs/branches
     }
 }
 
@@ -34,5 +39,10 @@ pub const fn dracula() -> Theme {
         fg_modified: Color::Rgb(0xff, 0x79, 0xc6), // Dracula pink
         border: Color::Rgb(0x62, 0x72, 0xa4),  // Dracula comment color
         line_num: Color::Rgb(0x62, 0x72, 0xa4), // Dracula comment color
+        // Git colors (like git log --pretty)
+        fg_git_hash: Color::Rgb(0xf1, 0xfa, 0x8c), // Yellow hash
+        fg_git_author: Color::Rgb(0x8b, 0xe9, 0xfd), // Cyan author
+        fg_git_date: Color::Rgb(0x50, 0xfa, 0x7b), // Green date
+        fg_git_refs: Color::Rgb(0xff, 0x79, 0xc6), // Pink refs/branches
     }
 }

@@ -56,11 +56,47 @@ impl App {
                 || self.symbol_search_mode
                 || self.theme_preview_mode
                 || self.help_mode
-                || self.file_tree_popup_mode,
+                || self.file_tree_popup_mode
+                || self.git_mode_state.is_active(),
             &mut self.file_watcher,
             &mut self.search_index_timer,
             &self.config.keys,
         )?;
+
+        // Handle git mode specially
+        if self.git_mode_state.is_active() {
+            match event {
+                AppEvent::OpenGitMode | AppEvent::CloseSearch | AppEvent::Quit => {
+                    self.toggle_git_mode();
+                    return Ok(());
+                }
+                AppEvent::NavigateUp | AppEvent::SearchNavigateUp => {
+                    self.git_mode_navigate_up();
+                    return Ok(());
+                }
+                AppEvent::NavigateDown | AppEvent::SearchNavigateDown => {
+                    self.git_mode_navigate_down();
+                    return Ok(());
+                }
+                AppEvent::ScrollPreviewUp => {
+                    self.git_mode_scroll_up();
+                    return Ok(());
+                }
+                AppEvent::ScrollPreviewDown => {
+                    self.git_mode_scroll_down();
+                    return Ok(());
+                }
+                AppEvent::SearchInput(c) => {
+                    match c {
+                        'l' => self.git_mode_show_log(),
+                        's' => self.git_mode_show_status(),
+                        _ => {}
+                    }
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
 
         match event {
             AppEvent::Quit => self.handle_quit(),
@@ -345,6 +381,32 @@ impl App {
                 if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
                     self.pdf_last_page();
                 }
+            }
+            AppEvent::OpenGitMode => {
+                if !self.search_mode && !self.symbol_search_mode {
+                    self.toggle_git_mode();
+                }
+            }
+            AppEvent::GitModeLog => {
+                self.git_mode_show_log();
+            }
+            AppEvent::GitModeStatus => {
+                self.git_mode_show_status();
+            }
+            AppEvent::GitModeNavigateUp => {
+                self.git_mode_navigate_up();
+            }
+            AppEvent::GitModeNavigateDown => {
+                self.git_mode_navigate_down();
+            }
+            AppEvent::GitModeScrollUp => {
+                self.git_mode_scroll_up();
+            }
+            AppEvent::GitModeScrollDown => {
+                self.git_mode_scroll_down();
+            }
+            AppEvent::CloseGitMode => {
+                self.toggle_git_mode();
             }
             AppEvent::None => {}
         }

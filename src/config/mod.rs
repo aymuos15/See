@@ -39,6 +39,11 @@ pub struct ThemeConfig {
     pub fg_modified: Option<String>,
     pub border: Option<String>,
     pub line_num: Option<String>,
+    // Git-specific colors
+    pub fg_git_hash: Option<String>,
+    pub fg_git_author: Option<String>,
+    pub fg_git_date: Option<String>,
+    pub fg_git_refs: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

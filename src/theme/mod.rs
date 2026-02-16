@@ -21,6 +21,11 @@ pub struct Theme {
     pub fg_modified: Color,
     pub border: Color,
     pub line_num: Color,
+    // Git-specific colors (like git log --pretty format)
+    pub fg_git_hash: Color,
+    pub fg_git_author: Color,
+    pub fg_git_date: Color,
+    pub fg_git_refs: Color,
 }
 
 impl Default for Theme {
@@ -74,6 +79,7 @@ impl Theme {
         Self::default()
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn from_config_values(cfg: &ThemeConfig) -> Self {
         let mut theme = Self::default();
 
@@ -137,6 +143,26 @@ impl Theme {
                 theme.line_num = color;
             }
         }
+        if let Some(hex) = &cfg.fg_git_hash {
+            if let Some(color) = parser::parse_hex_color(hex) {
+                theme.fg_git_hash = color;
+            }
+        }
+        if let Some(hex) = &cfg.fg_git_author {
+            if let Some(color) = parser::parse_hex_color(hex) {
+                theme.fg_git_author = color;
+            }
+        }
+        if let Some(hex) = &cfg.fg_git_date {
+            if let Some(color) = parser::parse_hex_color(hex) {
+                theme.fg_git_date = color;
+            }
+        }
+        if let Some(hex) = &cfg.fg_git_refs {
+            if let Some(color) = parser::parse_hex_color(hex) {
+                theme.fg_git_refs = color;
+            }
+        }
 
         theme
     }
@@ -154,6 +180,10 @@ impl Theme {
             || cfg.fg_modified.is_some()
             || cfg.border.is_some()
             || cfg.line_num.is_some()
+            || cfg.fg_git_hash.is_some()
+            || cfg.fg_git_author.is_some()
+            || cfg.fg_git_date.is_some()
+            || cfg.fg_git_refs.is_some()
     }
 
     fn load_helix_theme() -> Option<Self> {
@@ -326,6 +356,10 @@ foreground = \"#ffffff\"\n\
             fg_modified: Some("#ff9900".to_string()),
             border: Some("#666666".to_string()),
             line_num: Some("#666666".to_string()),
+            fg_git_hash: None,
+            fg_git_author: None,
+            fg_git_date: None,
+            fg_git_refs: None,
         };
 
         let theme = Theme::from_config(Some(cfg));
@@ -359,6 +393,10 @@ foreground = \"#ffffff\"\n\
             fg_modified: None,
             border: None,
             line_num: None,
+            fg_git_hash: None,
+            fg_git_author: None,
+            fg_git_date: None,
+            fg_git_refs: None,
         };
 
         let theme = Theme::from_config(Some(cfg));
@@ -376,9 +414,9 @@ foreground = \"#ffffff\"\n\
         // Verify unspecified colors use defaults from jellybeans theme
         match theme.bg_darker {
             Color::Rgb(r, g, b) => {
-                assert_eq!(r, 0xe8);
-                assert_eq!(g, 0xe0);
-                assert_eq!(b, 0xd0);
+                assert_eq!(r, 0x10);
+                assert_eq!(g, 0x10);
+                assert_eq!(b, 0x10);
             }
             _ => panic!("Expected default Jellybeans color for bg_darker"),
         }

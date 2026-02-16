@@ -26,6 +26,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         \n\
         /                  Open file search\n\
         f                  Open symbol search\n\
+        Shift+G            Enter Git Mode (l: log, s: status)\n\
         g                  Toggle git highlighting\n\
         d                  Toggle git diff view\n\
         t                  Cycle through themes\n\
