@@ -4,6 +4,7 @@ mod diff;
 mod directory;
 mod event_handler;
 mod git;
+mod git_mode;
 mod help;
 mod image;
 mod mouse;
@@ -21,6 +22,7 @@ use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
 use crate::git::GitStatus;
+use crate::git_mode::{GitLog, GitModeState, GitStatusData};
 use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
 use crate::worker::BackgroundWorker;
@@ -105,6 +107,14 @@ pub struct App {
     pub file_tree_popup_mode: bool,
     pub file_tree_popup_entries: Vec<FileEntry>,
     pub file_tree_popup_selected: usize,
+    // Git mode state
+    pub git_mode_state: GitModeState,
+    pub git_log: GitLog,
+    pub git_log_selected: usize,
+    pub git_log_scroll: u16,
+    pub git_log_list_scroll: usize,
+    pub git_status_data: GitStatusData,
+    pub git_status_selected: usize,
 }
 
 /// Main application state for the TUI file viewer.
@@ -231,6 +241,14 @@ impl App {
             file_tree_popup_mode: false,
             file_tree_popup_entries: Vec::new(),
             file_tree_popup_selected: 0,
+            // Git mode state
+            git_mode_state: GitModeState::default(),
+            git_log: GitLog::default(),
+            git_log_selected: 0,
+            git_log_scroll: 0,
+            git_log_list_scroll: 0,
+            git_status_data: GitStatusData::default(),
+            git_status_selected: 0,
         };
 
         if !app.files.is_empty() {
@@ -262,7 +280,7 @@ impl App {
     }
 
     /// Navigate up in the file tree popup
-    pub fn file_tree_popup_navigate_up(&mut self) {
+    pub const fn file_tree_popup_navigate_up(&mut self) {
         if self.file_tree_popup_selected > 0 {
             self.file_tree_popup_selected -= 1;
         } else if !self.file_tree_popup_entries.is_empty() {
@@ -271,7 +289,7 @@ impl App {
     }
 
     /// Navigate down in the file tree popup
-    pub fn file_tree_popup_navigate_down(&mut self) {
+    pub const fn file_tree_popup_navigate_down(&mut self) {
         if !self.file_tree_popup_entries.is_empty() {
             if self.file_tree_popup_selected < self.file_tree_popup_entries.len() - 1 {
                 self.file_tree_popup_selected += 1;
