@@ -377,8 +377,10 @@ impl GitDiff {
                 .new_file()
                 .path()
                 .or_else(|| delta.old_file().path())
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+                .map_or_else(
+                    || "unknown".to_string(),
+                    |p| p.to_string_lossy().to_string(),
+                );
 
             let is_new = matches!(delta.status(), git2::Delta::Added);
             let is_deleted = matches!(delta.status(), git2::Delta::Deleted);
@@ -398,7 +400,7 @@ impl GitDiff {
         // Try to get actual diff content using git command
         // This is a fallback since git2's diff API is complex
         if let Ok(output) = std::process::Command::new("git")
-            .args(&["diff", "--stat"])
+            .args(["diff", "--stat"])
             .current_dir(path)
             .output()
         {
@@ -412,8 +414,7 @@ impl GitDiff {
                         {
                             // Extract insertion/deletion counts from stat line
                             let stat_part = parts[parts.len() - 1];
-                            let changes: Vec<&str> =
-                                stat_part.split(|c: char| c == '+' || c == '-').collect();
+                            let changes: Vec<&str> = stat_part.split(['+', '-']).collect();
 
                             if changes.len() >= 3 {
                                 if let Ok(adds) = changes[1].parse::<usize>() {
@@ -431,7 +432,7 @@ impl GitDiff {
 
         // Get full diff content
         if let Ok(output) = std::process::Command::new("git")
-            .args(&["diff"])
+            .args(["diff"])
             .current_dir(path)
             .output()
         {
@@ -454,16 +455,10 @@ impl GitDiff {
                         if line.starts_with("+++")
                             || line.starts_with("---")
                             || line.starts_with("@@")
+                            || line.starts_with('+')
+                            || line.starts_with('-')
+                            || line.starts_with(' ')
                         {
-                            files[idx].content.push_str(line);
-                            files[idx].content.push('\n');
-                        } else if line.starts_with('+') {
-                            files[idx].content.push_str(line);
-                            files[idx].content.push('\n');
-                        } else if line.starts_with('-') {
-                            files[idx].content.push_str(line);
-                            files[idx].content.push('\n');
-                        } else if line.starts_with(' ') {
                             files[idx].content.push_str(line);
                             files[idx].content.push('\n');
                         }
@@ -514,23 +509,19 @@ impl GitDiff {
 
         // Get full diff content for the commit
         if let Ok(output) = std::process::Command::new("git")
-            .args(&["show", "--no-patch", "--format=%H", commit_hash])
+            .args(["show", "--no-patch", "--format=%H", commit_hash])
             .current_dir(path)
             .output()
         {
             // First validate the commit exists
             if !output.status.success() {
-                anyhow::bail!("Invalid commit hash: {}", commit_hash);
+                anyhow::bail!("Invalid commit hash: {commit_hash}");
             }
         }
 
         // Get diff stats for the commit
         if let Ok(output) = std::process::Command::new("git")
-            .args(&[
-                "diff",
-                &format!("{}^..{}", commit_hash, commit_hash),
-                "--stat",
-            ])
+            .args(["diff", &format!("{commit_hash}^..{commit_hash}"), "--stat"])
             .current_dir(path)
             .output()
         {
@@ -548,8 +539,7 @@ impl GitDiff {
                     // Extract insertion/deletion counts
                     if parts.len() >= 3 {
                         let stat_part = parts[parts.len() - 1];
-                        let changes: Vec<&str> =
-                            stat_part.split(|c: char| c == '+' || c == '-').collect();
+                        let changes: Vec<&str> = stat_part.split(['+', '-']).collect();
 
                         if changes.len() >= 3 {
                             if let Ok(adds) = changes[1].parse::<usize>() {
@@ -578,7 +568,7 @@ impl GitDiff {
 
         // Get full diff content
         if let Ok(output) = std::process::Command::new("git")
-            .args(&["diff", &format!("{}^..{}", commit_hash, commit_hash)])
+            .args(["diff", &format!("{commit_hash}^..{commit_hash}")])
             .current_dir(path)
             .output()
         {

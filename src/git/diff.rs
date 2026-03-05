@@ -3,6 +3,7 @@ use similar::{ChangeTag, TextDiff};
 use std::path::Path;
 
 /// Generate unified diff content comparing current file with HEAD
+#[allow(dead_code)]
 pub fn generate_diff_lines(file_path: &Path, current_content: &str) -> Option<Vec<String>> {
     let repo = Repository::discover(file_path).ok()?;
 
@@ -74,6 +75,7 @@ pub fn generate_diff_lines(file_path: &Path, current_content: &str) -> Option<Ve
 }
 
 /// Get file content from HEAD commit
+#[allow(dead_code)]
 fn get_head_content(repo: &Repository, file_path: &Path) -> Option<String> {
     let head = repo.head().ok()?;
     let commit = head.peel_to_commit().ok()?;

@@ -366,7 +366,12 @@ fn render_diff(frame: &mut Frame, app: &mut App, area: Rect, theme: &Theme) {
     }
 
     // Split area into files list (left) and diff content (right)
-    let files_width = (area.width as f32 * 0.3) as u16;
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_lossless
+    )]
+    let files_width = (f32::from(area.width) * 0.3) as u16;
     let files_area = Rect {
         x: area.x,
         y: area.y,
@@ -408,9 +413,9 @@ fn render_diff_files_list(frame: &mut Frame, app: &App, area: Rect, theme: &Them
                 'M'
             };
 
-            let file_name = file.path.split('/').last().unwrap_or(&file.path);
+            let file_name = file.path.split('/').next_back().unwrap_or(&file.path);
 
-            let label = format!(" {} {}", status_char, file_name);
+            let label = format!(" {status_char} {file_name}");
             let style = if is_selected {
                 Style::default().bg(theme.bg_selected).fg(theme.fg_text)
             } else {
@@ -467,7 +472,7 @@ fn render_diff_content(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) 
         let truncated_line = if line.len() > available_width {
             format!("{}…", &line[..available_width.saturating_sub(1)])
         } else {
-            line.to_string()
+            (*line).to_string()
         };
 
         let styled_line = if line.starts_with('+') && !line.starts_with("+++") {
@@ -497,10 +502,7 @@ fn render_diff_content(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) 
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(theme.fg_git_refs))
-                .title(format!(
-                    " Diff (+{} -{}) ",
-                    total_insertions, total_deletions
-                ))
+                .title(format!(" Diff (+{total_insertions} -{total_deletions}) "))
                 .title_style(Style::default().fg(theme.fg_git_refs)),
         );
 

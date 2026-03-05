@@ -1,10 +1,9 @@
 //! Diff viewer UI for git changes
 
 use crate::app::App;
-use crate::git_mode::DiffFileStat;
 use crate::theme::Theme;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Table};
+use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 
 /// Renders the diff viewer split view (files list on left, diff content on right)
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
@@ -30,7 +29,12 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     render_header(frame, app, header_area, theme);
 
     // Split content area: files list (left ~30%) and diff (right ~70%)
-    let files_width = (content_area.width as f32 * 0.3) as u16;
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_lossless
+    )]
+    let files_width = (f32::from(content_area.width) * 0.3) as u16;
     let files_area = Rect {
         x: content_area.x,
         y: content_area.y,
@@ -69,10 +73,8 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) {
     let total_dels = app.git_diff.total_deletions();
     let file_count = app.git_diff.files().len();
 
-    let stats_text = format!(
-        " {} files changed | {} insertions | {} deletions ",
-        file_count, total_ins, total_dels
-    );
+    let stats_text =
+        format!(" {file_count} files changed | {total_ins} insertions | {total_dels} deletions ");
 
     let header_block = Block::default()
         .borders(Borders::BOTTOM)
@@ -113,14 +115,11 @@ fn render_file_list(frame: &mut Frame, app: &App, area: Rect, theme: &Theme) {
                 _ => theme.fg_text,
             };
 
-            let file_name = file.path.split('/').last().unwrap_or(&file.path);
+            let file_name = file.path.split('/').next_back().unwrap_or(&file.path);
 
             let line = Line::from(vec![
-                Span::styled(
-                    format!("{} ", change_char),
-                    Style::default().fg(change_color),
-                ),
-                Span::raw(format!("{} ", file_name)),
+                Span::styled(format!("{change_char} "), Style::default().fg(change_color)),
+                Span::raw(format!("{file_name} ")),
                 Span::styled(
                     format!("+{} -{}", file.insertions, file.deletions),
                     Style::default().fg(theme.fg_dim),

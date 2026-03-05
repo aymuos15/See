@@ -22,7 +22,7 @@ impl App {
     }
 
     /// Exit diff view mode
-    pub fn exit_diff_mode(&mut self) {
+    pub const fn exit_diff_mode(&mut self) {
         self.git_diff_mode = false;
     }
 
@@ -56,14 +56,14 @@ impl App {
     }
 
     /// Scroll up in the diff content
-    pub fn diff_scroll_up(&mut self) {
+    pub const fn diff_scroll_up(&mut self) {
         if self.git_diff_scroll > 0 {
             self.git_diff_scroll -= 1;
         }
     }
 
     /// Scroll down in the diff content
-    pub fn diff_scroll_down(&mut self) {
+    pub const fn diff_scroll_down(&mut self) {
         self.git_diff_scroll += 1;
     }
 }

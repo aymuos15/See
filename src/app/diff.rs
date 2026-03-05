@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 impl App {
     /// Toggle between normal view and diff view
+    #[allow(dead_code)]
     pub(super) fn toggle_diff(&mut self) {
         // Only works on files, not directories
         if let Some(idx) = self.file_list_state.selected() {
@@ -47,6 +48,7 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
     fn show_diff(&mut self, file_path: &Path) {
         // Read current file content
         if let Ok(current_content) = read_file_content(file_path) {
@@ -78,6 +80,7 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
     fn restore_original_content(&mut self) {
         if let Some(original) = self.original_preview_content.take() {
             self.shared_preview_content = Some(original);
@@ -86,6 +89,7 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
     fn style_diff_lines(diff_lines: &[String]) -> Vec<Line<'static>> {
         diff_lines
             .iter()

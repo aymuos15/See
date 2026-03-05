@@ -166,7 +166,7 @@ impl App {
     }
 
     /// Scroll up within the current log entry (for long messages)
-    pub fn git_mode_scroll_up(&mut self) {
+    pub const fn git_mode_scroll_up(&mut self) {
         match self.git_mode_state {
             GitModeState::Log => {
                 if self.git_log_scroll > 0 {
@@ -183,7 +183,7 @@ impl App {
     }
 
     /// Scroll down within the current log entry (for long messages)
-    pub fn git_mode_scroll_down(&mut self) {
+    pub const fn git_mode_scroll_down(&mut self) {
         match self.git_mode_state {
             GitModeState::Log => {
                 // Allow scrolling if there might be more content

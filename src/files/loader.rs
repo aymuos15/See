@@ -4,6 +4,7 @@ use crate::files::{is_image_file, is_pdf_file};
 use std::fs;
 use std::path::Path;
 
+#[allow(dead_code)]
 pub fn read_file_content(path: &Path) -> anyhow::Result<String> {
     let metadata = fs::metadata(path)?;
     if metadata.len() > MAX_FILE_SIZE {

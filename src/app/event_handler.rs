@@ -79,19 +79,11 @@ impl App {
                     self.git_mode_navigate_down();
                     return Ok(());
                 }
-                AppEvent::ScrollPreviewUp => {
+                AppEvent::ScrollPreviewUp | AppEvent::MouseScrollUp => {
                     self.git_mode_scroll_up();
                     return Ok(());
                 }
-                AppEvent::ScrollPreviewDown => {
-                    self.git_mode_scroll_down();
-                    return Ok(());
-                }
-                AppEvent::MouseScrollUp => {
-                    self.git_mode_scroll_up();
-                    return Ok(());
-                }
-                AppEvent::MouseScrollDown => {
+                AppEvent::ScrollPreviewDown | AppEvent::MouseScrollDown => {
                     self.git_mode_scroll_down();
                     return Ok(());
                 }
@@ -123,19 +115,11 @@ impl App {
                     self.diff_navigate_down();
                     return Ok(());
                 }
-                AppEvent::ScrollPreviewUp => {
+                AppEvent::ScrollPreviewUp | AppEvent::MouseScrollUp => {
                     self.diff_scroll_up();
                     return Ok(());
                 }
-                AppEvent::ScrollPreviewDown => {
-                    self.diff_scroll_down();
-                    return Ok(());
-                }
-                AppEvent::MouseScrollUp => {
-                    self.diff_scroll_up();
-                    return Ok(());
-                }
-                AppEvent::MouseScrollDown => {
+                AppEvent::ScrollPreviewDown | AppEvent::MouseScrollDown => {
                     self.diff_scroll_down();
                     return Ok(());
                 }
