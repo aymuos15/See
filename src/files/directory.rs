@@ -25,6 +25,48 @@ pub fn read_directory(path: &Path, root: &Path, config: &Config) -> anyhow::Resu
     Ok(entries)
 }
 
+/// One row of the file tree: an entry plus how deep it sits below the root.
+#[derive(Debug, Clone)]
+pub struct TreeRow {
+    pub entry: FileEntry,
+    pub depth: usize,
+}
+
+/// Walks the tree in display order — each directory followed by its contents,
+/// directories before files, alphabetical within a level.
+pub fn build_tree(root: &Path, config: &Config) -> Vec<TreeRow> {
+    let mut rows = Vec::new();
+    collect_tree_rows(root, root, config, 0, &mut rows);
+    rows
+}
+
+fn collect_tree_rows(
+    path: &Path,
+    root: &Path,
+    config: &Config,
+    depth: usize,
+    rows: &mut Vec<TreeRow>,
+) {
+    // read_directory already sorts directories first and filters exclusions.
+    let Ok(entries) = read_directory(path, root, config) else {
+        return;
+    };
+
+    for entry in entries {
+        if entry.name.starts_with('.') {
+            continue;
+        }
+
+        let is_dir = !entry.is_file;
+        let child_path = entry.path.clone();
+        rows.push(TreeRow { entry, depth });
+
+        if is_dir {
+            collect_tree_rows(&child_path, root, config, depth + 1, rows);
+        }
+    }
+}
+
 /// Recursively find all files under a root directory
 #[allow(clippy::unnecessary_wraps)]
 pub fn find_all_files_recursive(root: &Path, config: &Config) -> anyhow::Result<Vec<FileEntry>> {

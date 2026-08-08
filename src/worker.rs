@@ -5,7 +5,8 @@ use crate::constants::{PDF_RENDER_SCALE, THUMBNAIL_SIZE};
 use crate::files::{extract_symbols, find_all_files_recursive, Symbol};
 use image::imageops::FilterType;
 use pdfium_render::prelude::*;
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
@@ -19,6 +20,11 @@ pub enum WorkerRequest {
     },
     LoadThumbnail {
         path: Box<Path>,
+    },
+    /// Count lines across the tree for the file tree popup
+    CountTreeLines {
+        root_dir: Box<Path>,
+        config: Box<Config>,
     },
     /// Syntax-highlight a file's text off the UI thread
     HighlightFile {
@@ -47,6 +53,8 @@ pub enum WorkerResponse {
         path: Box<Path>,
         result: anyhow::Result<image::DynamicImage>,
     },
+    /// Line counts for every file in the tree, and per-directory totals
+    TreeLinesCounted(TreeLineCounts),
     /// A file's highlighted lines, ready to replace its plain-text preview
     FileHighlighted {
         path: Box<Path>,
@@ -102,6 +110,13 @@ impl BackgroundWorker {
             .send(WorkerRequest::LoadThumbnail { path: path.into() });
     }
 
+    pub fn request_tree_line_counts(&self, root_dir: &Path, config: Config) {
+        let _ = self.request_tx.send(WorkerRequest::CountTreeLines {
+            root_dir: root_dir.into(),
+            config: Box::new(config),
+        });
+    }
+
     pub fn request_highlight(&self, path: &Path, text: String) {
         let _ = self.request_tx.send(WorkerRequest::HighlightFile {
             path: path.into(),
@@ -147,6 +162,10 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
             }
             WorkerRequest::LoadThumbnail { path } => {
                 load_thumbnail(&path, response_tx);
+            }
+            WorkerRequest::CountTreeLines { root_dir, config } => {
+                let counts = count_tree_lines(&root_dir, &config);
+                let _ = response_tx.send(WorkerResponse::TreeLinesCounted(counts));
             }
             WorkerRequest::HighlightFile { path, text } => {
                 let lines = highlighter.highlight(&path, &text);
@@ -337,4 +356,93 @@ fn render_pdf_page(
         .clone();
 
     Ok((image::DynamicImage::ImageRgba8(image), total_pages))
+}
+
+/// Line counts gathered for the file tree: a count per file, and per directory
+/// the number of files beneath it together with their combined lines.
+#[derive(Default)]
+pub struct TreeLineCounts {
+    pub files: HashMap<PathBuf, usize>,
+    pub directories: HashMap<PathBuf, (usize, usize)>,
+}
+
+/// Files above this size are assumed to be data rather than source and are
+/// counted as zero lines rather than read into memory.
+const MAX_COUNTED_BYTES: u64 = 4 * 1024 * 1024;
+
+/// Walks the tree counting lines per file, then rolls each file's count up
+/// into every directory above it.
+fn count_tree_lines(root: &Path, config: &Config) -> TreeLineCounts {
+    let mut counts = TreeLineCounts::default();
+
+    let Ok(entries) = crate::files::find_all_files_recursive(root, config) else {
+        return counts;
+    };
+
+    for entry in entries {
+        if !entry.is_file {
+            counts.directories.entry(entry.path).or_insert((0, 0));
+            continue;
+        }
+
+        let lines = count_lines(&entry.path);
+        counts.files.insert(entry.path.clone(), lines);
+
+        // Roll up into each ancestor directory inside the tree.
+        let mut parent = entry.path.parent();
+        while let Some(dir) = parent {
+            if !dir.starts_with(root) {
+                break;
+            }
+            let totals = counts
+                .directories
+                .entry(dir.to_path_buf())
+                .or_insert((0, 0));
+            totals.0 += 1;
+            totals.1 += lines;
+
+            if dir == root {
+                break;
+            }
+            parent = dir.parent();
+        }
+    }
+
+    counts
+}
+
+/// Counts newlines in a file, treating a trailing partial line as a line.
+fn count_lines(path: &Path) -> usize {
+    let Ok(metadata) = std::fs::metadata(path) else {
+        return 0;
+    };
+    if metadata.len() > MAX_COUNTED_BYTES {
+        return 0;
+    }
+
+    let Ok(bytes) = std::fs::read(path) else {
+        return 0;
+    };
+    if bytes.is_empty() || is_binary(&bytes) {
+        return 0;
+    }
+
+    let newlines = bytecount(&bytes);
+    if bytes.last() == Some(&b'\n') {
+        newlines
+    } else {
+        newlines + 1
+    }
+}
+
+#[allow(clippy::naive_bytecount)]
+fn bytecount(bytes: &[u8]) -> usize {
+    bytes.iter().filter(|&&b| b == b'\n').count()
+}
+
+/// Treats a NUL byte near the start as the mark of a binary file, the way most
+/// tools do. Counting newlines in a PNG is meaningless.
+fn is_binary(bytes: &[u8]) -> bool {
+    const SNIFF_BYTES: usize = 8192;
+    bytes[..bytes.len().min(SNIFF_BYTES)].contains(&0)
 }

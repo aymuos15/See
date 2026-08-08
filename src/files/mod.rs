@@ -3,7 +3,7 @@ pub mod loader;
 pub mod symbol;
 pub mod symbol_extractor;
 
-pub use directory::{find_all_files_recursive, read_directory};
+pub use directory::{build_tree, find_all_files_recursive, read_directory, TreeRow};
 pub use symbol::{Symbol, SymbolKind};
 pub use symbol_extractor::extract_symbols;
 

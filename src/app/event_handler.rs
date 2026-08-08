@@ -35,6 +35,9 @@ impl App {
                 WorkerResponse::ThumbnailLoaded { path, result } => {
                     self.handle_thumbnail_loaded(&path, &result);
                 }
+                WorkerResponse::TreeLinesCounted(counts) => {
+                    self.tree_line_counts = counts;
+                }
                 WorkerResponse::FileHighlighted { path, lines } => {
                     self.apply_highlighted(&path, lines);
                 }

@@ -99,8 +99,10 @@ pub struct App {
     // PDF loading error message (shown when PDFium fails)
     pub pdf_error: Option<String>,
     // File tree popup state
+    /// Line counts shown beside file tree entries, filled in by the worker
+    pub tree_line_counts: crate::worker::TreeLineCounts,
     pub file_tree_popup_mode: bool,
-    pub file_tree_popup_entries: Vec<FileEntry>,
+    pub file_tree_popup_entries: Vec<crate::files::TreeRow>,
     pub file_tree_popup_selected: usize,
 }
 
@@ -222,6 +224,7 @@ impl App {
             full_quality_images: HashSet::new(),
             pending_full_quality: None,
             pdf_error: None,
+            tree_line_counts: crate::worker::TreeLineCounts::default(),
             file_tree_popup_mode: false,
             file_tree_popup_entries: Vec::new(),
             file_tree_popup_selected: 0,
@@ -242,16 +245,15 @@ impl App {
     pub fn toggle_file_tree_popup(&mut self) {
         self.file_tree_popup_mode = !self.file_tree_popup_mode;
         if self.file_tree_popup_mode {
-            // Load all files recursively
-            if self.search_index.is_empty() {
-                use crate::files::directory::find_all_files_recursive;
-                if let Ok(all_files) = find_all_files_recursive(&self.root_dir, &self.config) {
-                    self.file_tree_popup_entries = all_files;
-                }
-            } else {
-                self.file_tree_popup_entries = self.search_index.clone();
-            }
+            // Built fresh each time so the tree reflects the directory as it
+            // is now, in hierarchy order rather than the search index's flat one.
+            self.file_tree_popup_entries = crate::files::build_tree(&self.root_dir, &self.config);
             self.file_tree_popup_selected = 0;
+
+            // Counting lines means reading every file, so it happens on the
+            // worker; entries render without counts until it answers.
+            self.worker
+                .request_tree_line_counts(&self.root_dir, self.config.clone());
         }
     }
 
@@ -280,6 +282,7 @@ impl App {
         if let Some(entry) = self
             .file_tree_popup_entries
             .get(self.file_tree_popup_selected)
+            .map(|row| &row.entry)
         {
             if entry.is_file {
                 // Navigate to the file's parent directory
