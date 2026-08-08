@@ -195,16 +195,17 @@ impl App {
                 }
             }
             PreviewContentType::Pdf { path, .. } => {
-                // Request first page render from worker
-                self.worker.request_pdf_page(path, 0);
+                // Start (or keep) the continuous view, which pulls in pages as
+                // they scroll into sight.
+                self.begin_pdf_view(path);
 
-                PreviewContentType::Pdf {
-                    path: path.clone(),
-                    current_page: 0,
-                    total_pages: 0,
-                }
+                PreviewContentType::Pdf { path: path.clone() }
             }
         };
+
+        if !matches!(content, PreviewContentType::Pdf { .. }) {
+            self.pdf_view = None;
+        }
 
         // Create shared reference for panes (Rc::clone is O(1))
         let shared = Rc::new(content);
@@ -306,14 +307,10 @@ impl App {
                                 if self.shared_preview_content.as_ref().is_none_or(|prev| {
                                     !matches!(prev.as_ref(), PreviewContentType::Pdf { .. })
                                 }) {
-                                    // Changed from non-PDF to PDF, reload first page
-                                    self.worker.request_pdf_page(&path, 0);
+                                    // Changed from non-PDF to PDF, start viewing it
+                                    self.begin_pdf_view(&path);
                                     self.shared_preview_content =
-                                        Some(Rc::new(PreviewContentType::Pdf {
-                                            path,
-                                            current_page: 0,
-                                            total_pages: 0,
-                                        }));
+                                        Some(Rc::new(PreviewContentType::Pdf { path }));
                                 }
                             }
                         }

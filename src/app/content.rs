@@ -16,14 +16,11 @@ pub enum PreviewContentType {
         /// Image dimensions in pixels
         dimensions: (u32, u32),
     },
-    /// PDF content rendered as images
+    /// PDF content, rendered page by page into the continuous scroll view.
+    /// Page state lives in `App::pdf_view`; this only marks the file's kind.
     Pdf {
         /// Path to PDF file
         path: PathBuf,
-        /// Current page number (0-indexed)
-        current_page: usize,
-        /// Total number of pages
-        total_pages: usize,
     },
 }
 

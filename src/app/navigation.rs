@@ -74,6 +74,9 @@ impl App {
     }
 
     pub(super) fn scroll_preview_down(&mut self) {
+        if self.pdf_scroll_by(1) {
+            return;
+        }
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 if let Some(content) = &pane.preview_content {
@@ -99,6 +102,9 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn scroll_preview_up(&mut self) {
+        if self.pdf_scroll_by(-1) {
+            return;
+        }
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 pane.scroll = pane.scroll.saturating_sub(1);
@@ -109,6 +115,9 @@ impl App {
     }
 
     pub(super) fn mouse_scroll_down(&mut self) {
+        if self.pdf_scroll_by(i32::from(MOUSE_SCROLL_LINES)) {
+            return;
+        }
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 if let Some(content) = &pane.preview_content {
@@ -134,6 +143,9 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn mouse_scroll_up(&mut self) {
+        if self.pdf_scroll_by(-i32::from(MOUSE_SCROLL_LINES)) {
+            return;
+        }
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 pane.scroll = pane.scroll.saturating_sub(MOUSE_SCROLL_LINES);
@@ -152,6 +164,9 @@ impl App {
 
     pub(super) fn scroll_preview_page_down(&mut self) {
         let scroll_amount = self.get_page_scroll_amount();
+        if self.pdf_scroll_by(i32::from(scroll_amount)) {
+            return;
+        }
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 if let Some(content) = &pane.preview_content {
@@ -178,6 +193,9 @@ impl App {
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn scroll_preview_page_up(&mut self) {
         let scroll_amount = self.get_page_scroll_amount();
+        if self.pdf_scroll_by(-i32::from(scroll_amount)) {
+            return;
+        }
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 pane.scroll = pane.scroll.saturating_sub(scroll_amount);

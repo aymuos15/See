@@ -4,7 +4,6 @@ use crate::app::PreviewContentType;
 use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Wrap};
-use std::path::Path;
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = app.config.theme.clone();
@@ -31,12 +30,15 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
                 let protocol = app.image_protocols.get_mut(&canonical_path);
                 render_image_content(frame, area, *dimensions, protocol);
             }
-            PreviewContentType::Pdf {
-                path,
-                current_page,
-                total_pages,
-            } => {
-                render_pdf_content(frame, app, area, path, *current_page, *total_pages, &theme);
+            PreviewContentType::Pdf { .. } => {
+                crate::ui::pdf::render(
+                    frame,
+                    area,
+                    &theme,
+                    app.pdf_view.as_mut(),
+                    app.image_picker.as_ref(),
+                    app.pdf_error.as_deref(),
+                );
             }
         }
     } else {
@@ -131,79 +133,6 @@ fn render_image_content(
             .alignment(Alignment::Center);
         frame.render_widget(placeholder, area);
     }
-}
-
-fn render_pdf_content(
-    frame: &mut Frame,
-    app: &mut App,
-    area: Rect,
-    path: &Path,
-    current_page: usize,
-    total_pages: usize,
-    theme: &Theme,
-) {
-    use ratatui_image::StatefulImage;
-
-    // Split area for page indicator and content
-    let layout = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]);
-    let [content_area, indicator_area] = layout.areas(area);
-
-    // Look up the rendered page from cache
-    let mut page_key = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    page_key.set_extension(format!("pdf.page{current_page}"));
-
-    let protocol = app.image_protocols.get_mut(&page_key);
-
-    // Check for PDF loading error first
-    if let Some(ref error) = app.pdf_error {
-        let error_text = format!(
-            "PDF Error\n\n{error}\n\nTo view PDFs, install the PDFium library:\n\n  - Linux: Install libpdfium-dev or download from\n    https://github.com/nicbarker/pdfium-binaries/releases\n  - macOS: brew install nicbarker/pdfium-binaries/pdfium\n  - Windows: Download pdfium.dll from the releases page"
-        );
-        let placeholder = Paragraph::new(error_text)
-            .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
-            .alignment(Alignment::Center);
-        frame.render_widget(placeholder, content_area);
-    } else if let Some(protocol) = protocol {
-        // Render the PDF page image
-        let image_widget = StatefulImage::default();
-        frame.render_stateful_widget(image_widget, content_area, protocol);
-    } else if total_pages == 0 {
-        // Still loading page count
-        let loading_text = "Loading PDF...";
-        let placeholder = Paragraph::new(loading_text)
-            .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
-            .alignment(Alignment::Center);
-        frame.render_widget(placeholder, content_area);
-    } else {
-        // Page is loading or graphics protocol unavailable
-        let loading_text = format!(
-            "PDF Preview\n\nPage {} of {}\n\n[Rendering page...]",
-            current_page + 1,
-            total_pages
-        );
-        let placeholder = Paragraph::new(loading_text)
-            .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
-            .alignment(Alignment::Center);
-        frame.render_widget(placeholder, content_area);
-    }
-
-    // Render page indicator
-    let page_text = if app.pdf_error.is_some() {
-        " PDF Error - PDFium library not available ".to_string()
-    } else if total_pages > 0 {
-        format!(
-            " Page {}/{} | n:next p:prev Home:first End:last ",
-            current_page + 1,
-            total_pages
-        )
-    } else {
-        " Loading... ".to_string()
-    };
-
-    let indicator = Paragraph::new(page_text)
-        .style(Style::default().fg(theme.fg_text).bg(theme.bg_darker))
-        .alignment(Alignment::Center);
-    frame.render_widget(indicator, indicator_area);
 }
 
 /// Apply selection highlighting to lines

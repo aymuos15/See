@@ -3,7 +3,7 @@ use crate::app::PreviewContentType;
 use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Wrap};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[allow(clippy::too_many_arguments)]
 pub fn render(
@@ -19,6 +19,9 @@ pub fn render(
         PathBuf,
         ratatui_image::protocol::StatefulProtocol,
     >,
+    pdf_view: Option<&mut crate::app::pdf::PdfView>,
+    picker: Option<&ratatui_image::picker::Picker>,
+    pdf_error: Option<&str>,
 ) {
     // No borders - tab bar serves as top separator, divider line between panes drawn separately
     let block = Block::default().style(Style::default().bg(theme.bg_main));
@@ -46,20 +49,8 @@ pub fn render(
                 let protocol = image_protocols.get_mut(&canonical_path);
                 render_image_pane(frame, inner_area, *dimensions, protocol);
             }
-            PreviewContentType::Pdf {
-                path,
-                current_page,
-                total_pages,
-            } => {
-                render_pdf_pane(
-                    frame,
-                    inner_area,
-                    theme,
-                    path,
-                    *current_page,
-                    *total_pages,
-                    image_protocols,
-                );
+            PreviewContentType::Pdf { .. } => {
+                crate::ui::pdf::render(frame, inner_area, theme, pdf_view, picker, pdf_error);
             }
         }
     } else {
@@ -164,61 +155,3 @@ fn render_image_pane(
     }
 }
 
-fn render_pdf_pane(
-    frame: &mut Frame,
-    inner_area: Rect,
-    theme: &Theme,
-    path: &Path,
-    current_page: usize,
-    total_pages: usize,
-    image_protocols: &mut std::collections::HashMap<
-        PathBuf,
-        ratatui_image::protocol::StatefulProtocol,
-    >,
-) {
-    use ratatui_image::StatefulImage;
-
-    // Split area for page indicator and content
-    let layout = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]);
-    let [content_area, indicator_area] = layout.areas(inner_area);
-
-    // Look up the rendered page from cache
-    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    let mut page_key = canonical_path;
-    page_key.set_extension(format!("pdf.page{current_page}"));
-
-    let protocol = image_protocols.get_mut(&page_key);
-
-    if let Some(protocol) = protocol {
-        let image_widget = StatefulImage::default();
-        frame.render_stateful_widget(image_widget, content_area, protocol);
-    } else if total_pages == 0 {
-        let loading_text = "Loading PDF...";
-        let placeholder = Paragraph::new(loading_text)
-            .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
-            .alignment(Alignment::Center);
-        frame.render_widget(placeholder, content_area);
-    } else {
-        let loading_text = format!(
-            "PDF Preview\n\nPage {} of {}\n\n[Rendering page...]",
-            current_page + 1,
-            total_pages
-        );
-        let placeholder = Paragraph::new(loading_text)
-            .style(Style::default().fg(theme.fg_dim).bg(theme.bg_main))
-            .alignment(Alignment::Center);
-        frame.render_widget(placeholder, content_area);
-    }
-
-    // Render page indicator
-    let page_text = if total_pages > 0 {
-        format!(" Page {}/{} ", current_page + 1, total_pages)
-    } else {
-        " Loading... ".to_string()
-    };
-
-    let indicator = Paragraph::new(page_text)
-        .style(Style::default().fg(theme.fg_text).bg(theme.bg_darker))
-        .alignment(Alignment::Center);
-    frame.render_widget(indicator, indicator_area);
-}

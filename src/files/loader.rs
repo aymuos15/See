@@ -44,8 +44,6 @@ pub fn load_preview_content(path: &Path) -> anyhow::Result<PreviewContentType> {
         // Return PDF content type - actual rendering happens via worker
         return Ok(PreviewContentType::Pdf {
             path: path.to_path_buf(),
-            current_page: 0,
-            total_pages: 0, // Will be updated when worker responds
         });
     }
 

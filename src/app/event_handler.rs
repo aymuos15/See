@@ -4,6 +4,10 @@ use std::time::Duration;
 
 use super::App;
 
+/// Upper bound on how many queued input events are applied between frames,
+/// so a stuck key cannot starve rendering entirely.
+const MAX_COALESCED_EVENTS: usize = 32;
+
 impl App {
     pub fn run(&mut self, terminal: &mut crate::tui::Tui) -> anyhow::Result<()> {
         while !self.should_quit {
@@ -11,8 +15,27 @@ impl App {
             self.poll_worker_responses();
             self.check_pending_full_quality();
             self.handle_next_event()?;
+            self.drain_pending_input()?;
         }
 
+        Ok(())
+    }
+
+    /// Handle input that is already queued before drawing again.
+    ///
+    /// A held scroll key or a spun mouse wheel produces events faster than a
+    /// frame takes to draw, and a PDF frame re-encodes an image. Without this
+    /// the queue backs up and scrolling lags behind the input by seconds;
+    /// applying the backlog first collapses it into a single frame.
+    fn drain_pending_input(&mut self) -> anyhow::Result<()> {
+        let mut handled = 0;
+        while handled < MAX_COALESCED_EVENTS
+            && !self.should_quit
+            && crossterm::event::poll(Duration::ZERO)?
+        {
+            self.handle_next_event()?;
+            handled += 1;
+        }
         Ok(())
     }
 
@@ -47,7 +70,7 @@ impl App {
                     total_pages,
                     result,
                 } => {
-                    self.handle_pdf_page_loaded(&path, page, total_pages, &result);
+                    self.handle_pdf_page_loaded(&path, page, total_pages, result);
                 }
             }
         }

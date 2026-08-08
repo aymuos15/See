@@ -6,7 +6,7 @@ mod help;
 mod image;
 mod mouse;
 mod navigation;
-mod pdf;
+pub mod pdf;
 mod search;
 pub mod selection;
 pub mod split;
@@ -91,13 +91,15 @@ pub struct App {
     pub image_protocols:
         std::collections::HashMap<PathBuf, ratatui_image::protocol::StatefulProtocol>,
     // Image picker (initialized once at startup)
-    image_picker: Option<ratatui_image::picker::Picker>,
+    pub(crate) image_picker: Option<ratatui_image::picker::Picker>,
     // Track which images have full quality loaded (vs thumbnail)
     full_quality_images: HashSet<PathBuf>,
     // Pending full-quality image load (path, timestamp when to load)
     pending_full_quality: Option<(PathBuf, Instant)>,
     // PDF loading error message (shown when PDFium fails)
     pub pdf_error: Option<String>,
+    /// Continuous-scroll state for the PDF being previewed, if any
+    pub pdf_view: Option<pdf::PdfView>,
     // File tree popup state
     /// Line counts shown beside file tree entries, filled in by the worker
     pub tree_line_counts: crate::worker::TreeLineCounts,
@@ -224,6 +226,7 @@ impl App {
             full_quality_images: HashSet::new(),
             pending_full_quality: None,
             pdf_error: None,
+            pdf_view: None,
             tree_line_counts: crate::worker::TreeLineCounts::default(),
             file_tree_popup_mode: false,
             file_tree_popup_entries: Vec::new(),

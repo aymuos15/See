@@ -5,6 +5,7 @@ pub mod help;
 pub mod indent;
 pub mod layout;
 pub mod pane;
+pub mod pdf;
 pub mod popup;
 pub mod preview;
 pub mod search;
@@ -52,6 +53,9 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     app.config.indent_guides,
                     app.highlighted_word.as_deref(),
                     &mut app.image_protocols,
+                    app.pdf_view.as_mut(),
+                    app.image_picker.as_ref(),
+                    app.pdf_error.as_deref(),
                 );
             }
         }
@@ -127,6 +131,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     } else {
         preview::render(frame, app, layout.pane_areas[0].1);
     }
+
+    // Pages that scrolled into view during this frame are fetched now, so the
+    // worker has them ready for the next one.
+    app.flush_pdf_requests();
 
     // Render search popup overlay if active (file or symbol search)
     if app.search_mode || app.symbol_search_mode || app.find_mode {
