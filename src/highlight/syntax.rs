@@ -77,6 +77,12 @@ impl SyntaxHighlighter {
             }
         }
 
+        // Markdown pipe tables read as ragged text until their columns are
+        // squared up.
+        if matches!(extension, "md" | "markdown") {
+            return crate::highlight::markdown_table::format_tables(lines);
+        }
+
         lines
     }
 }

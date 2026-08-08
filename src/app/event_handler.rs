@@ -53,6 +53,29 @@ impl App {
         }
     }
 
+    /// Closes whichever overlay is on top, innermost first.
+    fn close_overlay(&mut self) {
+        if self.help_mode {
+            self.close_help();
+        } else if self.theme_preview_mode {
+            self.theme_preview_mode = false;
+        } else if self.symbol_search_mode {
+            self.exit_symbol_search_mode();
+        } else if self.find_mode {
+            self.exit_find_mode();
+        } else if self.file_tree_popup_mode {
+            self.file_tree_popup_mode = false;
+        } else {
+            self.exit_search_mode();
+        }
+    }
+
+    /// True for overlays that show a list rather than a query, where a letter
+    /// key is free to mean something other than typing.
+    const fn takes_no_text_input(&self) -> bool {
+        self.help_mode || self.theme_preview_mode || self.file_tree_popup_mode
+    }
+
     #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     fn handle_next_event(&mut self) -> anyhow::Result<()> {
         let event = poll_event(
@@ -77,21 +100,10 @@ impl App {
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
             AppEvent::OpenFind => self.enter_find_mode(),
-            AppEvent::CloseSearch => {
-                if self.help_mode {
-                    self.close_help();
-                } else if self.theme_preview_mode {
-                    self.theme_preview_mode = false;
-                } else if self.symbol_search_mode {
-                    self.exit_symbol_search_mode();
-                } else if self.find_mode {
-                    self.exit_find_mode();
-                } else if self.file_tree_popup_mode {
-                    self.file_tree_popup_mode = false;
-                } else {
-                    self.exit_search_mode();
-                }
-            }
+            AppEvent::CloseSearch => self.close_overlay(),
+            // Panels that take no text input also close on `q`, matching the
+            // way `q` quits the viewer itself.
+            AppEvent::SearchInput('q') if self.takes_no_text_input() => self.close_overlay(),
             AppEvent::SearchInput(c) => {
                 if self.symbol_search_mode {
                     self.symbol_search_input(c);

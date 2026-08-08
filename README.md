@@ -40,9 +40,18 @@ See [`config.example.toml`](config.example.toml) for all available options inclu
 - File/directory exclusion patterns
 - Theme configuration (Helix themes or custom colors)
 - Customizable key bindings
+- Preview options such as `wrap` and `indent_guides`
 
 ## Key Features
 
+- Syntax highlighting for a wide range of languages, done on a background
+  thread so navigation never stalls on a large file
+- Symbol search powered by tree-sitter: rust, python, javascript, typescript,
+  go, html, css, yaml, toml, c/c++, cuda, markdown and latex
+- Indent guides in the preview, and markdown pipe tables aligned into columns
+- Global file tree (`Ctrl+t`) showing the hierarchy with line counts per file
+  and per directory
+- Split panes, fuzzy file and symbol search, text selection and copy
 - Image and PDF support through kitty protocol
 
 ## Auto-Refresh

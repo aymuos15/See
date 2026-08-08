@@ -129,19 +129,39 @@ src/
     split.rs        # Split pane management (SplitLayout, Pane, SplitNode tree)
   config/           # Configuration loading
   event/            # Event handling, file watching
-  files/            # File system operations
+  files/            # File system operations, tree building, tree-sitter symbols
   highlight/        # Syntax highlighting
+    markdown_table.rs # Aligns markdown pipe tables into columns
   theme/            # Theming system
   ui/               # UI rendering
     pane.rs         # Individual pane rendering
+    popup.rs        # Shared popup panel: surface, query line, list
+    indent.rs       # Indent guides in the preview
     tab_bar.rs      # Tab bar for split panes
     layout.rs       # Layout calculation with dividers
+  worker.rs         # Background thread: highlighting, symbols, images, line counts
 tests/              # Integration tests
 ```
 
+## Performance Notes
+
+Anything that reads or parses whole files belongs on the background worker,
+not the UI thread. Syntax highlighting a mid-size file costs tens of
+milliseconds, which is far too slow to run between keystrokes; the preview
+shows plain text immediately and `WorkerResponse::FileHighlighted` swaps in
+colors, cached per path. Counting lines for the file tree works the same way.
+Rendering runs every frame, so per-frame work must stay proportional to what is
+on screen rather than to file size.
+
 ## Key Dependencies
 
-`ratatui` (TUI framework), `crossterm` (terminal), `syntect` (syntax highlighting), `anyhow` (errors), `serde`+`toml` (config), `tree-sitter` (symbols), `notify` (file watching)
+`ratatui` (TUI framework), `crossterm` (terminal), `syntect` (syntax highlighting), `anyhow` (errors), `serde`+`toml` (config), `tree-sitter` 0.26 (symbols), `notify` (file watching)
+
+Grammars: rust, python, javascript, typescript, go, html, css, yaml, toml,
+c/c++, cuda, markdown, latex. The runtime must stay at 0.25+ — several
+grammars are ABI 15, which 0.24 rejects. Image and syntect features are
+trimmed in `Cargo.toml` to keep build times down; check there before adding
+a dependency's default features back.
 
 ## Common Patterns
 
