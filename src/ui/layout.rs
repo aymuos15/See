@@ -15,9 +15,10 @@ impl AppLayout {
         split_layout: &Option<SplitLayout>,
         split_percent: u16,
         divider_width: u16,
+        file_list_visible: bool,
     ) -> Self {
         if let Some(layout) = split_layout {
-            let (file_list_area, panes_area) = if layout.file_list_visible {
+            let (file_list_area, panes_area) = if file_list_visible {
                 let chunks: [Rect; 2] =
                     Layout::horizontal([Constraint::Percentage(split_percent), Constraint::Min(0)])
                         .areas(area);
@@ -35,7 +36,7 @@ impl AppLayout {
                 dividers: layout.get_dividers(panes_with_tabs[1], divider_width),
                 tab_bar_area: panes_with_tabs[0],
             }
-        } else {
+        } else if file_list_visible {
             let horizontal: [Rect; 2] = Layout::horizontal([
                 Constraint::Percentage(split_percent),
                 Constraint::Percentage(100 - split_percent),
@@ -47,6 +48,14 @@ impl AppLayout {
             Self {
                 file_list_area: Some(file_list_area),
                 pane_areas: vec![(0, preview_area)],
+                dividers: Vec::new(),
+                tab_bar_area: Rect::default(),
+            }
+        } else {
+            // File list hidden: the preview takes the whole area.
+            Self {
+                file_list_area: None,
+                pane_areas: vec![(0, area)],
                 dividers: Vec::new(),
                 tab_bar_area: Rect::default(),
             }

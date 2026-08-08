@@ -1,4 +1,5 @@
 use crate::app::content::PreviewContentType;
+use crate::constants::HIGHLIGHT_CACHE_ENTRIES;
 use crate::files::read_directory;
 use std::rc::Rc;
 
@@ -49,10 +50,90 @@ impl App {
         }
     }
 
+    /// Returns cached highlighted lines when we have them, otherwise plain
+    /// lines now plus a background request to highlight the file.
+    fn highlighted_or_plain(
+        &mut self,
+        path: &std::path::Path,
+        raw_lines: &[String],
+    ) -> Vec<ratatui::text::Line<'static>> {
+        if let Some(cached) = self.highlight_cache.get(path) {
+            return cached.as_ref().clone();
+        }
+
+        if self.highlight_pending.insert(path.to_path_buf()) {
+            self.worker.request_highlight(path, raw_lines.join("\n"));
+        }
+
+        raw_lines
+            .iter()
+            .map(|line| ratatui::text::Line::from(line.clone()))
+            .collect()
+    }
+
+    /// Stores freshly highlighted lines and shows them if that file is still
+    /// the one on screen.
+    pub(super) fn apply_highlighted(
+        &mut self,
+        path: &std::path::Path,
+        lines: Vec<ratatui::text::Line<'static>>,
+    ) {
+        self.highlight_pending.remove(path);
+
+        // Bound the cache so browsing a large tree cannot grow it without limit.
+        if self.highlight_cache.len() >= HIGHLIGHT_CACHE_ENTRIES {
+            self.highlight_cache.clear();
+        }
+        let lines = std::rc::Rc::new(lines);
+        self.highlight_cache
+            .insert(path.to_path_buf(), std::rc::Rc::clone(&lines));
+
+        self.replace_preview_lines(path, &lines);
+    }
+
+    /// Swaps highlighted lines into the main preview and any pane showing the
+    /// same file, keeping each one's raw lines and scroll position.
+    fn replace_preview_lines(
+        &mut self,
+        path: &std::path::Path,
+        lines: &std::rc::Rc<Vec<ratatui::text::Line<'static>>>,
+    ) {
+        let selected_path = self
+            .file_list_state
+            .selected()
+            .and_then(|idx| self.files.get(idx))
+            .map(|entry| entry.path.clone());
+
+        if selected_path.as_deref() == Some(path) {
+            if let Some(content) = &self.shared_preview_content {
+                if let PreviewContentType::Text { raw_lines, .. } = content.as_ref() {
+                    self.shared_preview_content =
+                        Some(std::rc::Rc::new(PreviewContentType::Text {
+                            lines: lines.as_ref().clone(),
+                            raw_lines: raw_lines.clone(),
+                        }));
+                }
+            }
+        }
+
+        if let Some(layout) = &mut self.split_layout {
+            for pane in &mut layout.panes {
+                if pane.file_path.as_deref() != Some(path) {
+                    continue;
+                }
+                if let Some(content) = &pane.preview_content {
+                    if let PreviewContentType::Text { raw_lines, .. } = content.as_ref() {
+                        pane.preview_content = Some(std::rc::Rc::new(PreviewContentType::Text {
+                            lines: lines.as_ref().clone(),
+                            raw_lines: raw_lines.clone(),
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
     pub(super) fn load_preview(&mut self) {
-        // Exit diff mode when loading new file
-        self.diff_mode = false;
-        self.original_preview_content = None;
         // Clear any previous PDF error
         self.pdf_error = None;
 
@@ -83,8 +164,10 @@ impl App {
         // Handle text content with syntax highlighting
         let content = match &content {
             PreviewContentType::Text { raw_lines, .. } => {
-                let text = raw_lines.join("\n");
-                let lines = self.highlighter.highlight(&entry_path, &text);
+                // Highlighting a large file costs tens of milliseconds, which is
+                // far too slow to do between keystrokes. Show the text straight
+                // away and let the worker colour it in.
+                let lines = self.highlighted_or_plain(&entry_path, raw_lines);
                 PreviewContentType::Text {
                     lines,
                     raw_lines: raw_lines.clone(),
@@ -188,9 +271,10 @@ impl App {
                                     });
 
                                 if content_changed {
-                                    let lines = self
-                                        .highlighter
-                                        .highlight(&entry.path, &raw_lines.join("\n"));
+                                    let path = entry.path.clone();
+                                    self.highlight_cache.remove(&path);
+                                    self.highlight_pending.remove(&path);
+                                    let lines = self.highlighted_or_plain(&path, &raw_lines);
                                     self.shared_preview_content =
                                         Some(Rc::new(PreviewContentType::Text {
                                             lines,

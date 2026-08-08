@@ -15,6 +15,12 @@ fn get_language_key(file_path: &Path) -> Option<&'static str> {
         "go" => Some("go"),
         "html" | "htm" => Some("html"),
         "css" => Some("css"),
+        "yaml" | "yml" => Some("yaml"),
+        "toml" => Some("toml"),
+        "cpp" | "cc" | "cxx" | "hpp" | "hh" | "hxx" | "c" | "h" => Some("cpp"),
+        "cu" | "cuh" => Some("cuda"),
+        "md" | "markdown" => Some("markdown"),
+        "tex" | "sty" | "cls" => Some("latex"),
         _ => None,
     }
 }
@@ -29,6 +35,12 @@ pub fn get_language(file_path: &Path) -> Option<Language> {
         "go" => Some(tree_sitter_go::LANGUAGE.into()),
         "html" => Some(tree_sitter_html::LANGUAGE.into()),
         "css" => Some(tree_sitter_css::LANGUAGE.into()),
+        "yaml" => Some(tree_sitter_yaml::LANGUAGE.into()),
+        "toml" => Some(tree_sitter_toml_ng::LANGUAGE.into()),
+        "cpp" => Some(tree_sitter_cpp::LANGUAGE.into()),
+        "cuda" => Some(tree_sitter_cuda::LANGUAGE.into()),
+        "markdown" => Some(tree_sitter_md::LANGUAGE.into()),
+        "latex" => Some(codebook_tree_sitter_latex::LANGUAGE.into()),
         _ => None,
     }
 }
@@ -283,6 +295,90 @@ const CSS_QUERY: &str = r#"
 // Note: HTML_QUERY and CSS_QUERY keep r#""# syntax because they contain special
 // characters that would interfere with tree-sitter query parsing
 
+/// YAML queries - top-level keys and anchors
+const YAML_QUERY: &str = r"
+; Mapping keys
+(block_mapping_pair key: (flow_node) @name) @item
+
+; Anchors
+(anchor (anchor_name) @name) @item
+";
+
+/// TOML queries - tables and keys
+const TOML_QUERY: &str = r"
+; Tables and array-of-table headers
+(table (bare_key) @name) @item
+(table (dotted_key) @name) @item
+(table_array_element (bare_key) @name) @item
+(table_array_element (dotted_key) @name) @item
+
+; Key/value pairs
+(pair (bare_key) @name) @item
+(pair (dotted_key) @name) @item
+";
+
+/// C/C++ queries, shared with CUDA (which extends the C++ grammar)
+const CPP_QUERY: &str = r"
+; Functions
+(function_definition
+  declarator: (function_declarator
+    declarator: (identifier) @name)) @item
+(function_definition
+  declarator: (function_declarator
+    declarator: (field_identifier) @name)) @item
+
+; Qualified methods, e.g. Foo::bar()
+(function_definition
+  declarator: (function_declarator
+    declarator: (qualified_identifier) @name)) @item
+
+; Classes, structs, unions and enums
+(class_specifier name: (type_identifier) @name) @item
+(struct_specifier name: (type_identifier) @name) @item
+(union_specifier name: (type_identifier) @name) @item
+(enum_specifier name: (type_identifier) @name) @item
+
+; Namespaces
+(namespace_definition name: (namespace_identifier) @name) @item
+
+; Type aliases and typedefs
+(alias_declaration name: (type_identifier) @name) @item
+(type_definition declarator: (type_identifier) @name) @item
+
+; Templates carry their declaration inside
+(template_declaration
+  (class_specifier name: (type_identifier) @name)) @item
+(template_declaration
+  (function_definition
+    declarator: (function_declarator
+      declarator: (identifier) @name))) @item
+";
+
+/// Markdown queries - headings become the document outline
+const MARKDOWN_QUERY: &str = r"
+(atx_heading (inline) @name) @item
+(setext_heading (paragraph (inline) @name)) @item
+";
+
+/// LaTeX queries - sectioning commands and definitions
+const LATEX_QUERY: &str = r"
+; Sectioning
+(part text: (curly_group) @name) @item
+(chapter text: (curly_group) @name) @item
+(section text: (curly_group) @name) @item
+(subsection text: (curly_group) @name) @item
+(paragraph text: (curly_group) @name) @item
+
+; Labels and macros
+(label_definition name: (curly_group_label) @name) @item
+(new_command_definition
+  declaration: (curly_group_command_name) @name) @item
+
+; Environments
+(generic_environment
+  begin: (begin name: (curly_group_text) @name)) @item
+";
+
 pub fn get_query(file_path: &Path, language: &Language) -> Option<Query> {
     let lang_key = get_language_key(file_path)?;
     let query_str = match lang_key {
@@ -293,6 +389,11 @@ pub fn get_query(file_path: &Path, language: &Language) -> Option<Query> {
         "go" => GO_QUERY,
         "html" => HTML_QUERY,
         "css" => CSS_QUERY,
+        "yaml" => YAML_QUERY,
+        "toml" => TOML_QUERY,
+        "cpp" | "cuda" => CPP_QUERY,
+        "markdown" => MARKDOWN_QUERY,
+        "latex" => LATEX_QUERY,
         _ => return None,
     };
 
@@ -413,6 +514,31 @@ fn determine_symbol_kind_from_node(node: tree_sitter::Node) -> crate::files::Sym
         "const_declaration" | "const_spec" => SymbolKind::Const,
         "var_declaration" | "var_spec" => SymbolKind::Variable,
 
+        // YAML / TOML
+        "block_mapping_pair" => SymbolKind::Variable,
+        "anchor" => SymbolKind::Const,
+        "table" | "table_array_element" => SymbolKind::Module,
+        // Also a JS object entry, which reads as a variable just as well
+        "pair" => SymbolKind::Variable,
+
+        // C / C++ / CUDA
+        "class_specifier" => SymbolKind::Class,
+        "struct_specifier" => SymbolKind::Struct,
+        "union_specifier" => SymbolKind::Struct,
+        "enum_specifier" => SymbolKind::Enum,
+        "namespace_definition" => SymbolKind::Module,
+        "alias_declaration" | "type_definition" => SymbolKind::Struct,
+        "template_declaration" => SymbolKind::Struct,
+
+        // Markdown
+        "atx_heading" | "setext_heading" => SymbolKind::Module,
+
+        // LaTeX
+        "part" | "chapter" | "section" | "subsection" => SymbolKind::Module,
+        "label_definition" => SymbolKind::Const,
+        "new_command_definition" => SymbolKind::Function,
+        "generic_environment" => SymbolKind::Struct,
+
         // CSS
         "class_selector" => SymbolKind::Class,
         "id_selector" => SymbolKind::Variable,
@@ -423,8 +549,7 @@ fn determine_symbol_kind_from_node(node: tree_sitter::Node) -> crate::files::Sym
         // HTML
         "element" | "script_element" | "style_element" => SymbolKind::Module,
 
-        // Generic fallbacks
-        "pair" => SymbolKind::Method, // Object method
+        // Generic fallback
         _ => SymbolKind::Variable,
     }
 }
@@ -449,5 +574,66 @@ mod tests {
     fn test_get_language_unknown() {
         let lang = get_language(Path::new("test.unknown"));
         assert!(lang.is_none());
+    }
+}
+
+#[cfg(test)]
+mod new_language_tests {
+    use super::*;
+
+    fn names(path: &str, source: &str) -> Vec<String> {
+        extract_symbols(Path::new(path), source)
+            .into_iter()
+            .map(|s| s.name)
+            .collect()
+    }
+
+    #[test]
+    fn extracts_yaml_keys() {
+        let found = names(
+            "c.yaml",
+            "name: build\njobs:\n  test:\n    runs-on: linux\n",
+        );
+        assert!(found.contains(&"name".to_string()), "got {found:?}");
+        assert!(found.contains(&"jobs".to_string()), "got {found:?}");
+    }
+
+    #[test]
+    fn extracts_toml_tables_and_keys() {
+        let found = names("c.toml", "[package]\nname = \"viewer\"\n\n[dependencies]\n");
+        assert!(found.contains(&"package".to_string()), "got {found:?}");
+        assert!(found.contains(&"name".to_string()), "got {found:?}");
+    }
+
+    #[test]
+    fn extracts_cpp_definitions() {
+        let source = "class Widget {\npublic:\n  void draw();\n};\nnamespace ui {}\nint main() { return 0; }\n";
+        let found = names("c.cpp", source);
+        assert!(found.contains(&"Widget".to_string()), "got {found:?}");
+        assert!(found.contains(&"main".to_string()), "got {found:?}");
+        assert!(found.contains(&"ui".to_string()), "got {found:?}");
+    }
+
+    #[test]
+    fn extracts_cuda_kernels() {
+        let source = "__global__ void addKernel(int *c) {}\nstruct Params {};\n";
+        let found = names("c.cu", source);
+        assert!(found.contains(&"addKernel".to_string()), "got {found:?}");
+        assert!(found.contains(&"Params".to_string()), "got {found:?}");
+    }
+
+    #[test]
+    fn extracts_markdown_headings() {
+        let found = names("c.md", "# Title\n\nsome text\n\n## Section\n");
+        assert!(found.iter().any(|n| n.contains("Title")), "got {found:?}");
+        assert!(found.iter().any(|n| n.contains("Section")), "got {found:?}");
+    }
+
+    #[test]
+    fn extracts_latex_sections() {
+        let source = "\\section{Intro}\n\\subsection{Details}\n";
+        let found = names("c.tex", source);
+        assert!(found.iter().any(|n| n.contains("Intro")), "got {found:?}");
+        assert!(found.iter().any(|n| n.contains("Details")), "got {found:?}");
     }
 }

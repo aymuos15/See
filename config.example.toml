@@ -14,6 +14,9 @@ exclude = [
     ".git",
 ]
 
+# Draw faint vertical rules at each indentation level in the preview
+indent_guides = true
+
 # Width of dividers between split panes
 # 1 = thin line character, 2+ = solid block
 divider_width = 1
@@ -35,7 +38,6 @@ divider_width = 1
 # fg_selected = "#00ff00"
 # fg_dim = "#808080"
 # fg_folder = "#00ccff"
-# fg_modified = "#ff9900"
 # border = "#666666"
 # line_num = "#666666"
 
@@ -73,8 +75,6 @@ grow_file_list = ["shift+l"]
 # Normal mode - Features
 open_search = ["/"]
 open_symbol_search = ["f"]
-toggle_git_highlight = ["g"]
-toggle_diff = ["d"]
 toggle_theme_preview = ["t"]
 toggle_help = ["?"]
 cycle_pane = ["tab"]
@@ -83,7 +83,7 @@ copy_selection = ["ctrl+c"]
 # Split pane controls
 swap_split_orientation = ["alt+s"]
 close_active_pane = ["alt+q"]
-toggle_file_list = ["alt+p"]
+toggle_file_list = ["ctrl+b", "alt+p"]
 split_up = ["alt+up"]
 split_down = ["alt+down"]
 split_left = ["alt+left"]

@@ -13,14 +13,8 @@ pub const fn jellybeans() -> Theme {
         fg_selected: Color::Rgb(0xff, 0xff, 0xff),  // Selected text
         fg_dim: Color::Rgb(0x80, 0x80, 0x80),       // Dim text
         fg_folder: Color::Rgb(0x81, 0xa2, 0xbe),    // Blue folders
-        fg_modified: Color::Rgb(0xcc, 0x66, 0x66),  // Red modified
         border: Color::Rgb(0x50, 0x50, 0x50),       // Border color
         line_num: Color::Rgb(0x60, 0x60, 0x60),     // Line numbers
-        // Git colors (like git log --pretty)
-        fg_git_hash: Color::Rgb(0xf0, 0xc6, 0x74), // Yellow hash
-        fg_git_author: Color::Rgb(0x81, 0xa2, 0xbe), // Blue author
-        fg_git_date: Color::Rgb(0xb5, 0xbd, 0x68), // Green date
-        fg_git_refs: Color::Rgb(0xb2, 0x94, 0xbb), // Magenta refs/branches
     }
 }
 
@@ -36,13 +30,7 @@ pub const fn dracula() -> Theme {
         fg_selected: Color::Rgb(0xf1, 0xfa, 0x8c), // Dracula yellow
         fg_dim: Color::Rgb(0x62, 0x72, 0xa4),  // Dracula comment gray
         fg_folder: Color::Rgb(0x8b, 0xe9, 0xfd), // Dracula cyan
-        fg_modified: Color::Rgb(0xff, 0x79, 0xc6), // Dracula pink
         border: Color::Rgb(0x62, 0x72, 0xa4),  // Dracula comment color
         line_num: Color::Rgb(0x62, 0x72, 0xa4), // Dracula comment color
-        // Git colors (like git log --pretty)
-        fg_git_hash: Color::Rgb(0xf1, 0xfa, 0x8c), // Yellow hash
-        fg_git_author: Color::Rgb(0x8b, 0xe9, 0xfd), // Cyan author
-        fg_git_date: Color::Rgb(0x50, 0xfa, 0x7b), // Green date
-        fg_git_refs: Color::Rgb(0xff, 0x79, 0xc6), // Pink refs/branches
     }
 }

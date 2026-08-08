@@ -4,10 +4,6 @@
 
 *File browser with syntax-highlighted preview*
 
-![Git diff view](assets/diff_and_pane_git_notif.png)
-
-*Git highlighting with visual diff - modified files marked with ● and colored text*
-
 ![Search](assets/search.png)
 
 *Fuzzy search across entire directory tree*
@@ -48,7 +44,6 @@ See [`config.example.toml`](config.example.toml) for all available options inclu
 ## Key Features
 
 - Image and PDF support through kitty protocol
-- Nice diff viewer now too!
 
 ## Auto-Refresh
 

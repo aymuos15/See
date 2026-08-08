@@ -18,14 +18,8 @@ pub struct Theme {
     pub fg_selected: Color,
     pub fg_dim: Color,
     pub fg_folder: Color,
-    pub fg_modified: Color,
     pub border: Color,
     pub line_num: Color,
-    // Git-specific colors (like git log --pretty format)
-    pub fg_git_hash: Color,
-    pub fg_git_author: Color,
-    pub fg_git_date: Color,
-    pub fg_git_refs: Color,
 }
 
 impl Default for Theme {
@@ -47,6 +41,21 @@ impl Theme {
     /// List all available built-in theme names
     pub fn list_builtins() -> Vec<&'static str> {
         vec!["jellybeans", "dracula"]
+    }
+}
+
+/// Scales an RGB color's channels toward black, keeping `percent` of each.
+/// Non-RGB colors (terminal palette entries) have no channels to scale, so they
+/// pass through unchanged.
+pub fn darken(color: Color, percent: u16) -> Color {
+    let scale = |channel: u8| {
+        let scaled = u16::from(channel) * percent.min(100) / 100;
+        u8::try_from(scaled).unwrap_or(u8::MAX)
+    };
+
+    match color {
+        Color::Rgb(r, g, b) => Color::Rgb(scale(r), scale(g), scale(b)),
+        other => other,
     }
 }
 
@@ -128,11 +137,6 @@ impl Theme {
                 theme.fg_folder = color;
             }
         }
-        if let Some(hex) = &cfg.fg_modified {
-            if let Some(color) = parser::parse_hex_color(hex) {
-                theme.fg_modified = color;
-            }
-        }
         if let Some(hex) = &cfg.border {
             if let Some(color) = parser::parse_hex_color(hex) {
                 theme.border = color;
@@ -141,26 +145,6 @@ impl Theme {
         if let Some(hex) = &cfg.line_num {
             if let Some(color) = parser::parse_hex_color(hex) {
                 theme.line_num = color;
-            }
-        }
-        if let Some(hex) = &cfg.fg_git_hash {
-            if let Some(color) = parser::parse_hex_color(hex) {
-                theme.fg_git_hash = color;
-            }
-        }
-        if let Some(hex) = &cfg.fg_git_author {
-            if let Some(color) = parser::parse_hex_color(hex) {
-                theme.fg_git_author = color;
-            }
-        }
-        if let Some(hex) = &cfg.fg_git_date {
-            if let Some(color) = parser::parse_hex_color(hex) {
-                theme.fg_git_date = color;
-            }
-        }
-        if let Some(hex) = &cfg.fg_git_refs {
-            if let Some(color) = parser::parse_hex_color(hex) {
-                theme.fg_git_refs = color;
             }
         }
 
@@ -177,13 +161,8 @@ impl Theme {
             || cfg.fg_selected.is_some()
             || cfg.fg_dim.is_some()
             || cfg.fg_folder.is_some()
-            || cfg.fg_modified.is_some()
             || cfg.border.is_some()
             || cfg.line_num.is_some()
-            || cfg.fg_git_hash.is_some()
-            || cfg.fg_git_author.is_some()
-            || cfg.fg_git_date.is_some()
-            || cfg.fg_git_refs.is_some()
     }
 
     fn load_helix_theme() -> Option<Self> {
@@ -353,13 +332,8 @@ foreground = \"#ffffff\"\n\
             fg_selected: Some("#00ff00".to_string()),
             fg_dim: Some("#808080".to_string()),
             fg_folder: Some("#00ccff".to_string()),
-            fg_modified: Some("#ff9900".to_string()),
             border: Some("#666666".to_string()),
             line_num: Some("#666666".to_string()),
-            fg_git_hash: None,
-            fg_git_author: None,
-            fg_git_date: None,
-            fg_git_refs: None,
         };
 
         let theme = Theme::from_config(Some(cfg));
@@ -390,13 +364,8 @@ foreground = \"#ffffff\"\n\
             fg_selected: None,
             fg_dim: None,
             fg_folder: None,
-            fg_modified: None,
             border: None,
             line_num: None,
-            fg_git_hash: None,
-            fg_git_author: None,
-            fg_git_date: None,
-            fg_git_refs: None,
         };
 
         let theme = Theme::from_config(Some(cfg));

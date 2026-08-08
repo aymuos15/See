@@ -35,6 +35,9 @@ impl App {
                 WorkerResponse::ThumbnailLoaded { path, result } => {
                     self.handle_thumbnail_loaded(&path, &result);
                 }
+                WorkerResponse::FileHighlighted { path, lines } => {
+                    self.apply_highlighted(&path, lines);
+                }
                 WorkerResponse::PdfPageLoaded {
                     path,
                     page,
@@ -56,94 +59,18 @@ impl App {
                 || self.symbol_search_mode
                 || self.theme_preview_mode
                 || self.help_mode
-                || self.file_tree_popup_mode
-                || self.git_mode_state.is_active()
-                || self.git_diff_mode,
+                || self.file_tree_popup_mode,
             &mut self.file_watcher,
             &mut self.search_index_timer,
             &self.config.keys,
         )?;
 
-        // Handle git mode specially
-        if self.git_mode_state.is_active() {
-            match event {
-                AppEvent::OpenGitMode | AppEvent::CloseSearch | AppEvent::Quit => {
-                    self.toggle_git_mode();
-                    return Ok(());
-                }
-                AppEvent::NavigateUp | AppEvent::SearchNavigateUp => {
-                    self.git_mode_navigate_up();
-                    return Ok(());
-                }
-                AppEvent::NavigateDown | AppEvent::SearchNavigateDown => {
-                    self.git_mode_navigate_down();
-                    return Ok(());
-                }
-                AppEvent::ScrollPreviewUp | AppEvent::MouseScrollUp => {
-                    self.git_mode_scroll_up();
-                    return Ok(());
-                }
-                AppEvent::ScrollPreviewDown | AppEvent::MouseScrollDown => {
-                    self.git_mode_scroll_down();
-                    return Ok(());
-                }
-                AppEvent::SearchInput(c) => {
-                    match c {
-                        'l' => self.git_mode_show_log(),
-                        's' => self.git_mode_show_status(),
-                        'd' => self.git_mode_toggle_diff(),
-                        _ => {}
-                    }
-                    return Ok(());
-                }
-                _ => {}
-            }
-        }
-
-        // Handle diff mode specially
-        if self.git_diff_mode {
-            match event {
-                AppEvent::ToggleDiff | AppEvent::CloseSearch | AppEvent::Quit => {
-                    self.exit_diff_mode();
-                    return Ok(());
-                }
-                AppEvent::NavigateUp | AppEvent::SearchNavigateUp => {
-                    self.diff_navigate_up();
-                    return Ok(());
-                }
-                AppEvent::NavigateDown | AppEvent::SearchNavigateDown => {
-                    self.diff_navigate_down();
-                    return Ok(());
-                }
-                AppEvent::ScrollPreviewUp | AppEvent::MouseScrollUp => {
-                    self.diff_scroll_up();
-                    return Ok(());
-                }
-                AppEvent::ScrollPreviewDown | AppEvent::MouseScrollDown => {
-                    self.diff_scroll_down();
-                    return Ok(());
-                }
-                _ => {}
-            }
-        }
-
         match event {
             AppEvent::Quit => self.handle_quit(),
             AppEvent::DirectoryChanged => {
                 self.refresh_current_directory();
-                // Refresh git status if highlighting is enabled
-                if self.git_highlight_enabled {
-                    if let Some(ref mut git_status) = self.git_status {
-                        git_status.refresh();
-                    }
-                }
             }
-            AppEvent::PreviewFileChanged => {
-                // Don't refresh preview if we're in diff mode - file changes don't matter
-                if !self.diff_mode {
-                    self.refresh_preview();
-                }
-            }
+            AppEvent::PreviewFileChanged => self.refresh_preview(),
             AppEvent::SearchIndexRefreshTimer => self.refresh_search_index(),
             AppEvent::OpenSearch => self.enter_search_mode(),
             AppEvent::OpenFind => self.enter_find_mode(),
@@ -219,16 +146,6 @@ impl App {
             }
             AppEvent::OpenSymbolSearch => self.enter_symbol_search_mode(),
             AppEvent::CloseSymbolSearch => self.exit_symbol_search_mode(),
-            AppEvent::ToggleGitHighlight => {
-                if !self.search_mode && !self.symbol_search_mode {
-                    self.toggle_git_highlight();
-                }
-            }
-            AppEvent::ToggleDiff => {
-                if !self.search_mode && !self.symbol_search_mode {
-                    self.toggle_diff_view();
-                }
-            }
             AppEvent::ToggleThemePreview => {
                 if !self.search_mode && !self.symbol_search_mode {
                     self.toggle_theme_preview();
@@ -353,9 +270,7 @@ impl App {
                 }
             }
             AppEvent::ToggleFileList => {
-                if let Some(ref mut layout) = self.split_layout {
-                    layout.file_list_visible = !layout.file_list_visible;
-                }
+                self.file_list_visible = !self.file_list_visible;
             }
             AppEvent::ResizeSplitLeft => {
                 if let Some(ref mut layout) = self.split_layout {
@@ -410,48 +325,6 @@ impl App {
                 if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
                     self.pdf_last_page();
                 }
-            }
-            AppEvent::OpenGitMode => {
-                if !self.search_mode && !self.symbol_search_mode {
-                    self.toggle_git_mode();
-                }
-            }
-            AppEvent::GitModeLog => {
-                self.git_mode_show_log();
-            }
-            AppEvent::GitModeStatus => {
-                self.git_mode_show_status();
-            }
-            AppEvent::GitModeNavigateUp => {
-                self.git_mode_navigate_up();
-            }
-            AppEvent::GitModeNavigateDown => {
-                self.git_mode_navigate_down();
-            }
-            AppEvent::GitModeScrollUp => {
-                self.git_mode_scroll_up();
-            }
-            AppEvent::GitModeScrollDown => {
-                self.git_mode_scroll_down();
-            }
-            AppEvent::CloseGitMode => {
-                self.toggle_git_mode();
-            }
-            // Diff view events
-            AppEvent::DiffNavigateUp => {
-                self.diff_navigate_up();
-            }
-            AppEvent::DiffNavigateDown => {
-                self.diff_navigate_down();
-            }
-            AppEvent::DiffScrollUp => {
-                self.diff_scroll_up();
-            }
-            AppEvent::DiffScrollDown => {
-                self.diff_scroll_down();
-            }
-            AppEvent::CloseDiff => {
-                self.exit_diff_mode();
             }
             AppEvent::None => {}
         }

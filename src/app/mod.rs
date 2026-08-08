@@ -1,11 +1,7 @@
 mod content;
 pub use content::{PreviewContentType, SharedPreviewContent};
-mod diff;
-mod diff_view;
 mod directory;
 mod event_handler;
-mod git;
-mod git_mode;
 mod help;
 mod image;
 mod mouse;
@@ -22,15 +18,13 @@ use crate::config::Config;
 use crate::constants::INITIAL_SPLIT_PERCENT;
 use crate::event::{FileWatcher, RefreshTimer};
 use crate::files::{read_directory, FileEntry, Symbol};
-use crate::git::GitStatus;
-use crate::git_mode::{GitDiff, GitLog, GitModeState, GitStatusData};
-use crate::highlight::SyntaxHighlighter;
 use crate::theme::Theme;
 use crate::worker::BackgroundWorker;
 use ratatui::prelude::Rect;
 use ratatui::widgets::ListState;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::Instant;
 
 use selection::TextSelection;
@@ -46,7 +40,6 @@ pub struct App {
     /// Shared preview content (text or image) for efficient pane sharing.
     pub shared_preview_content: Option<SharedPreviewContent>,
     pub preview_scroll: u16,
-    pub highlighter: SyntaxHighlighter,
     pub should_quit: bool,
     pub split_percent: u16,
     pub config: Config,
@@ -75,16 +68,7 @@ pub struct App {
     pub last_preview_area: Option<Rect>,
     pub last_pane_areas: Vec<(usize, Rect)>,
     pub last_file_list_area: Option<Rect>,
-    // Git diff view areas (for mouse support)
-    pub last_diff_files_area: Option<Rect>,
-    pub last_diff_content_area: Option<Rect>,
     clipboard: ClipboardManager,
-    // Git highlighting
-    git_highlight_enabled: bool,
-    git_status: Option<GitStatus>,
-    // Diff mode state
-    diff_mode: bool,
-    original_preview_content: Option<SharedPreviewContent>,
     // Theme state
     pub current_theme_name: String,
     pub available_themes: Vec<String>,
@@ -93,8 +77,15 @@ pub struct App {
     pub help_mode: bool,
     // Split layout
     pub split_layout: Option<SplitLayout>,
+    /// Whether the file list pane is shown alongside the preview
+    pub file_list_visible: bool,
     // Background worker
     worker: BackgroundWorker,
+    /// Highlighted lines already computed for a file, so revisiting one is
+    /// instant instead of a fresh syntect pass
+    highlight_cache: std::collections::HashMap<PathBuf, Rc<Vec<ratatui::text::Line<'static>>>>,
+    /// Files whose highlighting is in flight, to avoid queueing duplicates
+    highlight_pending: HashSet<PathBuf>,
     pub symbol_indexing_progress: Option<(usize, usize)>,
     // Image protocol cache (by canonical path)
     pub image_protocols:
@@ -111,19 +102,6 @@ pub struct App {
     pub file_tree_popup_mode: bool,
     pub file_tree_popup_entries: Vec<FileEntry>,
     pub file_tree_popup_selected: usize,
-    // Git mode state
-    pub git_mode_state: GitModeState,
-    pub git_log: GitLog,
-    pub git_log_selected: usize,
-    pub git_log_scroll: u16,
-    pub git_log_list_scroll: usize,
-    pub git_status_data: GitStatusData,
-    pub git_status_selected: usize,
-    // Diff view state
-    pub git_diff: GitDiff,
-    pub git_diff_selected_file: usize,
-    pub git_diff_scroll: u16,
-    pub git_diff_mode: bool,
 }
 
 /// Main application state for the TUI file viewer.
@@ -188,7 +166,6 @@ impl App {
 
         // Read directory contents
         let files = read_directory(&current_dir, &root_dir, &config)?;
-        let highlighter = SyntaxHighlighter::new();
 
         // Initialize file watcher
         let file_watcher = FileWatcher::new(&current_dir)?;
@@ -204,7 +181,6 @@ impl App {
             file_list_state: ListState::default(),
             shared_preview_content: None,
             preview_scroll: 0,
-            highlighter,
             should_quit: false,
             split_percent: INITIAL_SPLIT_PERCENT,
             config,
@@ -227,13 +203,7 @@ impl App {
             last_preview_area: None,
             last_pane_areas: Vec::new(),
             last_file_list_area: None,
-            last_diff_files_area: None,
-            last_diff_content_area: None,
             clipboard: ClipboardManager::new(),
-            git_highlight_enabled: false,
-            git_status: None,
-            diff_mode: false,
-            original_preview_content: None,
             current_theme_name: "jellybeans".to_string(),
             available_themes: Theme::list_builtins()
                 .iter()
@@ -242,7 +212,10 @@ impl App {
             theme_preview_mode: false,
             help_mode: false,
             split_layout: None,
+            file_list_visible: true,
             worker,
+            highlight_cache: std::collections::HashMap::new(),
+            highlight_pending: HashSet::new(),
             symbol_indexing_progress: None,
             image_protocols: std::collections::HashMap::new(),
             image_picker: None, // Will be initialized after TUI setup
@@ -252,19 +225,6 @@ impl App {
             file_tree_popup_mode: false,
             file_tree_popup_entries: Vec::new(),
             file_tree_popup_selected: 0,
-            // Git mode state
-            git_mode_state: GitModeState::default(),
-            git_log: GitLog::default(),
-            git_log_selected: 0,
-            git_log_scroll: 0,
-            git_log_list_scroll: 0,
-            git_status_data: GitStatusData::default(),
-            git_status_selected: 0,
-            // Diff view state
-            git_diff: GitDiff::new(),
-            git_diff_selected_file: 0,
-            git_diff_scroll: 0,
-            git_diff_mode: false,
         };
 
         if !app.files.is_empty() {

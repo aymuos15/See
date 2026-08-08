@@ -4,7 +4,7 @@ This document provides guidelines for AI coding agents working on this Rust TUI 
 
 ## Project Overview
 
-A terminal-based file viewer built with Ratatui, featuring syntax highlighting, git integration, symbol search, and split panes. Written in Rust (2021 edition).
+A terminal-based file viewer built with Ratatui, featuring syntax highlighting, symbol search, and split panes. Written in Rust (2021 edition).
 
 ## Build Commands
 
@@ -130,7 +130,6 @@ src/
   config/           # Configuration loading
   event/            # Event handling, file watching
   files/            # File system operations
-  git/              # Git integration
   highlight/        # Syntax highlighting
   theme/            # Theming system
   ui/               # UI rendering
@@ -142,7 +141,7 @@ tests/              # Integration tests
 
 ## Key Dependencies
 
-`ratatui` (TUI framework), `crossterm` (terminal), `syntect` (syntax highlighting), `anyhow` (errors), `serde`+`toml` (config), `git2` (git), `tree-sitter` (symbols), `notify` (file watching)
+`ratatui` (TUI framework), `crossterm` (terminal), `syntect` (syntax highlighting), `anyhow` (errors), `serde`+`toml` (config), `tree-sitter` (symbols), `notify` (file watching)
 
 ## Common Patterns
 

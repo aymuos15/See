@@ -1,11 +1,9 @@
 use crate::app::App;
-use crate::constants::{
-    SEARCH_INPUT_HEIGHT, SEARCH_POPUP_HEIGHT_PERCENT, SEARCH_POPUP_MARGIN,
-    SEARCH_POPUP_WIDTH_PERCENT,
-};
+use crate::constants::{SEARCH_POPUP_HEIGHT_PERCENT, SEARCH_POPUP_WIDTH_PERCENT};
+use crate::theme::Theme;
 use crate::ui::popup;
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
+use ratatui::widgets::ListItem;
 
 /// Renders the appropriate search popup based on current mode.
 pub fn render(frame: &mut Frame, app: &App) {
@@ -18,158 +16,114 @@ pub fn render(frame: &mut Frame, app: &App) {
     }
 }
 
-/// Creates a centered popup area and clears it for rendering.
-fn create_popup_area(frame: &mut Frame, bg_color: Color) -> (Rect, Rect) {
+/// Opens a search panel and splits it into a query line and a results area.
+fn search_panel(frame: &mut Frame, title: &str, theme: &Theme) -> (Rect, Rect) {
     let area = frame.area();
-    let popup_area = popup::centered_popup(
+    let panel = popup::centered_popup(
         area,
         SEARCH_POPUP_WIDTH_PERCENT,
         SEARCH_POPUP_HEIGHT_PERCENT,
     );
-    popup::render_popup_background(frame, popup_area, bg_color);
+    let inner = popup::render_panel(frame, panel, title, theme);
 
-    let inner = popup::popup_inner(popup_area, SEARCH_POPUP_MARGIN);
-    let (input_area, results_area) = popup::split_popup(inner, SEARCH_INPUT_HEIGHT);
-
-    (input_area, results_area)
+    popup::split_query(inner)
 }
 
-/// Renders the search input field.
-fn render_input(
-    frame: &mut Frame,
-    area: Rect,
-    prefix: &str,
-    query: &str,
-    theme: &crate::theme::Theme,
-) {
-    let input_text = format!("{prefix} {query}");
-    let input =
-        Paragraph::new(input_text).style(Style::default().fg(theme.fg_text).bg(theme.bg_search));
-    frame.render_widget(input, area);
-}
-
-/// Renders a "No matches" message.
-fn render_no_results(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
-    let no_results = Paragraph::new("No matches")
-        .style(Style::default().fg(theme.fg_dim).bg(theme.bg_search))
-        .alignment(Alignment::Center);
-    frame.render_widget(no_results, area);
-}
-
-/// Renders a list of results with selection highlighting.
-fn render_results_list(
-    frame: &mut Frame,
-    area: Rect,
-    items: Vec<ListItem>,
-    selected: usize,
-    theme: &crate::theme::Theme,
-) {
-    let results_list = List::new(items)
-        .style(Style::default().bg(theme.bg_search))
-        .highlight_style(Style::default().bg(theme.bg_selected).fg(theme.fg_selected))
-        .highlight_symbol("> ");
-
-    let mut list_state = ratatui::widgets::ListState::default();
-    list_state.select(Some(selected));
-
-    frame.render_stateful_widget(results_list, area, &mut list_state);
+/// Styles a result row. Ratatui pads unselected rows to the width of the
+/// selection marker, so rows carry no indent of their own.
+fn row(text: &str, color: Color, theme: &Theme) -> ListItem<'static> {
+    ListItem::new(text.to_string()).style(Style::default().fg(color).bg(theme.bg_search))
 }
 
 fn render_file_search(frame: &mut Frame, app: &App) {
     let theme = &app.config.theme;
-    let (input_area, results_area) = create_popup_area(frame, theme.bg_search);
+    let (query_area, results_area) = search_panel(frame, "Find File", theme);
 
-    render_input(frame, input_area, "/", &app.search_query, theme);
+    popup::render_query(frame, query_area, "▸", &app.search_query, theme);
 
     if app.search_results.is_empty() {
-        render_no_results(frame, results_area, theme);
-    } else {
-        let items: Vec<ListItem> = app
-            .search_results
-            .iter()
-            .filter_map(|&idx| {
-                app.search_index().get(idx).map(|file| {
-                    let display_path = file
-                        .path
-                        .strip_prefix(app.root_dir())
-                        .ok()
-                        .and_then(|p| p.to_str())
-                        .unwrap_or(&file.name);
-                    ListItem::new(display_path)
-                        .style(Style::default().fg(theme.fg_text).bg(theme.bg_search))
-                })
-            })
-            .collect();
-
-        render_results_list(frame, results_area, items, app.search_selected, theme);
+        popup::render_empty_message(frame, results_area, "No matches", theme);
+        return;
     }
+
+    let items: Vec<ListItem> = app
+        .search_results
+        .iter()
+        .filter_map(|&idx| {
+            app.search_index().get(idx).map(|file| {
+                let display_path = file
+                    .path
+                    .strip_prefix(app.root_dir())
+                    .ok()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or(&file.name);
+                row(display_path, theme.fg_text, theme)
+            })
+        })
+        .collect();
+
+    popup::render_list(frame, results_area, items, app.search_selected, theme);
 }
 
 fn render_symbol_search(frame: &mut Frame, app: &App) {
     let theme = &app.config.theme;
-    let (input_area, results_area) = create_popup_area(frame, theme.bg_search);
+    let (query_area, results_area) = search_panel(frame, "Find Symbol", theme);
 
-    render_input(frame, input_area, "f", &app.symbol_search_query, theme);
+    popup::render_query(frame, query_area, "▸", &app.symbol_search_query, theme);
 
     if app.symbol_search_results.is_empty() {
-        render_no_results(frame, results_area, theme);
-    } else {
-        let items: Vec<ListItem> = app
-            .symbol_search_results
-            .iter()
-            .filter_map(|&idx| {
-                app.symbol_index.get(idx).map(|symbol| {
-                    let location = format!(
-                        "{}:{} [{}]",
-                        symbol
-                            .file
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("?"),
-                        symbol.line + 1,
-                        symbol.kind.icon()
-                    );
-                    let display = format!("{:<30} {}", symbol.name, location);
-                    ListItem::new(display)
-                        .style(Style::default().fg(theme.fg_text).bg(theme.bg_search))
-                })
-            })
-            .collect();
-
-        render_results_list(
-            frame,
-            results_area,
-            items,
-            app.symbol_search_selected,
-            theme,
-        );
+        popup::render_empty_message(frame, results_area, "No matches", theme);
+        return;
     }
+
+    let items: Vec<ListItem> = app
+        .symbol_search_results
+        .iter()
+        .filter_map(|&idx| {
+            app.symbol_index.get(idx).map(|symbol| {
+                let location = format!(
+                    "{}:{} [{}]",
+                    symbol
+                        .file
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("?"),
+                    symbol.line + 1,
+                    symbol.kind.icon()
+                );
+                row(
+                    &format!("{:<30} {location}", symbol.name),
+                    theme.fg_text,
+                    theme,
+                )
+            })
+        })
+        .collect();
+
+    popup::render_list(
+        frame,
+        results_area,
+        items,
+        app.symbol_search_selected,
+        theme,
+    );
 }
 
+/// Find-in-file is a compact panel pinned to the top right rather than a
+/// centered one — it stays out of the way of the text being searched.
 fn render_find_search(frame: &mut Frame, app: &App) {
     let theme = &app.config.theme;
     let area = frame.area();
 
-    // Position in top right, flush against edges
-    let popup_width = (area.width * 30).min(40);
-    let popup_height = 3;
-    let popup_x = area.width.saturating_sub(popup_width);
-    let popup_y = 0;
-
-    let popup_area = Rect {
-        x: popup_x,
-        y: popup_y,
-        width: popup_width,
-        height: popup_height,
+    let width = (area.width * 30 / 100).clamp(24, 40).min(area.width);
+    let panel = Rect {
+        x: area.width.saturating_sub(width),
+        y: 0,
+        width,
+        // Title, the query line, and a row of padding either side of it.
+        height: 4,
     };
 
-    frame.render_widget(Clear, popup_area);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.fg_dim))
-        .style(Style::default().bg(theme.bg_search));
-    let inner_area = block.inner(popup_area);
-    frame.render_widget(block, popup_area);
-
-    render_input(frame, inner_area, "\\", &app.find_query, theme);
+    let inner = popup::render_panel(frame, panel, "Find", theme);
+    popup::render_query(frame, inner, "▸", &app.find_query, theme);
 }

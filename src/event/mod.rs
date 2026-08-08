@@ -40,8 +40,6 @@ pub enum AppEvent {
     SymbolSearchNavigateUp,
     SymbolSearchNavigateDown,
     SymbolSearchConfirm,
-    ToggleGitHighlight,
-    ToggleDiff,
     ToggleThemePreview,
     ToggleHelp,
     DirectoryChanged,
@@ -74,23 +72,6 @@ pub enum AppEvent {
 
     // Popup
     ToggleFileTreePopup,
-
-    // Git mode
-    OpenGitMode,
-    GitModeLog,
-    GitModeStatus,
-    GitModeNavigateUp,
-    GitModeNavigateDown,
-    GitModeScrollUp,
-    GitModeScrollDown,
-    CloseGitMode,
-
-    // Diff view
-    DiffNavigateUp,
-    DiffNavigateDown,
-    DiffScrollUp,
-    DiffScrollDown,
-    CloseDiff,
 
     None,
 }
@@ -197,8 +178,6 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::OpenSearch => AppEvent::OpenSearch,
         Action::OpenFind => AppEvent::OpenFind,
         Action::OpenSymbolSearch => AppEvent::OpenSymbolSearch,
-        Action::ToggleGitHighlight => AppEvent::ToggleGitHighlight,
-        Action::ToggleDiff => AppEvent::ToggleDiff,
         Action::ToggleThemePreview => AppEvent::ToggleThemePreview,
         Action::ToggleHelp => AppEvent::ToggleHelp,
         Action::CyclePane => AppEvent::CyclePane,
@@ -224,7 +203,6 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::PdfFirstPage => AppEvent::PdfFirstPage,
         Action::PdfLastPage => AppEvent::PdfLastPage,
         Action::ToggleFileTreePopup => AppEvent::ToggleFileTreePopup,
-        Action::OpenGitMode => AppEvent::OpenGitMode,
     }
 }
 

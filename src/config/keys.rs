@@ -111,8 +111,6 @@ pub struct KeyBindingsConfig {
     pub open_search: Option<Vec<String>>,
     pub open_find: Option<Vec<String>>,
     pub open_symbol_search: Option<Vec<String>>,
-    pub toggle_git_highlight: Option<Vec<String>>,
-    pub toggle_diff: Option<Vec<String>>,
     pub toggle_theme_preview: Option<Vec<String>>,
     pub toggle_help: Option<Vec<String>>,
     pub cycle_pane: Option<Vec<String>>,
@@ -146,9 +144,6 @@ pub struct KeyBindingsConfig {
 
     // Popup
     pub toggle_file_tree_popup: Option<Vec<String>>,
-
-    // Git mode
-    pub open_git_mode: Option<Vec<String>>,
 }
 
 /// Parsed keybindings ready for use
@@ -169,8 +164,6 @@ pub struct KeyBindings {
     pub open_search: Vec<KeyBinding>,
     pub open_find: Vec<KeyBinding>,
     pub open_symbol_search: Vec<KeyBinding>,
-    pub toggle_git_highlight: Vec<KeyBinding>,
-    pub toggle_diff: Vec<KeyBinding>,
     pub toggle_theme_preview: Vec<KeyBinding>,
     pub toggle_help: Vec<KeyBinding>,
     pub cycle_pane: Vec<KeyBinding>,
@@ -205,9 +198,6 @@ pub struct KeyBindings {
     // Popup
     pub toggle_file_tree_popup: Vec<KeyBinding>,
 
-    // Git mode
-    pub open_git_mode: Vec<KeyBinding>,
-
     // Lookup table for quick matching
     normal_mode_map: HashMap<KeyBinding, Action>,
     search_mode_map: HashMap<KeyBinding, Action>,
@@ -231,8 +221,6 @@ pub enum Action {
     OpenSearch,
     OpenFind,
     OpenSymbolSearch,
-    ToggleGitHighlight,
-    ToggleDiff,
     ToggleThemePreview,
     ToggleHelp,
     CyclePane,
@@ -266,9 +254,6 @@ pub enum Action {
 
     // Popup
     ToggleFileTreePopup,
-
-    // Git mode
-    OpenGitMode,
 }
 
 impl Default for KeyBindings {
@@ -308,8 +293,6 @@ impl Default for KeyBindings {
             open_search: vec![KeyBinding::key(KeyCode::Char('/'))],
             open_find: vec![KeyBinding::key(KeyCode::Char('\\'))],
             open_symbol_search: vec![KeyBinding::key(KeyCode::Char('f'))],
-            toggle_git_highlight: vec![KeyBinding::key(KeyCode::Char('g'))],
-            toggle_diff: vec![KeyBinding::key(KeyCode::Char('d'))],
             toggle_theme_preview: vec![KeyBinding::key(KeyCode::Char('t'))],
             toggle_help: vec![KeyBinding::key(KeyCode::Char('?'))],
             cycle_pane: vec![KeyBinding::key(KeyCode::Tab)],
@@ -320,7 +303,10 @@ impl Default for KeyBindings {
             // Split pane controls (Alt-based)
             swap_split_orientation: vec![KeyBinding::alt(KeyCode::Char('s'))],
             close_active_pane: vec![KeyBinding::alt(KeyCode::Char('q'))],
-            toggle_file_list: vec![KeyBinding::alt(KeyCode::Char('p'))],
+            toggle_file_list: vec![
+                KeyBinding::ctrl(KeyCode::Char('b')),
+                KeyBinding::alt(KeyCode::Char('p')),
+            ],
             split_up: vec![KeyBinding::alt(KeyCode::Up)],
             split_down: vec![KeyBinding::alt(KeyCode::Down)],
             split_left: vec![KeyBinding::alt(KeyCode::Left)],
@@ -343,9 +329,6 @@ impl Default for KeyBindings {
 
             // Popup defaults
             toggle_file_tree_popup: vec![KeyBinding::ctrl(KeyCode::Char('t'))],
-
-            // Git mode defaults
-            open_git_mode: vec![KeyBinding::new(KeyCode::Char('G'), KeyModifiers::SHIFT)],
 
             // Initialize empty maps
             normal_mode_map: HashMap::new(),
@@ -421,11 +404,6 @@ impl KeyBindings {
             cfg.open_symbol_search.clone(),
         );
         apply_config_keys(
-            &mut bindings.toggle_git_highlight,
-            cfg.toggle_git_highlight.clone(),
-        );
-        apply_config_keys(&mut bindings.toggle_diff, cfg.toggle_diff.clone());
-        apply_config_keys(
             &mut bindings.toggle_theme_preview,
             cfg.toggle_theme_preview.clone(),
         );
@@ -486,7 +464,6 @@ impl KeyBindings {
             &mut bindings.toggle_file_tree_popup,
             cfg.toggle_file_tree_popup.clone(),
         );
-        apply_config_keys(&mut bindings.open_git_mode, cfg.open_git_mode.clone());
     }
 
     /// Rebuild the lookup maps after modifying bindings
@@ -555,16 +532,6 @@ impl KeyBindings {
             &mut self.normal_mode_map,
             &self.open_symbol_search,
             Action::OpenSymbolSearch,
-        );
-        insert_bindings(
-            &mut self.normal_mode_map,
-            &self.toggle_git_highlight,
-            Action::ToggleGitHighlight,
-        );
-        insert_bindings(
-            &mut self.normal_mode_map,
-            &self.toggle_diff,
-            Action::ToggleDiff,
         );
         insert_bindings(
             &mut self.normal_mode_map,
@@ -709,11 +676,6 @@ impl KeyBindings {
             &mut self.normal_mode_map,
             &self.toggle_file_tree_popup,
             Action::ToggleFileTreePopup,
-        );
-        insert_bindings(
-            &mut self.normal_mode_map,
-            &self.open_git_mode,
-            Action::OpenGitMode,
         );
     }
 

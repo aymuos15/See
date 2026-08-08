@@ -1,8 +1,8 @@
 pub mod coordinates;
-pub mod diff;
 pub mod file_list;
 pub mod file_tree_popup;
 pub mod help;
+pub mod indent;
 pub mod layout;
 pub mod pane;
 pub mod popup;
@@ -26,6 +26,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         &app.split_layout,
         app.split_percent,
         app.config.divider_width,
+        app.file_list_visible,
     );
 
     if let Some(file_list_area) = layout.file_list_area {
@@ -48,6 +49,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                     &app.config.theme,
                     pane.id == split_layout.active_pane_index,
                     app.config.wrap,
+                    app.config.indent_guides,
                     app.highlighted_word.as_deref(),
                     &mut app.image_protocols,
                 );
@@ -144,18 +146,5 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     // Render file tree popup if active
     if app.file_tree_popup_mode {
         file_tree_popup::render(frame, app);
-    }
-
-    // Render git mode popup if active
-    if app.git_mode_state.is_active() {
-        crate::git_mode::ui::render(frame, app);
-    }
-
-    // Render diff view popup if active
-    if app.git_diff_mode {
-        let popup_area = popup::centered_popup(frame.area(), 95, 95);
-        popup::render_popup_background(frame, popup_area, app.config.theme.bg_main);
-        let inner = popup::popup_inner(popup_area, 1);
-        diff::render(frame, app, inner);
     }
 }

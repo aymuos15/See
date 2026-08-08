@@ -13,6 +13,7 @@ pub fn render(
     theme: &Theme,
     _is_active: bool,
     wrap: bool,
+    indent_guides: bool,
     highlight_word: Option<&str>,
     image_protocols: &mut std::collections::HashMap<
         PathBuf,
@@ -36,6 +37,7 @@ pub fn render(
                     lines,
                     raw_lines,
                     wrap,
+                    indent_guides,
                     highlight_word,
                 );
             }
@@ -77,6 +79,7 @@ fn render_text_pane(
     lines: &[Line<'static>],
     raw_lines: &[String],
     wrap: bool,
+    indent_guides: bool,
     highlight_word: Option<&str>,
 ) {
     let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(0)]);
@@ -119,6 +122,12 @@ fn render_text_pane(
             word,
             theme,
         );
+    }
+
+    if indent_guides {
+        let width = crate::ui::indent::infer_width(raw_lines);
+        visible_lines =
+            crate::ui::indent::apply(&visible_lines, &raw_lines[start..end], width, theme);
     }
 
     let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));

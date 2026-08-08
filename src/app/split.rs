@@ -52,7 +52,6 @@ pub struct SplitLayout {
     pub panes: Vec<Pane>,
     pub split_tree: SplitNode,
     pub active_pane_index: usize,
-    pub file_list_visible: bool,
     next_pane_id: usize,
 }
 
@@ -62,7 +61,6 @@ impl SplitLayout {
             panes: vec![Pane::new(0)],
             split_tree: SplitNode::Leaf { pane_index: 0 },
             active_pane_index: 0,
-            file_list_visible: true,
             next_pane_id: 1,
         }
     }

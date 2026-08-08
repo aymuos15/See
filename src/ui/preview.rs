@@ -93,6 +93,12 @@ fn render_text_content(
         visible_lines = apply_word_highlights(&visible_lines, &raw_lines[start..end], word, theme);
     }
 
+    if app.config.indent_guides {
+        let width = crate::ui::indent::infer_width(raw_lines);
+        visible_lines =
+            crate::ui::indent::apply(&visible_lines, &raw_lines[start..end], width, theme);
+    }
+
     let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
     let content = if app.config.wrap {
         content.wrap(Wrap { trim: false })

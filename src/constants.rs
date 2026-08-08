@@ -4,7 +4,7 @@
 pub const INITIAL_SPLIT_PERCENT: u16 = 10;
 
 /// Minimum split percentage for file list pane
-pub const MIN_SPLIT_PERCENT: u16 = 10;
+pub const MIN_SPLIT_PERCENT: u16 = 5;
 
 /// Maximum split percentage for file list pane
 pub const MAX_SPLIT_PERCENT: u16 = 80;
@@ -39,11 +39,8 @@ pub const SEARCH_POPUP_WIDTH_PERCENT: u16 = 60;
 /// Search popup height as percentage of screen height
 pub const SEARCH_POPUP_HEIGHT_PERCENT: u16 = 70;
 
-/// Height of search input field in lines
-pub const SEARCH_INPUT_HEIGHT: u16 = 3;
-
-/// Inner margin for search popup (horizontal, vertical)
-pub const SEARCH_POPUP_MARGIN: u16 = 1;
+/// How many files' highlighted lines to keep before clearing the cache
+pub const HIGHLIGHT_CACHE_ENTRIES: usize = 48;
 
 /// Default syntax highlighting theme name
 pub const DEFAULT_SYNTAX_THEME: &str = "base16-eighties.dark";

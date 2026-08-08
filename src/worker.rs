@@ -20,6 +20,11 @@ pub enum WorkerRequest {
     LoadThumbnail {
         path: Box<Path>,
     },
+    /// Syntax-highlight a file's text off the UI thread
+    HighlightFile {
+        path: Box<Path>,
+        text: String,
+    },
     /// Load a PDF file and render a specific page
     LoadPdfPage {
         path: Box<Path>,
@@ -41,6 +46,11 @@ pub enum WorkerResponse {
     ThumbnailLoaded {
         path: Box<Path>,
         result: anyhow::Result<image::DynamicImage>,
+    },
+    /// A file's highlighted lines, ready to replace its plain-text preview
+    FileHighlighted {
+        path: Box<Path>,
+        lines: Vec<ratatui::text::Line<'static>>,
     },
     /// PDF page rendered as an image
     PdfPageLoaded {
@@ -92,6 +102,13 @@ impl BackgroundWorker {
             .send(WorkerRequest::LoadThumbnail { path: path.into() });
     }
 
+    pub fn request_highlight(&self, path: &Path, text: String) {
+        let _ = self.request_tx.send(WorkerRequest::HighlightFile {
+            path: path.into(),
+            text,
+        });
+    }
+
     pub fn request_pdf_page(&self, path: &Path, page: usize) {
         let _ = self.request_tx.send(WorkerRequest::LoadPdfPage {
             path: path.into(),
@@ -117,6 +134,8 @@ impl Drop for BackgroundWorker {
 fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<WorkerResponse>) {
     // Initialize Pdfium once for the worker thread
     let pdfium = init_pdfium();
+    // The syntax and theme sets are expensive to build, so build them once here
+    let highlighter = crate::highlight::SyntaxHighlighter::new();
 
     while let Ok(request) = request_rx.recv() {
         match request {
@@ -128,6 +147,10 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
             }
             WorkerRequest::LoadThumbnail { path } => {
                 load_thumbnail(&path, response_tx);
+            }
+            WorkerRequest::HighlightFile { path, text } => {
+                let lines = highlighter.highlight(&path, &text);
+                let _ = response_tx.send(WorkerResponse::FileHighlighted { path, lines });
             }
             WorkerRequest::LoadPdfPage { path, page } => {
                 load_pdf_page(&path, page, pdfium.as_ref(), response_tx);

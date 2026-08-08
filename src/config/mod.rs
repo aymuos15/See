@@ -20,8 +20,16 @@ struct ConfigFile {
     keys: Option<KeyBindingsConfig>,
     #[serde(default)]
     pub wrap: bool,
+    /// Whether to draw indent guides in the preview
+    #[serde(default = "enabled")]
+    pub indent_guides: bool,
     #[serde(default)]
     pub image: Option<ImageConfig>,
+}
+
+/// serde default for options that are on unless switched off.
+const fn enabled() -> bool {
+    true
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -36,14 +44,8 @@ pub struct ThemeConfig {
     pub fg_selected: Option<String>,
     pub fg_dim: Option<String>,
     pub fg_folder: Option<String>,
-    pub fg_modified: Option<String>,
     pub border: Option<String>,
     pub line_num: Option<String>,
-    // Git-specific colors
-    pub fg_git_hash: Option<String>,
-    pub fg_git_author: Option<String>,
-    pub fg_git_date: Option<String>,
-    pub fg_git_refs: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -67,6 +69,8 @@ pub struct Config {
     pub keys: KeyBindings,
     /// Whether to wrap text in the preview pane
     pub wrap: bool,
+    /// Whether to draw indent guides in the preview
+    pub indent_guides: bool,
     /// Image viewing configuration
     #[allow(dead_code)]
     pub image: ImageConfig,
@@ -80,6 +84,7 @@ impl Default for Config {
             divider_width: 1,
             keys: KeyBindings::default(),
             wrap: false,
+            indent_guides: true,
             image: ImageConfig { max_size_mb: 10 },
         }
     }
@@ -100,6 +105,7 @@ impl Config {
         let divider_width = config_file.divider_width.unwrap_or(1).max(1);
         let keys = KeyBindings::from_config(config_file.keys);
         let wrap = config_file.wrap;
+        let indent_guides = config_file.indent_guides;
         let image = config_file.image.unwrap_or(ImageConfig { max_size_mb: 10 });
 
         Some(Self {
@@ -108,6 +114,7 @@ impl Config {
             divider_width,
             keys,
             wrap,
+            indent_guides,
             image,
         })
     }

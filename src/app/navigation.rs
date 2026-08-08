@@ -109,12 +109,6 @@ impl App {
     }
 
     pub(super) fn mouse_scroll_down(&mut self) {
-        // Handle git mode scrolling
-        if self.git_mode_state.is_active() {
-            self.git_mode_scroll_down();
-            return;
-        }
-
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 if let Some(content) = &pane.preview_content {
@@ -140,12 +134,6 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     pub(super) fn mouse_scroll_up(&mut self) {
-        // Handle git mode scrolling
-        if self.git_mode_state.is_active() {
-            self.git_mode_scroll_up();
-            return;
-        }
-
         if let Some(ref mut layout) = self.split_layout {
             if let Some(pane) = layout.get_active_pane_mut() {
                 pane.scroll = pane.scroll.saturating_sub(MOUSE_SCROLL_LINES);

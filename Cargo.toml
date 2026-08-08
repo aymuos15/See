@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 ratatui = "0.30"
 crossterm = "0.28"
-ratatui-image = { version = "10", default-features = false, features = ["crossterm", "image-defaults"] }
-syntect = "5.2"
+ratatui-image = { version = "10", default-features = false, features = ["crossterm"] }
+syntect = { version = "5.2", default-features = false, features = ["default-fancy"] }
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
 toml = "0.8"
@@ -18,9 +18,8 @@ globset = "0.4"
 notify = "7.0"
 notify-debouncer-mini = "0.5"
 arboard = "3.4"
-git2 = "0.19"
 streaming-iterator = "0.1"
-tree-sitter = "0.24"
+tree-sitter = "0.26"
 tree-sitter-rust = "0.23"
 tree-sitter-python = "0.23"
 tree-sitter-javascript = "0.23"
@@ -28,9 +27,16 @@ tree-sitter-typescript = "0.23"
 tree-sitter-go = "0.23"
 tree-sitter-html = "0.23"
 tree-sitter-css = "0.23"
-similar = { version = "2.6", features = ["text"] }
-image = "0.25"
+# Only the formats listed in IMAGE_EXTENSIONS; the default set drags in
+# AVIF/OpenEXR encoders that cost more to build than the rest of the tree.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "ico", "tga"] }
 pdfium-render = { version = "0.8", features = ["image"] }
+tree-sitter-yaml = "0.7.2"
+tree-sitter-toml-ng = "0.7.0"
+tree-sitter-cpp = "0.23.4"
+tree-sitter-md = "0.5.3"
+tree-sitter-cuda = "0.21.1"
+codebook-tree-sitter-latex = "0.6.1"
 
 [lints.clippy]
 all = "warn"
