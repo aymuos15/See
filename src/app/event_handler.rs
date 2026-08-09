@@ -155,7 +155,14 @@ impl App {
             // way `q` quits the viewer itself.
             AppEvent::SearchInput('q') if self.takes_no_text_input() => self.close_overlay(),
             AppEvent::SearchInput(c) => {
-                if self.symbol_search_mode {
+                if self.file_tree_popup_mode {
+                    // The popup takes no text input, so vim keys can navigate.
+                    match c {
+                        'j' => self.file_tree_popup_navigate_down(),
+                        'k' => self.file_tree_popup_navigate_up(),
+                        _ => {}
+                    }
+                } else if self.symbol_search_mode {
                     self.symbol_search_input(c);
                 } else if self.find_mode {
                     // In find mode, some characters might be used for navigation
@@ -177,7 +184,9 @@ impl App {
                 }
             }
             AppEvent::SearchNavigateUp => {
-                if self.theme_preview_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_navigate_up();
+                } else if self.theme_preview_mode {
                     self.theme_search_navigate_up();
                 } else if self.symbol_search_mode {
                     self.symbol_search_navigate_up();
@@ -188,7 +197,9 @@ impl App {
                 }
             }
             AppEvent::SearchNavigateDown => {
-                if self.theme_preview_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_navigate_down();
+                } else if self.theme_preview_mode {
                     self.theme_search_navigate_down();
                 } else if self.symbol_search_mode {
                     self.symbol_search_navigate_down();
@@ -199,7 +210,9 @@ impl App {
                 }
             }
             AppEvent::SearchConfirm => {
-                if self.theme_preview_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_confirm();
+                } else if self.theme_preview_mode {
                     self.theme_search_confirm();
                 } else if self.symbol_search_mode {
                     self.symbol_search_confirm();
@@ -230,16 +243,12 @@ impl App {
             AppEvent::SymbolSearchNavigateDown => self.symbol_search_navigate_down(),
             AppEvent::SymbolSearchConfirm => self.symbol_search_confirm(),
             AppEvent::NavigateDown => {
-                if self.file_tree_popup_mode {
-                    self.file_tree_popup_navigate_down();
-                } else if !self.search_mode && !self.symbol_search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.navigate_down();
                 }
             }
             AppEvent::NavigateUp => {
-                if self.file_tree_popup_mode {
-                    self.file_tree_popup_navigate_up();
-                } else if !self.search_mode && !self.symbol_search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.navigate_up();
                 }
             }
@@ -264,12 +273,16 @@ impl App {
                 }
             }
             AppEvent::MouseScrollDown => {
-                if !self.search_mode && !self.symbol_search_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_navigate_down();
+                } else if !self.search_mode && !self.symbol_search_mode {
                     self.mouse_scroll_down();
                 }
             }
             AppEvent::MouseScrollUp => {
-                if !self.search_mode && !self.symbol_search_mode {
+                if self.file_tree_popup_mode {
+                    self.file_tree_popup_navigate_up();
+                } else if !self.search_mode && !self.symbol_search_mode {
                     self.mouse_scroll_up();
                 }
             }
@@ -284,9 +297,7 @@ impl App {
                 }
             }
             AppEvent::Enter => {
-                if self.file_tree_popup_mode {
-                    self.file_tree_popup_confirm();
-                } else if !self.search_mode && !self.symbol_search_mode {
+                if !self.search_mode && !self.symbol_search_mode {
                     self.enter_directory();
                 }
             }
