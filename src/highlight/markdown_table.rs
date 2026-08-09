@@ -6,6 +6,7 @@
 //! the file.
 
 use ratatui::prelude::*;
+use unicode_width::UnicodeWidthChar;
 
 /// Column borders and rules, in the muted gray of the surrounding chrome.
 const RULE_COLOR: Color = Color::Rgb(0x6a, 0x6a, 0x6a);
@@ -103,8 +104,13 @@ struct Cell {
 }
 
 impl Cell {
-    const fn width(&self) -> usize {
-        self.chars.len()
+    /// Columns the cell occupies on screen. Counting characters would misplace
+    /// the borders around anything double-width, emoji and CJK especially.
+    fn width(&self) -> usize {
+        self.chars
+            .iter()
+            .map(|(c, _)| UnicodeWidthChar::width(*c).unwrap_or(0))
+            .sum()
     }
 
     fn spans(&self) -> Vec<Span<'static>> {
@@ -286,6 +292,34 @@ mod tests {
                 "│ bke            │ GPU     │",
             ]
         );
+    }
+
+    /// Screen columns a rendered row occupies, the way a terminal counts them.
+    fn screen_width(line: &str) -> usize {
+        line.chars()
+            .map(|c| UnicodeWidthChar::width(c).unwrap_or(0))
+            .sum()
+    }
+
+    #[test]
+    fn double_width_cells_keep_the_borders_in_line() {
+        let out = format_tables(lines(&[
+            "| dataset | convfree | primus |",
+            "|---|---|---|",
+            "| MSLesSeg | ✅ | ❌ |",
+            "| ACDC | yes | no |",
+        ]));
+
+        let widths: Vec<usize> = rendered(&out).iter().map(|l| screen_width(l)).collect();
+        assert!(
+            widths.windows(2).all(|pair| pair[0] == pair[1]),
+            "every row should occupy the same screen width, got {widths:?}"
+        );
+
+        // The emoji row's trailing border must sit where the others' do.
+        for row in rendered(&out) {
+            assert!(row.ends_with('│') || row.ends_with('┤'), "row: {row}");
+        }
     }
 
     #[test]

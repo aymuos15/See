@@ -40,14 +40,17 @@ pub fn render(
 
     let page_box = layout_page(view, picker, content_area);
     view.page_rows = page_box.rows;
-    // The viewport may have grown since the last scroll, so re-clamp.
-    view.scroll_by(0, content_area.height);
 
     if view.total_pages == 0 {
+        // The page count is unknown while the first page renders, so the
+        // scroll position cannot be clamped yet without discarding it.
         view.want_page(0);
         centered(frame, content_area, theme, "Loading PDF...");
         return;
     }
+
+    // The viewport may have grown since the last scroll, so re-clamp.
+    view.scroll_by(0, content_area.height);
 
     view.begin_frame();
     draw_pages(frame, content_area, theme, view, picker, &page_box);

@@ -43,6 +43,12 @@ pub struct PdfView {
     pub scroll: u32,
     /// Rows a single page occupied at the last render. Zero until first drawn.
     pub page_rows: u32,
+    /// Height / width of the pages seen so far. Kept across a reload so a
+    /// rebuilt document does not jump to the default shape and back.
+    aspect: Option<f32>,
+    /// Modification time and size of the file the pages were rendered from,
+    /// used to notice a rebuild.
+    stamp: Option<(std::time::SystemTime, u64)>,
     /// Full-resolution page bitmaps as they arrive from the worker.
     pages: HashMap<usize, Rc<DynamicImage>>,
     /// Pages resized to exactly fill their on-screen box.
@@ -60,10 +66,12 @@ pub struct PdfView {
 impl PdfView {
     pub fn new(path: PathBuf) -> Self {
         Self {
+            stamp: file_stamp(&path),
             path,
             total_pages: 0,
             scroll: 0,
             page_rows: 0,
+            aspect: None,
             pages: HashMap::new(),
             scaled: HashMap::new(),
             slices: HashMap::new(),
@@ -101,20 +109,9 @@ impl PdfView {
         (page as usize).min(self.total_pages.saturating_sub(1))
     }
 
-    /// Aspect ratio (height / width) taken from any page already rendered.
+    /// Aspect ratio (height / width) taken from the pages rendered so far.
     pub fn aspect(&self) -> f32 {
-        self.pages
-            .values()
-            .next()
-            .map_or(DEFAULT_PAGE_ASPECT, |img| {
-                if img.width() == 0 {
-                    DEFAULT_PAGE_ASPECT
-                } else {
-                    #[allow(clippy::cast_precision_loss)]
-                    let aspect = img.height() as f32 / img.width() as f32;
-                    aspect
-                }
-            })
+        self.aspect.unwrap_or(DEFAULT_PAGE_ASPECT)
     }
 
     pub fn scroll_by(&mut self, delta: i32, viewport_rows: u16) {
@@ -133,10 +130,28 @@ impl PdfView {
 
     /// Store a page bitmap that just arrived from the worker.
     pub fn insert_page(&mut self, page: usize, image: DynamicImage) {
+        if image.width() > 0 {
+            #[allow(clippy::cast_precision_loss)]
+            let aspect = image.height() as f32 / image.width() as f32;
+            self.aspect = Some(aspect);
+        }
         self.pages.insert(page, Rc::new(image));
         // Any strip cut from a stale copy of this page is now invalid.
         self.scaled.retain(|(p, _, _), _| *p != page);
         self.slices.retain(|key, _| key.page != page);
+    }
+
+    /// Drop every rendered page, keeping where the reader is. Used when the
+    /// file itself changed underneath us, so the next frame re-renders from
+    /// the new document while holding its scroll position.
+    pub fn invalidate(&mut self) {
+        self.pages.clear();
+        self.scaled.clear();
+        self.slices.clear();
+        self.live_slices.clear();
+        self.requested.clear();
+        self.wanted.clear();
+        self.total_pages = 0;
     }
 
     /// Record that the renderer needs a page it does not have yet.
@@ -279,13 +294,23 @@ impl App {
         }
     }
 
-    /// Start viewing a PDF from the top, requesting its first page.
+    /// Start viewing a PDF from the top, requesting its first page. If the same
+    /// PDF is already open, it is re-rendered only when the file on disk has
+    /// changed since the pages were made.
     pub(super) fn begin_pdf_view(&mut self, path: &Path) {
         let already_open = self
             .pdf_view
             .as_ref()
             .is_some_and(|view| same_file(&view.path, path));
         if already_open {
+            let stamp = file_stamp(path);
+            let rebuilt = self
+                .pdf_view
+                .as_ref()
+                .is_some_and(|view| view.stamp != stamp);
+            if rebuilt {
+                self.reload_pdf_view();
+            }
             return;
         }
 
@@ -293,6 +318,20 @@ impl App {
         let mut view = PdfView::new(path.to_path_buf());
         view.want_page(0);
         self.pdf_view = Some(view);
+        self.flush_pdf_requests();
+    }
+
+    /// Re-render a PDF whose file changed on disk, keeping the scroll position.
+    /// A document rebuilt from source (LaTeX especially) is a new file, so the
+    /// cached page bitmaps and the page count are both stale.
+    pub(super) fn reload_pdf_view(&mut self) {
+        let Some(view) = self.pdf_view.as_mut() else {
+            return;
+        };
+        view.stamp = file_stamp(&view.path);
+        view.invalidate();
+        view.want_page(0);
+        self.pdf_error = None;
         self.flush_pdf_requests();
     }
 
@@ -377,9 +416,74 @@ impl App {
     }
 }
 
+/// Modification time and size of a file, as a cheap stand-in for its contents.
+fn file_stamp(path: &Path) -> Option<(std::time::SystemTime, u64)> {
+    let metadata = std::fs::metadata(path).ok()?;
+    Some((metadata.modified().ok()?, metadata.len()))
+}
+
 /// Compare two paths, falling back to a plain comparison when either cannot be
 /// canonicalized (the file may have been moved out from under us).
 fn same_file(a: &Path, b: &Path) -> bool {
     let canon = |p: &Path| p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
     canon(a) == canon(b)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn page(width: u32, height: u32) -> DynamicImage {
+        DynamicImage::ImageRgba8(image::RgbaImage::new(width, height))
+    }
+
+    #[test]
+    fn invalidating_keeps_the_reader_where_they_were() {
+        let mut view = PdfView::new(PathBuf::from("doc.pdf"));
+        view.total_pages = 12;
+        view.page_rows = 30;
+        view.insert_page(3, page(100, 200));
+        view.scroll = 200;
+
+        let aspect = view.aspect();
+        view.invalidate();
+
+        assert_eq!(view.scroll, 200, "scroll position should survive a reload");
+        assert!(
+            (view.aspect() - aspect).abs() < f32::EPSILON,
+            "page shape should survive a reload"
+        );
+        assert_eq!(view.total_pages, 0, "page count is unknown until re-read");
+
+        // With no pages left, the renderer asks for what it needs again.
+        view.want_page(0);
+        assert_eq!(view.take_wanted(), vec![0]);
+    }
+
+    #[test]
+    fn page_shape_comes_from_the_rendered_page() {
+        let mut view = PdfView::new(PathBuf::from("doc.pdf"));
+        assert!((view.aspect() - DEFAULT_PAGE_ASPECT).abs() < f32::EPSILON);
+
+        view.insert_page(0, page(100, 150));
+        assert!((view.aspect() - 1.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn stamps_change_when_a_file_is_rebuilt() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("doc.pdf");
+        std::fs::write(&path, b"first build").expect("write");
+
+        let before = file_stamp(&path);
+        assert!(before.is_some());
+
+        std::fs::write(&path, b"a longer second build").expect("rewrite");
+        assert_ne!(before, file_stamp(&path), "a rebuild should be noticed");
+    }
+
+    #[test]
+    fn a_missing_file_has_no_stamp() {
+        assert_eq!(file_stamp(Path::new("/nonexistent/doc.pdf")), None);
+    }
 }

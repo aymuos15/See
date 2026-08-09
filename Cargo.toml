@@ -31,6 +31,7 @@ tree-sitter-css = "0.23"
 # AVIF/OpenEXR encoders that cost more to build than the rest of the tree.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "ico", "tga"] }
 pdfium-render = { version = "0.8", features = ["image"] }
+unicode-width = "0.2"
 tree-sitter-yaml = "0.7.2"
 tree-sitter-toml-ng = "0.7.0"
 tree-sitter-cpp = "0.23.4"

@@ -248,9 +248,21 @@ impl App {
         }
     }
 
+    /// Path of the file the preview is showing, if it still exists.
+    fn watched_preview_path(&self) -> Option<std::path::PathBuf> {
+        let entry = self.files.get(self.file_list_state.selected()?)?;
+        entry.is_file.then(|| entry.path.clone())
+    }
+
     /// Refresh the preview content for the currently viewed file
     /// Preserves selection if content hasn't changed
     pub(super) fn refresh_preview(&mut self) {
+        // A rebuilt file is usually a new file in the same place, and the watch
+        // followed the old one, so re-arm it before doing anything else.
+        if let Some(path) = self.watched_preview_path() {
+            let _ = self.file_watcher.watch_preview_file(Some(&path));
+        }
+
         if let Some(idx) = self.file_list_state.selected() {
             if let Some(entry) = self.files.get(idx) {
                 if entry.is_file {
@@ -303,7 +315,6 @@ impl App {
                                 }
                             }
                             PreviewContentType::Pdf { path, .. } => {
-                                // For PDFs, keep the existing preview
                                 if self.shared_preview_content.as_ref().is_none_or(|prev| {
                                     !matches!(prev.as_ref(), PreviewContentType::Pdf { .. })
                                 }) {
@@ -311,6 +322,10 @@ impl App {
                                     self.begin_pdf_view(&path);
                                     self.shared_preview_content =
                                         Some(Rc::new(PreviewContentType::Pdf { path }));
+                                } else {
+                                    // Same PDF: re-renders only if the file was
+                                    // rebuilt, keeping the scroll position.
+                                    self.begin_pdf_view(&path);
                                 }
                             }
                         }

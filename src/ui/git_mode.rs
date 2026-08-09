@@ -8,6 +8,7 @@ use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Wrap};
 use std::time::{SystemTime, UNIX_EPOCH};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Share of the width given to the commit list.
 const COMMIT_LIST_PERCENT: u16 = 45;
@@ -419,8 +420,14 @@ fn relative_time(seconds: i64) -> String {
     }
 }
 
+/// Columns a string occupies on screen. Commit subjects and paths carry emoji
+/// and CJK often enough that counting characters would skew every column.
 fn display_width(text: &str) -> usize {
-    text.chars().count()
+    UnicodeWidthStr::width(text)
+}
+
+fn char_width(c: char) -> usize {
+    UnicodeWidthChar::width(c).unwrap_or(0)
 }
 
 /// Keep the head of a string, marking any cut with an ellipsis.
@@ -431,22 +438,49 @@ fn truncate(text: &str, width: usize) -> String {
     if width <= 1 {
         return String::new();
     }
-    let kept: String = text.chars().take(width - 1).collect();
-    format!("{kept}…")
+
+    // One column is reserved for the ellipsis; a double-width character that
+    // would straddle the edge is dropped rather than half drawn.
+    let mut kept = String::new();
+    let mut used = 0;
+    for c in text.chars() {
+        let next = used + char_width(c);
+        if next > width - 1 {
+            break;
+        }
+        kept.push(c);
+        used = next;
+    }
+    kept.push('…');
+    kept.push_str(&" ".repeat(width - used - 1));
+    kept
 }
 
 /// Keep the tail of a string, which is the informative end of a file path.
 fn truncate_start(text: &str, width: usize) -> String {
-    let length = display_width(text);
-    if length <= width {
+    if display_width(text) <= width {
         return text.to_string();
     }
     if width <= 1 {
         return String::new();
     }
-    let dropped = length - (width - 1);
-    let kept: String = text.chars().skip(dropped).collect();
-    format!("…{kept}")
+
+    let mut kept: Vec<char> = Vec::new();
+    let mut used = 0;
+    for c in text.chars().rev() {
+        let next = used + char_width(c);
+        if next > width - 1 {
+            break;
+        }
+        kept.push(c);
+        used = next;
+    }
+
+    let tail: String = kept.into_iter().rev().collect();
+    let mut out = " ".repeat(width - used - 1);
+    out.push('…');
+    out.push_str(&tail);
+    out
 }
 
 #[cfg(test)]
@@ -604,6 +638,25 @@ mod tests {
 
         assert_eq!(added.style.fg, Some(theme.diff_add));
         assert_eq!(removed.style.fg, Some(theme.diff_del));
+    }
+
+    #[test]
+    fn truncation_counts_screen_columns_not_characters() {
+        // Each emoji is two columns wide, so eight characters is sixteen.
+        let wide = "✅❌✅❌✅❌✅❌";
+        assert_eq!(display_width(wide), 16);
+        assert_eq!(display_width(&truncate(wide, 7)), 7);
+        assert_eq!(display_width(&truncate_start(wide, 7)), 7);
+
+        // A row built from a wide subject still fills its pane exactly.
+        let theme = Theme::default();
+        let line = commit_line(&commit(wide, 30), 1_000_000, 30, false, &theme);
+        let width: usize = line
+            .spans
+            .iter()
+            .map(|span| display_width(&span.content))
+            .sum();
+        assert_eq!(width, 30);
     }
 
     #[test]
