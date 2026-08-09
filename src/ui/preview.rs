@@ -1,9 +1,39 @@
 use crate::app::selection::TextSelection;
 use crate::app::App;
 use crate::app::PreviewContentType;
-use crate::theme::Theme;
+use crate::theme::{darken, Theme};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Paragraph, Wrap};
+use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
+
+/// How far the scrollbar track sits below the dim foreground; the thumb uses
+/// `fg_dim` itself so position reads at a glance without drawing attention.
+const TRACK_DARKEN: u16 = 80;
+
+/// Draws a right-edge scrollbar over `area` when `total` rows overflow it.
+/// `position` is the index of the first visible row.
+pub fn render_scrollbar(
+    frame: &mut Frame,
+    area: Rect,
+    theme: &Theme,
+    total: usize,
+    position: usize,
+) {
+    let visible = area.height as usize;
+    if total <= visible {
+        return;
+    }
+
+    let mut state = ScrollbarState::new(total.saturating_sub(visible)).position(position);
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(None)
+        .end_symbol(None)
+        .track_symbol(Some("│"))
+        .thumb_symbol("┃")
+        .track_style(Style::default().fg(darken(theme.fg_dim, TRACK_DARKEN)))
+        .thumb_style(Style::default().fg(theme.fg_dim));
+
+    frame.render_stateful_widget(scrollbar, area, &mut state);
+}
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = app.config.theme.clone();
@@ -114,6 +144,7 @@ fn render_text_content(
         content
     };
     frame.render_widget(content, content_area);
+    render_scrollbar(frame, content_area, theme, lines.len(), start);
 }
 
 fn render_image_content(

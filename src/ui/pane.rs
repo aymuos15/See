@@ -137,6 +137,7 @@ fn render_text_pane(
         content
     };
     frame.render_widget(content, content_area);
+    crate::ui::preview::render_scrollbar(frame, content_area, theme, lines.len(), start);
 }
 
 fn render_image_pane(

@@ -63,6 +63,16 @@ pub fn render(frame: &mut Frame, app: &App) {
     state.select(Some(app.file_tree_popup_selected));
 
     frame.render_stateful_widget(list, inner, &mut state);
+
+    // The list keeps the selection just inside the view, so its offset after
+    // rendering is the first visible row — exactly the scrollbar position.
+    crate::ui::preview::render_scrollbar(
+        frame,
+        inner,
+        theme,
+        app.file_tree_popup_entries.len(),
+        state.offset(),
+    );
 }
 
 /// Lays a path out on the left with its counts right-aligned, so the numbers

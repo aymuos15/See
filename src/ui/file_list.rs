@@ -33,4 +33,13 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         .highlight_symbol("> ");
 
     frame.render_stateful_widget(list, area, &mut app.file_list_state);
+
+    let theme = &app.config.theme;
+    crate::ui::preview::render_scrollbar(
+        frame,
+        area,
+        theme,
+        app.files.len(),
+        app.file_list_state.offset(),
+    );
 }
