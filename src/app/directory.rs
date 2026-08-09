@@ -107,11 +107,10 @@ impl App {
         if selected_path.as_deref() == Some(path) {
             if let Some(content) = &self.shared_preview_content {
                 if let PreviewContentType::Text { raw_lines, .. } = content.as_ref() {
-                    self.shared_preview_content =
-                        Some(std::rc::Rc::new(PreviewContentType::Text {
-                            lines: lines.as_ref().clone(),
-                            raw_lines: raw_lines.clone(),
-                        }));
+                    self.shared_preview_content = Some(std::rc::Rc::new(PreviewContentType::text(
+                        lines.as_ref().clone(),
+                        raw_lines.clone(),
+                    )));
                 }
             }
         }
@@ -123,10 +122,10 @@ impl App {
                 }
                 if let Some(content) = &pane.preview_content {
                     if let PreviewContentType::Text { raw_lines, .. } = content.as_ref() {
-                        pane.preview_content = Some(std::rc::Rc::new(PreviewContentType::Text {
-                            lines: lines.as_ref().clone(),
-                            raw_lines: raw_lines.clone(),
-                        }));
+                        pane.preview_content = Some(std::rc::Rc::new(PreviewContentType::text(
+                            lines.as_ref().clone(),
+                            raw_lines.clone(),
+                        )));
                     }
                 }
             }
@@ -168,10 +167,7 @@ impl App {
                 // far too slow to do between keystrokes. Show the text straight
                 // away and let the worker colour it in.
                 let lines = self.highlighted_or_plain(&entry_path, raw_lines);
-                PreviewContentType::Text {
-                    lines,
-                    raw_lines: raw_lines.clone(),
-                }
+                PreviewContentType::text(lines, raw_lines.clone())
             }
             PreviewContentType::Image { path, dimensions } => {
                 // Cancel any pending full quality load from previous image
@@ -289,10 +285,7 @@ impl App {
                                     self.highlight_pending.remove(&path);
                                     let lines = self.highlighted_or_plain(&path, &raw_lines);
                                     self.shared_preview_content =
-                                        Some(Rc::new(PreviewContentType::Text {
-                                            lines,
-                                            raw_lines,
-                                        }));
+                                        Some(Rc::new(PreviewContentType::text(lines, raw_lines)));
                                     // Only clear selection if content changed
                                     self.selection = None;
                                     // Keep highlighted_word for cross-file search persistence

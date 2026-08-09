@@ -1,0 +1,38 @@
+{
+  "commit": "9b16d54",
+  "dirty": true,
+  "captured": "2026-08-09T01:24:51Z",
+  "machine": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12800H",
+    "governor": "powersave",
+    "os": "Linux-6.8.0-136-generic-x86_64-with-glibc2.35",
+    "rustc": "rustc 1.90.0 (1159e78c4 2025-09-14)"
+  },
+  "fixture_version": 1,
+  "mode": "full",
+  "stale": [],
+  "measurements": {
+    "fuzzy/filter/10k_paths_query_1": 291577.4,
+    "fuzzy/filter/10k_paths_query_13": 932538.9,
+    "fuzzy/filter/10k_paths_query_4": 1574596.4,
+    "git/parse/commit_detail_40_files": 93531.7,
+    "git/parse/log_500_commits": 61640.9,
+    "indent/infer_width_10k_lines": 3960.6,
+    "markdown/format_tables/ascii_8x40": 673390.8,
+    "markdown/format_tables/no_tables": 10421.2,
+    "markdown/format_tables/wide_cells_200_rows": 215591.3,
+    "render/file_list/5000_entries": 1271563.6,
+    "render/file_list/50_entries": 239735.2,
+    "render/indent_guides/off": 274125.5,
+    "render/indent_guides/on": 295731.7,
+    "render/scroll_position/middle": 293383.9,
+    "render/scroll_position/top": 287675.1,
+    "render/text_preview/20000_line_file": 285473.4,
+    "render/text_preview/200_line_file": 286223.7,
+    "symbols/extract/rust_2k_lines": 13199207.8,
+    "syntax/highlight/markdown_with_tables": 19752070.7,
+    "syntax/highlight/rust_10000_lines": 736229644.5,
+    "syntax/highlight/rust_1000_lines": 73391446.5,
+    "syntax/highlighter_new": 762907.7
+  }
+}

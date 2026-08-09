@@ -19,15 +19,20 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     // Use shared_preview_content (Rc) for better performance
     if let Some(content) = app.shared_preview_content.clone() {
         match content.as_ref() {
-            PreviewContentType::Text { lines, raw_lines } => {
-                render_text_content(frame, app, area, &theme, lines, raw_lines);
+            PreviewContentType::Text {
+                lines,
+                raw_lines,
+                indent_width,
+            } => {
+                let width = *indent_width.get_or_init(|| crate::ui::indent::infer_width(raw_lines));
+                render_text_content(frame, app, area, &theme, lines, raw_lines, width);
             }
             PreviewContentType::Image {
                 path, dimensions, ..
             } => {
-                // Look up protocol from cache (need mutable access for rendering)
-                let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
-                let protocol = app.image_protocols.get_mut(&canonical_path);
+                // The path was canonicalized at load time, matching the
+                // protocol cache's keys.
+                let protocol = app.image_protocols.get_mut(path);
                 render_image_content(frame, area, *dimensions, protocol);
             }
             PreviewContentType::Pdf { .. } => {
@@ -50,6 +55,7 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_text_content(
     frame: &mut Frame,
     app: &App,
@@ -57,6 +63,7 @@ fn render_text_content(
     theme: &Theme,
     lines: &[Line<'static>],
     raw_lines: &[String],
+    indent_width: usize,
 ) {
     let horizontal = Layout::horizontal([Constraint::Length(5), Constraint::Min(1)]);
     let [line_num_area, content_area] = horizontal.areas(area);
@@ -96,9 +103,8 @@ fn render_text_content(
     }
 
     if app.config.indent_guides {
-        let width = crate::ui::indent::infer_width(raw_lines);
         visible_lines =
-            crate::ui::indent::apply(&visible_lines, &raw_lines[start..end], width, theme);
+            crate::ui::indent::apply(&visible_lines, &raw_lines[start..end], indent_width, theme);
     }
 
     let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));
@@ -248,7 +254,12 @@ pub fn apply_word_highlights<'a>(
         .bg(theme.bg_selection)
         .add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
 
-    let word_lower = word.to_lowercase();
+    // Compare char-by-char (one lowercase codepoint per char keeps a 1:1
+    // mapping to columns) — the spans downstream count columns in chars, so
+    // byte offsets from `str::find` would misplace highlights on non-ASCII
+    // lines.
+    let lower = |c: char| c.to_lowercase().next().unwrap_or(c);
+    let word_chars: Vec<char> = word.chars().map(lower).collect();
 
     lines
         .iter()
@@ -259,32 +270,30 @@ pub fn apply_word_highlights<'a>(
             };
 
             let mut current_line = line.clone();
-            let mut start_search = 0;
-            let raw_line_lower = raw_line.to_lowercase();
+            let chars: Vec<char> = raw_line.chars().collect();
+            let is_word_char = |c: char| c.is_alphanumeric() || c == '_';
+            let mut start = 0;
 
-            while let Some(start_idx) = raw_line_lower[start_search..].find(&word_lower) {
-                let absolute_start = start_search + start_idx;
-                let absolute_end = absolute_start + word.len();
-
-                // Check if it's a whole word match
-                let before_char = absolute_start
-                    .checked_sub(1)
-                    .and_then(|i| raw_line.chars().nth(i));
-                let after_char = raw_line.chars().nth(absolute_end);
-
-                let is_whole_word = before_char.is_none_or(|c| !c.is_alphanumeric() && c != '_')
-                    && after_char.is_none_or(|c| !c.is_alphanumeric() && c != '_');
-
-                if is_whole_word {
-                    current_line = apply_selection_to_line(
-                        &current_line,
-                        absolute_start,
-                        absolute_end,
-                        highlight_style,
-                    );
+            while start + word_chars.len() <= chars.len() {
+                let matched = chars[start..start + word_chars.len()]
+                    .iter()
+                    .zip(&word_chars)
+                    .all(|(&c, &w)| lower(c) == w);
+                if !matched {
+                    start += 1;
+                    continue;
                 }
 
-                start_search = absolute_start + word.len().max(1);
+                let end = start + word_chars.len();
+                let is_whole_word = (start == 0 || !is_word_char(chars[start - 1]))
+                    && (end == chars.len() || !is_word_char(chars[end]));
+
+                if is_whole_word {
+                    current_line =
+                        apply_selection_to_line(&current_line, start, end, highlight_style);
+                }
+
+                start = end.max(start + 1);
             }
 
             current_line

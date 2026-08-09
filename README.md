@@ -68,6 +68,16 @@ The viewer automatically watches for file changes:
 
 ## Development
 
+### Benchmarks
+
+```bash
+./benchmarks/run.sh          # measure, and compare with the recorded baseline
+./benchmarks/run.sh --quick  # rough numbers, fast
+```
+
+Results are tracked in [`benchmarks/`](benchmarks/README.md), which also
+documents what is measured and how to keep two runs comparable.
+
 ### Pre-commit Hooks
 
 Use prek! https://github.com/j178/prek

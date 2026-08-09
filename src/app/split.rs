@@ -55,6 +55,12 @@ pub struct SplitLayout {
     next_pane_id: usize,
 }
 
+impl Default for SplitLayout {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SplitLayout {
     pub fn new() -> Self {
         Self {

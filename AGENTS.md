@@ -29,6 +29,19 @@ cargo test --test watcher_integration_test  # Run specific integration test file
 cargo test -- --nocapture            # Show stdout during tests
 ```
 
+## Benchmark Commands
+
+```bash
+./benchmarks/run.sh                  # All benchmarks, compared with the baseline
+./benchmarks/run.sh render           # One target: render, highlight or parse
+./benchmarks/run.sh --quick          # Fewer samples, for a fast loop
+./benchmarks/run.sh --save           # Also record the run in benchmarks/history/
+python3 benchmarks/collect.py promote  # Make the last run the new baseline
+```
+
+See `benchmarks/README.md` for what is measured and how to read the output.
+Anything under ±10% between runs is noise on a developer machine.
+
 ## Code Style Guidelines
 
 ### Formatting (rustfmt.toml)
@@ -123,6 +136,7 @@ mod tests {
 
 ```
 src/
+  lib.rs            # Crate root: every module, so benches and tests can call in
   main.rs           # Entry point, CLI parsing
   tui.rs            # Terminal init/restore
   app/              # Core application logic (App struct, event handling, navigation)
@@ -146,8 +160,16 @@ src/
     layout.rs       # Layout calculation with dividers
   worker.rs         # Background thread: highlighting, symbols, images, PDF
                     # pages, git log and diffs, line counts
+benches/            # Benchmark targets, with generated fixtures
+benchmarks/         # Recorded results, the runner and the comparison tool
 tests/              # Integration tests
 ```
+
+The program lives in `src/lib.rs`, not `src/main.rs`: a binary crate exposes
+nothing, so benchmarks could not call into it. `main.rs` is only argument
+parsing and a call to `App::run`. Everything is `pub` for that reason, which is
+also why `lib.rs` switches off the lints that police a published API — they
+would demand `#[must_use]` and `# Errors` on ~80 internal functions.
 
 ## Performance Notes
 
@@ -157,7 +179,9 @@ milliseconds, which is far too slow to run between keystrokes; the preview
 shows plain text immediately and `WorkerResponse::FileHighlighted` swaps in
 colors, cached per path. Counting lines for the file tree works the same way.
 Rendering runs every frame, so per-frame work must stay proportional to what is
-on screen rather than to file size.
+on screen rather than to file size. The `render/*` benchmarks exist to check
+exactly that: each holds the viewport fixed and varies the subject, so a cost
+that scales with the file or the directory shows up as a widening gap.
 
 Some frames are expensive whatever we do: a PDF row of scroll re-encodes an
 image for the terminal's graphics protocol. Input therefore arrives faster than

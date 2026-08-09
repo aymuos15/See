@@ -10,7 +10,6 @@ use std::time::Duration;
 
 /// Application events triggered by user input or system events.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum AppEvent {
     Quit,
     NavigateUp,
@@ -46,9 +45,18 @@ pub enum AppEvent {
     PreviewFileChanged,
     SearchIndexRefreshTimer,
     // Mouse selection events
-    MouseDown { column: u16, row: u16 },
-    MouseDrag { column: u16, row: u16 },
-    MouseUp { column: u16, row: u16 },
+    MouseDown {
+        column: u16,
+        row: u16,
+    },
+    MouseDrag {
+        column: u16,
+        row: u16,
+    },
+    MouseUp {
+        column: u16,
+        row: u16,
+    },
     CopySelection,
     SelectAll,
     SplitHorizontal,
@@ -76,6 +84,9 @@ pub enum AppEvent {
     // Git mode
     ToggleGitMode,
 
+    /// Changes nothing itself but invalidates the drawn frame (e.g. a
+    /// terminal resize).
+    Redraw,
     None,
 }
 
@@ -127,6 +138,7 @@ pub fn poll_event(
                     _ => AppEvent::None,
                 });
             }
+            Event::Resize(_, _) => return Ok(AppEvent::Redraw),
             _ => {}
         }
     }

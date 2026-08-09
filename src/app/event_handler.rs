@@ -10,12 +10,17 @@ const MAX_COALESCED_EVENTS: usize = 32;
 
 impl App {
     pub fn run(&mut self, terminal: &mut crate::tui::Tui) -> anyhow::Result<()> {
+        // Redraw only when state may have changed: an idle viewer would
+        // otherwise rebuild every visible line ~60 times a second.
+        let mut needs_redraw = true;
         while !self.should_quit {
-            terminal.draw(|frame| crate::ui::render(frame, self))?;
-            self.poll_worker_responses();
-            self.check_pending_full_quality();
-            self.handle_next_event()?;
-            self.drain_pending_input()?;
+            if needs_redraw {
+                terminal.draw(|frame| crate::ui::render(frame, self))?;
+            }
+            needs_redraw = self.poll_worker_responses();
+            needs_redraw |= self.check_pending_full_quality();
+            needs_redraw |= self.handle_next_event()?;
+            needs_redraw |= self.drain_pending_input()?;
         }
 
         Ok(())
@@ -27,20 +32,25 @@ impl App {
     /// frame takes to draw, and a PDF frame re-encodes an image. Without this
     /// the queue backs up and scrolling lags behind the input by seconds;
     /// applying the backlog first collapses it into a single frame.
-    fn drain_pending_input(&mut self) -> anyhow::Result<()> {
+    /// Returns whether any event was handled.
+    fn drain_pending_input(&mut self) -> anyhow::Result<bool> {
         let mut handled = 0;
+        let mut dirty = false;
         while handled < MAX_COALESCED_EVENTS
             && !self.should_quit
             && crossterm::event::poll(Duration::ZERO)?
         {
-            self.handle_next_event()?;
+            dirty |= self.handle_next_event()?;
             handled += 1;
         }
-        Ok(())
+        Ok(dirty)
     }
 
-    fn poll_worker_responses(&mut self) {
+    /// Returns whether any response was applied.
+    fn poll_worker_responses(&mut self) -> bool {
+        let mut any = false;
         while let Some(response) = self.worker.poll_response() {
+            any = true;
             match response {
                 WorkerResponse::SymbolsIndexed(symbols) => {
                     self.symbol_index = symbols;
@@ -80,6 +90,7 @@ impl App {
                 }
             }
         }
+        any
     }
 
     /// Closes whichever overlay is on top, innermost first.
@@ -105,8 +116,9 @@ impl App {
         self.help_mode || self.theme_preview_mode || self.file_tree_popup_mode
     }
 
+    /// Returns whether an event was handled (i.e. the frame may be stale).
     #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-    fn handle_next_event(&mut self) -> anyhow::Result<()> {
+    fn handle_next_event(&mut self) -> anyhow::Result<bool> {
         let event = poll_event(
             Duration::from_millis(16),
             self.search_mode
@@ -120,10 +132,12 @@ impl App {
             &self.config.keys,
         )?;
 
+        let dirty = !matches!(event, AppEvent::None);
+
         // Git mode owns most keys while it is open; anything it does not claim
         // falls through to its usual meaning.
         if self.in_git_mode() && self.handle_git_mode_event(&event) {
-            return Ok(());
+            return Ok(dirty);
         }
 
         match event {
@@ -377,10 +391,10 @@ impl App {
                     self.pdf_last_page();
                 }
             }
-            AppEvent::None => {}
+            AppEvent::Redraw | AppEvent::None => {}
         }
 
-        Ok(())
+        Ok(dirty)
     }
 
     fn handle_quit(&mut self) {

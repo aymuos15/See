@@ -5,7 +5,9 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Wrap};
 use std::path::PathBuf;
 
-#[allow(clippy::too_many_arguments)]
+// The protocol cache is the app's own map, never a caller's, so there is no
+// hasher to generalise over.
+#[allow(clippy::too_many_arguments, clippy::implicit_hasher)]
 pub fn render(
     frame: &mut Frame,
     pane: &Pane,
@@ -31,7 +33,12 @@ pub fn render(
 
     if let Some(content) = &pane.preview_content {
         match content.as_ref() {
-            PreviewContentType::Text { lines, raw_lines } => {
+            PreviewContentType::Text {
+                lines,
+                raw_lines,
+                indent_width,
+            } => {
+                let width = *indent_width.get_or_init(|| crate::ui::indent::infer_width(raw_lines));
                 render_text_pane(
                     frame,
                     pane,
@@ -39,14 +46,16 @@ pub fn render(
                     theme,
                     lines,
                     raw_lines,
+                    width,
                     wrap,
                     indent_guides,
                     highlight_word,
                 );
             }
             PreviewContentType::Image { path, dimensions } => {
-                let canonical_path = path.canonicalize().unwrap_or_else(|_| path.clone());
-                let protocol = image_protocols.get_mut(&canonical_path);
+                // The path was canonicalized at load time, matching the
+                // protocol cache's keys.
+                let protocol = image_protocols.get_mut(path);
                 render_image_pane(frame, inner_area, *dimensions, protocol);
             }
             PreviewContentType::Pdf { .. } => {
@@ -69,6 +78,7 @@ fn render_text_pane(
     theme: &Theme,
     lines: &[Line<'static>],
     raw_lines: &[String],
+    indent_width: usize,
     wrap: bool,
     indent_guides: bool,
     highlight_word: Option<&str>,
@@ -116,9 +126,8 @@ fn render_text_pane(
     }
 
     if indent_guides {
-        let width = crate::ui::indent::infer_width(raw_lines);
         visible_lines =
-            crate::ui::indent::apply(&visible_lines, &raw_lines[start..end], width, theme);
+            crate::ui::indent::apply(&visible_lines, &raw_lines[start..end], indent_width, theme);
     }
 
     let content = Paragraph::new(visible_lines).style(Style::default().bg(theme.bg_main));

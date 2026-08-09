@@ -1,19 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-mod app;
-mod clipboard;
-mod config;
-mod constants;
-mod event;
-mod files;
-mod git;
-mod highlight;
-mod theme;
-mod tui;
-mod ui;
-mod util;
-mod worker;
+use viewer::{app::App, tui};
 
 #[derive(Parser)]
 #[command(name = "viewer")]
@@ -28,7 +16,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     // Create the app first (which validates the path) before initializing the terminal
-    let mut app = app::App::new(cli.path)?;
+    let mut app = App::new(cli.path)?;
 
     let mut terminal = tui::init()?;
 

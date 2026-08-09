@@ -1,4 +1,5 @@
 use ratatui::text::Line;
+use std::cell::OnceCell;
 use std::path::PathBuf;
 
 /// Type of content being previewed
@@ -8,10 +9,15 @@ pub enum PreviewContentType {
     Text {
         lines: Vec<Line<'static>>,
         raw_lines: Vec<String>,
+        /// Indent-guide width, inferred from the whole file on first use.
+        /// Cached here because it is a pure function of `raw_lines` and the
+        /// render loop would otherwise rescan the file every frame.
+        indent_width: OnceCell<usize>,
     },
     /// Image content for Kitty terminal
     Image {
-        /// Path to image file
+        /// Path to image file, canonicalized at load time so per-frame
+        /// protocol lookups need no filesystem access
         path: PathBuf,
         /// Image dimensions in pixels
         dimensions: (u32, u32),
@@ -22,6 +28,17 @@ pub enum PreviewContentType {
         /// Path to PDF file
         path: PathBuf,
     },
+}
+
+impl PreviewContentType {
+    /// Text content; the indent width is inferred lazily on first render.
+    pub const fn text(lines: Vec<Line<'static>>, raw_lines: Vec<String>) -> Self {
+        Self::Text {
+            lines,
+            raw_lines,
+            indent_width: OnceCell::new(),
+        }
+    }
 }
 
 /// Reference-counted preview content for efficient sharing between panes

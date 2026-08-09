@@ -1,1 +1,6 @@
 /target
+
+# The working file from a benchmark run; history/ and baseline.json are the
+# records worth keeping.
+/benchmarks/latest.json
+__pycache__/

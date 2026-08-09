@@ -1,5 +1,13 @@
+use std::cell::RefCell;
+
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
+
+thread_local! {
+    // The matcher owns growable scoring slabs; rebuilding it on every
+    // keystroke would re-allocate them each time.
+    static MATCHER: RefCell<Matcher> = RefCell::new(Matcher::new(Config::DEFAULT));
+}
 
 /// Fuzzy filter items by query, returning matched indices in order of relevance.
 pub fn fuzzy_filter_indices<T>(
@@ -11,20 +19,20 @@ pub fn fuzzy_filter_indices<T>(
         return (0..items.len()).collect();
     }
 
-    let config = Config::DEFAULT;
-    let mut matcher = Matcher::new(config);
     let pattern = Pattern::parse(query, CaseMatching::Ignore, Normalization::Smart);
 
-    let mut results: Vec<(usize, u32)> = items
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, item)| {
-            let name = name_of(item);
-            let haystack = Utf32Str::Ascii(name.as_bytes());
-            let score = pattern.score(haystack, &mut matcher)?;
-            Some((idx, score))
-        })
-        .collect();
+    let mut results: Vec<(usize, u32)> = MATCHER.with_borrow_mut(|matcher| {
+        let mut scratch = Vec::new();
+        items
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, item)| {
+                let haystack = Utf32Str::new(name_of(item), &mut scratch);
+                let score = pattern.score(haystack, matcher)?;
+                Some((idx, score))
+            })
+            .collect()
+    });
 
     // Sort by score (descending), then by original index (ascending)
     results.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));

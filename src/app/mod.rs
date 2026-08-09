@@ -141,11 +141,22 @@ impl App {
         &self.search_index
     }
 
-    /// Creates a new App instance for the given path.
+    /// Creates a new App instance for the given path, loading the user's
+    /// configuration.
     ///
     /// # Errors
     /// Returns an error if the path doesn't exist or is inaccessible.
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
+        Self::with_config(path, Config::load())
+    }
+
+    /// Creates a new App instance with a configuration supplied by the caller.
+    /// Tests and benchmarks use this so their behaviour does not depend on
+    /// whatever is in the developer's config file.
+    ///
+    /// # Errors
+    /// Returns an error if the path doesn't exist or is inaccessible.
+    pub fn with_config(path: PathBuf, config: Config) -> anyhow::Result<Self> {
         // Validate the path exists
         if !path.exists() {
             anyhow::bail!("Path does not exist: {}", path.display());
@@ -167,9 +178,6 @@ impl App {
 
         // Use the canonicalized path as current_dir
         let current_dir = root_dir.clone();
-
-        // Load config
-        let config = Config::load();
 
         // Read directory contents
         let files = read_directory(&current_dir, &root_dir, &config)?;

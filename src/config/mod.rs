@@ -23,8 +23,6 @@ struct ConfigFile {
     /// Whether to draw indent guides in the preview
     #[serde(default = "enabled")]
     pub indent_guides: bool,
-    #[serde(default)]
-    pub image: Option<ImageConfig>,
 }
 
 /// serde default for options that are on unless switched off.
@@ -48,17 +46,6 @@ pub struct ThemeConfig {
     pub line_num: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[allow(dead_code)]
-pub struct ImageConfig {
-    #[serde(default = "default_max_image_size_mb")]
-    pub max_size_mb: u64,
-}
-
-const fn default_max_image_size_mb() -> u64 {
-    10
-}
-
 #[derive(Clone)]
 pub struct Config {
     pub exclude_set: GlobSet,
@@ -71,9 +58,6 @@ pub struct Config {
     pub wrap: bool,
     /// Whether to draw indent guides in the preview
     pub indent_guides: bool,
-    /// Image viewing configuration
-    #[allow(dead_code)]
-    pub image: ImageConfig,
 }
 
 impl Default for Config {
@@ -85,7 +69,6 @@ impl Default for Config {
             keys: KeyBindings::default(),
             wrap: false,
             indent_guides: true,
-            image: ImageConfig { max_size_mb: 10 },
         }
     }
 }
@@ -106,7 +89,6 @@ impl Config {
         let keys = KeyBindings::from_config(config_file.keys);
         let wrap = config_file.wrap;
         let indent_guides = config_file.indent_guides;
-        let image = config_file.image.unwrap_or(ImageConfig { max_size_mb: 10 });
 
         Some(Self {
             exclude_set,
@@ -115,7 +97,6 @@ impl Config {
             keys,
             wrap,
             indent_guides,
-            image,
         })
     }
 

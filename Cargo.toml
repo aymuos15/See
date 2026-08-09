@@ -2,6 +2,12 @@
 name = "viewer"
 version = "0.1.0"
 edition = "2021"
+description = "A Helix-inspired terminal file viewer with syntax highlighting"
+license = "MIT"
+repository = "https://github.com/aymuos15/See"
+# Bench targets are listed explicitly, so benches/fixtures.rs stays a shared
+# module rather than becoming a target of its own.
+autobenches = false
 
 [dependencies]
 ratatui = "0.30"
@@ -31,6 +37,8 @@ tree-sitter-css = "0.23"
 # AVIF/OpenEXR encoders that cost more to build than the rest of the tree.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "ico", "tga"] }
 pdfium-render = { version = "0.8", features = ["image"] }
+# Only built with --features iai; see benchmarks/README.md.
+iai-callgrind = { version = "0.16", optional = true }
 unicode-width = "0.2"
 tree-sitter-yaml = "0.7.2"
 tree-sitter-toml-ng = "0.7.0"
@@ -55,6 +63,49 @@ unimplemented = "warn"
 
 [dev-dependencies]
 tempfile = "3.8"
+# Plotting is left out: the html_reports feature covers what a single machine
+# needs, and the gnuplot path would depend on a system binary.
+criterion = { version = "0.8", default-features = false, features = ["html_reports"] }
+
+
+# Benchmarks are built with the release profile, whose full LTO costs ~40s per
+# rebuild. Thin LTO keeps the edit-measure loop usable; benchmarks/README.md
+# records that this is not quite the shipped binary's codegen.
+[profile.bench]
+lto = "thin"
+codegen-units = 16
+# The release profile below strips symbols, which bench inherits; Callgrind
+# and flamegraphs need them.
+strip = false
+debug = true
+
+[[bench]]
+name = "render"
+harness = false
+
+[[bench]]
+name = "highlight"
+harness = false
+
+[[bench]]
+name = "parse"
+harness = false
+
+# Instruction counting needs Valgrind installed, so it is opt-in:
+#   cargo bench --features iai --bench instructions
+[[bench]]
+name = "instructions"
+harness = false
+required-features = ["iai"]
+
+[features]
+iai = ["dep:iai-callgrind"]
+
+# Debug builds spend most of their time in unoptimized syntect/tree-sitter/
+# image/pdfium; optimizing just the dependencies keeps the dev loop usable
+# without slowing incremental rebuilds of this crate.
+[profile.dev.package."*"]
+opt-level = 2
 
 # Optimized release profile for smaller, faster binaries
 [profile.release]

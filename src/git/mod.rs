@@ -148,7 +148,7 @@ fn run_git(repo: &Path, args: &[&str]) -> anyhow::Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
-fn parse_log(output: &str) -> Vec<Commit> {
+pub fn parse_log(output: &str) -> Vec<Commit> {
     output
         .split(RECORD_SEP)
         .map(str::trim_start)
@@ -171,7 +171,7 @@ fn parse_log(output: &str) -> Vec<Commit> {
 /// The numstat lines come first, then a blank line, then the patch. Each file's
 /// stat is matched back to the patch by the `diff --git` header order, which is
 /// the same in both halves.
-fn parse_commit_detail(message: &str, body: &str) -> CommitDetail {
+pub fn parse_commit_detail(message: &str, body: &str) -> CommitDetail {
     let mut stats: Vec<(String, Option<u32>, Option<u32>)> = Vec::new();
     let mut diff: Vec<String> = Vec::new();
     let mut in_patch = false;
