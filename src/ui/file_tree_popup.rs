@@ -66,9 +66,15 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     // The list keeps the selection just inside the view, so its offset after
     // rendering is the first visible row — exactly the scrollbar position.
+    // Drawn in the panel's horizontal padding so it never covers the counts.
+    let scrollbar_area = Rect {
+        x: inner.x + inner.width + 1,
+        width: 1,
+        ..inner
+    };
     crate::ui::preview::render_scrollbar(
         frame,
-        inner,
+        scrollbar_area,
         theme,
         app.file_tree_popup_entries.len(),
         state.offset(),
