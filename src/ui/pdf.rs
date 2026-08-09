@@ -55,6 +55,14 @@ pub fn render(
     view.begin_frame();
     draw_pages(frame, content_area, theme, view, picker, &page_box);
     view.end_frame();
+
+    crate::ui::preview::render_scrollbar(
+        frame,
+        content_area,
+        theme,
+        view.document_rows() as usize,
+        view.scroll as usize,
+    );
 }
 
 /// Fit a page to the viewport height, falling back to its width when the pane
