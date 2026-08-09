@@ -124,6 +124,16 @@ fn render_find_search(frame: &mut Frame, app: &App) {
         height: 4,
     };
 
-    let inner = popup::render_panel(frame, panel, "Find", theme);
+    // The match count doubles as the panel title so the query line stays
+    // free for typing.
+    let title = if app.find_query.is_empty() {
+        "Find".to_string()
+    } else {
+        let count = app.find_match_lines().len();
+        let plural = if count == 1 { "" } else { "s" };
+        format!("Find — {count} line{plural}")
+    };
+
+    let inner = popup::render_panel(frame, panel, &title, theme);
     popup::render_query(frame, inner, "▸", &app.find_query, theme);
 }

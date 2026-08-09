@@ -371,14 +371,24 @@ impl App {
             AppEvent::ToggleWrap => {
                 self.config.wrap = !self.config.wrap;
             }
+            // In a PDF, n/p turn pages; in text with a find highlight active,
+            // the same keys jump between matches.
             AppEvent::PdfNextPage => {
-                if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
-                    self.pdf_next_page();
+                if !self.search_mode && !self.symbol_search_mode {
+                    if self.is_viewing_pdf() {
+                        self.pdf_next_page();
+                    } else if self.highlighted_word.is_some() {
+                        self.find_next_match();
+                    }
                 }
             }
             AppEvent::PdfPrevPage => {
-                if !self.search_mode && !self.symbol_search_mode && self.is_viewing_pdf() {
-                    self.pdf_prev_page();
+                if !self.search_mode && !self.symbol_search_mode {
+                    if self.is_viewing_pdf() {
+                        self.pdf_prev_page();
+                    } else if self.highlighted_word.is_some() {
+                        self.find_prev_match();
+                    }
                 }
             }
             AppEvent::PdfFirstPage => {

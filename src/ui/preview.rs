@@ -254,13 +254,6 @@ pub fn apply_word_highlights<'a>(
         .bg(theme.bg_selection)
         .add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
 
-    // Compare char-by-char (one lowercase codepoint per char keeps a 1:1
-    // mapping to columns) — the spans downstream count columns in chars, so
-    // byte offsets from `str::find` would misplace highlights on non-ASCII
-    // lines.
-    let lower = |c: char| c.to_lowercase().next().unwrap_or(c);
-    let word_chars: Vec<char> = word.chars().map(lower).collect();
-
     lines
         .iter()
         .enumerate()
@@ -270,35 +263,56 @@ pub fn apply_word_highlights<'a>(
             };
 
             let mut current_line = line.clone();
-            let chars: Vec<char> = raw_line.chars().collect();
-            let is_word_char = |c: char| c.is_alphanumeric() || c == '_';
-            let mut start = 0;
-
-            while start + word_chars.len() <= chars.len() {
-                let matched = chars[start..start + word_chars.len()]
-                    .iter()
-                    .zip(&word_chars)
-                    .all(|(&c, &w)| lower(c) == w);
-                if !matched {
-                    start += 1;
-                    continue;
-                }
-
-                let end = start + word_chars.len();
-                let is_whole_word = (start == 0 || !is_word_char(chars[start - 1]))
-                    && (end == chars.len() || !is_word_char(chars[end]));
-
-                if is_whole_word {
-                    current_line =
-                        apply_selection_to_line(&current_line, start, end, highlight_style);
-                }
-
-                start = end.max(start + 1);
+            for (start, end) in whole_word_ranges(raw_line, word) {
+                current_line = apply_selection_to_line(&current_line, start, end, highlight_style);
             }
-
             current_line
         })
         .collect()
+}
+
+/// Char-column ranges of case-insensitive whole-word occurrences of `word` in
+/// `raw_line`. The single definition of what "a match" means, shared by the
+/// highlight rendering and match navigation.
+///
+/// Compares char-by-char (one lowercase codepoint per char keeps a 1:1
+/// mapping to columns) — the spans downstream count columns in chars, so
+/// byte offsets from `str::find` would misplace highlights on non-ASCII
+/// lines.
+pub fn whole_word_ranges(raw_line: &str, word: &str) -> Vec<(usize, usize)> {
+    let lower = |c: char| c.to_lowercase().next().unwrap_or(c);
+    let word_chars: Vec<char> = word.chars().map(lower).collect();
+    if word_chars.is_empty() {
+        return Vec::new();
+    }
+
+    let chars: Vec<char> = raw_line.chars().collect();
+    let is_word_char = |c: char| c.is_alphanumeric() || c == '_';
+    let mut ranges = Vec::new();
+    let mut start = 0;
+
+    while start + word_chars.len() <= chars.len() {
+        let matched = chars[start..start + word_chars.len()]
+            .iter()
+            .zip(&word_chars)
+            .all(|(&c, &w)| lower(c) == w);
+        if !matched {
+            start += 1;
+            continue;
+        }
+
+        let end = start + word_chars.len();
+        let is_whole_word = (start == 0 || !is_word_char(chars[start - 1]))
+            && (end == chars.len() || !is_word_char(chars[end]));
+
+        if is_whole_word {
+            ranges.push((start, end));
+        }
+
+        start = end.max(start + 1);
+    }
+
+    ranges
 }
 
 #[cfg(test)]
@@ -426,6 +440,22 @@ mod tests {
         // Line should be unchanged since selection is outside visible range
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].spans[0].content, "Visible line");
+    }
+
+    #[test]
+    fn whole_word_ranges_finds_case_insensitive_whole_words() {
+        assert_eq!(
+            whole_word_ranges("let app = App::new();", "app"),
+            vec![(4, 7), (10, 13)]
+        );
+        // Substrings inside identifiers are not whole words
+        assert_eq!(whole_word_ranges("app_state.mapped()", "app"), vec![]);
+    }
+
+    #[test]
+    fn whole_word_ranges_counts_chars_not_bytes() {
+        // The multi-byte chars before the match must not shift its columns
+        assert_eq!(whole_word_ranges("é日本 word", "word"), vec![(4, 8)]);
     }
 
     #[test]

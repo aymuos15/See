@@ -136,5 +136,73 @@ impl App {
 
     pub fn find_confirm(&mut self) {
         self.exit_find_mode();
+        // Land on the first match at or below the current position.
+        if let Some(line) = self.find_match_at_or_after(self.preview_scroll as usize) {
+            self.scroll_preview_to(line);
+        }
+    }
+
+    /// Line numbers of the previewed file that contain the highlighted word.
+    pub fn find_match_lines(&self) -> Vec<usize> {
+        let Some(word) = &self.highlighted_word else {
+            return Vec::new();
+        };
+        let Some(content) = &self.shared_preview_content else {
+            return Vec::new();
+        };
+        let crate::app::PreviewContentType::Text { raw_lines, .. } = content.as_ref() else {
+            return Vec::new();
+        };
+
+        raw_lines
+            .iter()
+            .enumerate()
+            .filter(|(_, line)| !crate::ui::preview::whole_word_ranges(line, word).is_empty())
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
+    fn find_match_at_or_after(&self, from: usize) -> Option<usize> {
+        let matches = self.find_match_lines();
+        matches
+            .iter()
+            .copied()
+            .find(|&line| line >= from)
+            .or_else(|| matches.first().copied())
+    }
+
+    /// Jump to the next match below the current scroll position, wrapping to
+    /// the first.
+    pub fn find_next_match(&mut self) {
+        let matches = self.find_match_lines();
+        let current = self.preview_scroll as usize;
+        if let Some(line) = matches
+            .iter()
+            .copied()
+            .find(|&line| line > current)
+            .or_else(|| matches.first().copied())
+        {
+            self.scroll_preview_to(line);
+        }
+    }
+
+    /// Jump to the previous match above the current scroll position, wrapping
+    /// to the last.
+    pub fn find_prev_match(&mut self) {
+        let matches = self.find_match_lines();
+        let current = self.preview_scroll as usize;
+        if let Some(line) = matches
+            .iter()
+            .copied()
+            .rev()
+            .find(|&line| line < current)
+            .or_else(|| matches.last().copied())
+        {
+            self.scroll_preview_to(line);
+        }
+    }
+
+    fn scroll_preview_to(&mut self, line: usize) {
+        self.preview_scroll = u16::try_from(line).unwrap_or(u16::MAX);
     }
 }

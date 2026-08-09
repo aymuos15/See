@@ -20,6 +20,8 @@ const ROWS: &[Row] = &[
     Binding("H  L", "Shrink / grow the file list"),
     Section("Find"),
     Binding("/", "Search files"),
+    Binding("?  \\", "Find word in the open file"),
+    Binding("n  p", "Next / previous match"),
     Binding("f", "Search symbols"),
     Binding("Ctrl+t", "Global file tree"),
     Binding("Ctrl+b", "Show / hide the file list"),
@@ -91,7 +93,7 @@ fn lines(theme: &Theme) -> Vec<Line<'static>> {
 
     lines.push(Line::default());
     lines.push(Line::from(Span::styled(
-        "?  toggle this panel",
+        "F1  toggle this panel",
         Style::default().fg(theme.fg_dim),
     )));
 
