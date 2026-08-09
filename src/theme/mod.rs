@@ -20,6 +20,12 @@ pub struct Theme {
     pub fg_folder: Color,
     pub border: Color,
     pub line_num: Color,
+    /// Added lines in a diff
+    pub diff_add: Color,
+    /// Removed lines in a diff
+    pub diff_del: Color,
+    /// Hunk and file headers in a diff
+    pub diff_hunk: Color,
 }
 
 impl Default for Theme {

@@ -47,6 +47,16 @@ pub(super) fn parse_theme(content: &str) -> anyhow::Result<Theme> {
         theme.border = fg;
     }
 
+    if let Some(fg) = get_style_fg(&theme_file.styles, "diff.plus", palette) {
+        theme.diff_add = fg;
+    }
+    if let Some(fg) = get_style_fg(&theme_file.styles, "diff.minus", palette) {
+        theme.diff_del = fg;
+    }
+    if let Some(fg) = get_style_fg(&theme_file.styles, "diff.delta", palette) {
+        theme.diff_hunk = fg;
+    }
+
     // Try to get colors from palette directly for common names
     if let Some(c) = resolve_color("background", palette) {
         theme.bg_main = c;

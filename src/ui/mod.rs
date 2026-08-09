@@ -1,6 +1,7 @@
 pub mod coordinates;
 pub mod file_list;
 pub mod file_tree_popup;
+pub mod git_mode;
 pub mod help;
 pub mod indent;
 pub mod layout;
@@ -21,6 +22,16 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     // Fill entire frame with background color first
     let bg_block = Block::default().style(Style::default().bg(app.config.theme.bg_main));
     frame.render_widget(bg_block, frame.area());
+
+    // Git mode takes over the whole frame while it is open. Help still opens
+    // over the top of it.
+    if app.in_git_mode() {
+        git_mode::render(frame, app, frame.area());
+        if app.help_mode {
+            help::render(frame, app, frame.area());
+        }
+        return;
+    }
 
     let layout = layout::AppLayout::new(
         frame.area(),

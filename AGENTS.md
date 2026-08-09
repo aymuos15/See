@@ -4,7 +4,7 @@ This document provides guidelines for AI coding agents working on this Rust TUI 
 
 ## Project Overview
 
-A terminal-based file viewer built with Ratatui, featuring syntax highlighting, symbol search, and split panes. Written in Rust (2021 edition).
+A terminal-based file viewer built with Ratatui, featuring syntax highlighting, symbol search, split panes, a scrolling PDF view and a git history browser. Written in Rust (2021 edition).
 
 ## Build Commands
 
@@ -127,19 +127,25 @@ src/
   tui.rs            # Terminal init/restore
   app/              # Core application logic (App struct, event handling, navigation)
     split.rs        # Split pane management (SplitLayout, Pane, SplitNode tree)
+    pdf.rs          # Continuous PDF scroll state: page stack, slices, caching
+    git_mode.rs     # Git mode state: commit list, selection, diff scroll
   config/           # Configuration loading
   event/            # Event handling, file watching
   files/            # File system operations, tree building, tree-sitter symbols
+  git/              # Reading commits by shelling out to git, and parsing it
   highlight/        # Syntax highlighting
     markdown_table.rs # Aligns markdown pipe tables into columns
   theme/            # Theming system
   ui/               # UI rendering
     pane.rs         # Individual pane rendering
+    pdf.rs          # Draws the PDF page column, centered and sliced to fit
+    git_mode.rs     # Draws the commit list, commit summary and diff
     popup.rs        # Shared popup panel: surface, query line, list
     indent.rs       # Indent guides in the preview
     tab_bar.rs      # Tab bar for split panes
     layout.rs       # Layout calculation with dividers
-  worker.rs         # Background thread: highlighting, symbols, images, line counts
+  worker.rs         # Background thread: highlighting, symbols, images, PDF
+                    # pages, git log and diffs, line counts
 tests/              # Integration tests
 ```
 
@@ -153,9 +159,18 @@ colors, cached per path. Counting lines for the file tree works the same way.
 Rendering runs every frame, so per-frame work must stay proportional to what is
 on screen rather than to file size.
 
+Some frames are expensive whatever we do: a PDF row of scroll re-encodes an
+image for the terminal's graphics protocol. Input therefore arrives faster than
+frames can be drawn, so `App::drain_pending_input` applies the whole queued
+backlog before drawing again; without it a held key falls seconds behind.
+
 ## Key Dependencies
 
-`ratatui` (TUI framework), `crossterm` (terminal), `syntect` (syntax highlighting), `anyhow` (errors), `serde`+`toml` (config), `tree-sitter` 0.26 (symbols), `notify` (file watching)
+`ratatui` (TUI framework), `crossterm` (terminal), `syntect` (syntax highlighting), `anyhow` (errors), `serde`+`toml` (config), `tree-sitter` 0.26 (symbols), `notify` (file watching), `ratatui-image`+`pdfium-render` (images and PDFs)
+
+Git support shells out to the `git` binary rather than linking a library: the
+viewer only reads history, so `src/git/` runs `log` and `show` and parses their
+output. Keep it that way unless something needs to write.
 
 Grammars: rust, python, javascript, typescript, go, html, css, yaml, toml,
 c/c++, cuda, markdown, latex. The runtime must stay at 0.25+ — several

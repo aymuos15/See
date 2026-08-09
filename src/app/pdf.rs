@@ -243,11 +243,8 @@ impl PdfView {
             return None;
         }
 
-        let scaled = Rc::new(source.resize_exact(
-            width,
-            height,
-            image::imageops::FilterType::Triangle,
-        ));
+        let scaled =
+            Rc::new(source.resize_exact(width, height, image::imageops::FilterType::Triangle));
         self.scaled.insert(cache_key, Rc::clone(&scaled));
         Some(scaled)
     }

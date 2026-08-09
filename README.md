@@ -52,7 +52,11 @@ See [`config.example.toml`](config.example.toml) for all available options inclu
 - Global file tree (`Ctrl+t`) showing the hierarchy with line counts per file
   and per directory
 - Split panes, fuzzy file and symbol search, text selection and copy
-- Image and PDF support through kitty protocol
+- Image support through the kitty graphics protocol, and PDFs as one
+  continuously scrollable column of pages, centered in the pane
+- Git mode on `Shift+G`: scroll the commit list with the selected commit
+  summarised beside it, then `Enter` for its diff with the changed files and
+  their `+/-` counts alongside. `Esc` steps back, `Shift+G` leaves
 
 ## Auto-Refresh
 

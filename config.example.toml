@@ -80,6 +80,9 @@ toggle_help = ["?"]
 cycle_pane = ["tab"]
 copy_selection = ["ctrl+c"]
 
+# Git mode: browse commits, enter one for its diff, and leave again
+toggle_git_mode = ["shift+G"]
+
 # Split pane controls
 swap_split_orientation = ["alt+s"]
 close_active_pane = ["alt+q"]

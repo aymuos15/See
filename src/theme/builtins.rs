@@ -15,6 +15,9 @@ pub const fn jellybeans() -> Theme {
         fg_folder: Color::Rgb(0x81, 0xa2, 0xbe),    // Blue folders
         border: Color::Rgb(0x50, 0x50, 0x50),       // Border color
         line_num: Color::Rgb(0x60, 0x60, 0x60),     // Line numbers
+        diff_add: Color::Rgb(0x99, 0xad, 0x6a),     // Added lines
+        diff_del: Color::Rgb(0xcf, 0x6a, 0x4c),     // Removed lines
+        diff_hunk: Color::Rgb(0x8f, 0xbf, 0xdc),    // Hunk and file headers
     }
 }
 
@@ -32,5 +35,8 @@ pub const fn dracula() -> Theme {
         fg_folder: Color::Rgb(0x8b, 0xe9, 0xfd), // Dracula cyan
         border: Color::Rgb(0x62, 0x72, 0xa4),  // Dracula comment color
         line_num: Color::Rgb(0x62, 0x72, 0xa4), // Dracula comment color
+        diff_add: Color::Rgb(0x50, 0xfa, 0x7b), // Dracula green
+        diff_del: Color::Rgb(0xff, 0x55, 0x55), // Dracula red
+        diff_hunk: Color::Rgb(0xbd, 0x93, 0xf9), // Dracula purple
     }
 }

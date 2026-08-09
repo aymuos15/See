@@ -31,6 +31,17 @@ pub enum WorkerRequest {
         path: Box<Path>,
         text: String,
     },
+    /// Read a page of commits from a repository
+    GitLog {
+        repo: Box<Path>,
+        skip: usize,
+        limit: usize,
+    },
+    /// Read one commit's message, file stats, and patch
+    GitCommit {
+        repo: Box<Path>,
+        hash: String,
+    },
     /// Load a PDF file and render a specific page
     LoadPdfPage {
         path: Box<Path>,
@@ -59,6 +70,16 @@ pub enum WorkerResponse {
     FileHighlighted {
         path: Box<Path>,
         lines: Vec<ratatui::text::Line<'static>>,
+    },
+    /// A page of commits, `skip` commits back from HEAD
+    GitLogLoaded {
+        skip: usize,
+        result: anyhow::Result<Vec<crate::git::Commit>>,
+    },
+    /// One commit's message, file stats, and patch
+    GitCommitLoaded {
+        hash: String,
+        result: anyhow::Result<crate::git::CommitDetail>,
     },
     /// PDF page rendered as an image
     PdfPageLoaded {
@@ -124,6 +145,21 @@ impl BackgroundWorker {
         });
     }
 
+    pub fn request_git_log(&self, repo: &Path, skip: usize, limit: usize) {
+        let _ = self.request_tx.send(WorkerRequest::GitLog {
+            repo: repo.into(),
+            skip,
+            limit,
+        });
+    }
+
+    pub fn request_git_commit(&self, repo: &Path, hash: &str) {
+        let _ = self.request_tx.send(WorkerRequest::GitCommit {
+            repo: repo.into(),
+            hash: hash.to_string(),
+        });
+    }
+
     pub fn request_pdf_page(&self, path: &Path, page: usize) {
         let _ = self.request_tx.send(WorkerRequest::LoadPdfPage {
             path: path.into(),
@@ -170,6 +206,14 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
             WorkerRequest::HighlightFile { path, text } => {
                 let lines = highlighter.highlight(&path, &text);
                 let _ = response_tx.send(WorkerResponse::FileHighlighted { path, lines });
+            }
+            WorkerRequest::GitLog { repo, skip, limit } => {
+                let result = crate::git::log(&repo, skip, limit);
+                let _ = response_tx.send(WorkerResponse::GitLogLoaded { skip, result });
+            }
+            WorkerRequest::GitCommit { repo, hash } => {
+                let result = crate::git::commit_detail(&repo, &hash);
+                let _ = response_tx.send(WorkerResponse::GitCommitLoaded { hash, result });
             }
             WorkerRequest::LoadPdfPage { path, page } => {
                 load_pdf_page(&path, page, pdfium.as_ref(), response_tx);

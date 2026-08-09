@@ -64,6 +64,12 @@ impl App {
                 WorkerResponse::FileHighlighted { path, lines } => {
                     self.apply_highlighted(&path, lines);
                 }
+                WorkerResponse::GitLogLoaded { skip, result } => {
+                    self.handle_git_log_loaded(skip, result);
+                }
+                WorkerResponse::GitCommitLoaded { hash, result } => {
+                    self.handle_git_commit_loaded(&hash, result);
+                }
                 WorkerResponse::PdfPageLoaded {
                     path,
                     page,
@@ -114,7 +120,14 @@ impl App {
             &self.config.keys,
         )?;
 
+        // Git mode owns most keys while it is open; anything it does not claim
+        // falls through to its usual meaning.
+        if self.in_git_mode() && self.handle_git_mode_event(&event) {
+            return Ok(());
+        }
+
         match event {
+            AppEvent::ToggleGitMode => self.toggle_git_mode(),
             AppEvent::Quit => self.handle_quit(),
             AppEvent::DirectoryChanged => {
                 self.refresh_current_directory();

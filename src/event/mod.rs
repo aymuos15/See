@@ -73,6 +73,9 @@ pub enum AppEvent {
     // Popup
     ToggleFileTreePopup,
 
+    // Git mode
+    ToggleGitMode,
+
     None,
 }
 
@@ -203,6 +206,7 @@ const fn action_to_app_event(action: Action) -> AppEvent {
         Action::PdfFirstPage => AppEvent::PdfFirstPage,
         Action::PdfLastPage => AppEvent::PdfLastPage,
         Action::ToggleFileTreePopup => AppEvent::ToggleFileTreePopup,
+        Action::ToggleGitMode => AppEvent::ToggleGitMode,
     }
 }
 

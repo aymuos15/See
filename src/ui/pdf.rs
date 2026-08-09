@@ -94,7 +94,9 @@ fn draw_pages(
     let first = (viewport_top / stride) as usize;
 
     for page in first..view.total_pages {
-        let top = u32::try_from(page).unwrap_or(u32::MAX).saturating_mul(stride);
+        let top = u32::try_from(page)
+            .unwrap_or(u32::MAX)
+            .saturating_mul(stride);
         if top >= viewport_bottom {
             // Fetch one page beyond the fold so scrolling stays ahead of the
             // worker.

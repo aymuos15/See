@@ -144,6 +144,9 @@ pub struct KeyBindingsConfig {
 
     // Popup
     pub toggle_file_tree_popup: Option<Vec<String>>,
+
+    // Git mode
+    pub toggle_git_mode: Option<Vec<String>>,
 }
 
 /// Parsed keybindings ready for use
@@ -197,6 +200,9 @@ pub struct KeyBindings {
 
     // Popup
     pub toggle_file_tree_popup: Vec<KeyBinding>,
+
+    // Git mode
+    pub toggle_git_mode: Vec<KeyBinding>,
 
     // Lookup table for quick matching
     normal_mode_map: HashMap<KeyBinding, Action>,
@@ -254,6 +260,9 @@ pub enum Action {
 
     // Popup
     ToggleFileTreePopup,
+
+    // Git mode
+    ToggleGitMode,
 }
 
 impl Default for KeyBindings {
@@ -330,6 +339,12 @@ impl Default for KeyBindings {
             // Popup defaults
             toggle_file_tree_popup: vec![KeyBinding::ctrl(KeyCode::Char('t'))],
 
+            // Git mode default (Shift+G toggles history browsing)
+            toggle_git_mode: vec![
+                KeyBinding::new(KeyCode::Char('G'), KeyModifiers::SHIFT),
+                KeyBinding::key(KeyCode::Char('G')),
+            ],
+
             // Initialize empty maps
             normal_mode_map: HashMap::new(),
             search_mode_map: HashMap::new(),
@@ -367,6 +382,7 @@ impl KeyBindings {
             Self::apply_search_config(&mut bindings, &cfg);
             Self::apply_pdf_config(&mut bindings, &cfg);
             Self::apply_popup_config(&mut bindings, &cfg);
+            apply_config_keys(&mut bindings.toggle_git_mode, cfg.toggle_git_mode.clone());
         }
 
         bindings.rebuild_maps();
@@ -476,6 +492,11 @@ impl KeyBindings {
         self.build_search_mode_map();
         self.build_pdf_map();
         self.build_popup_map();
+        insert_bindings(
+            &mut self.normal_mode_map,
+            &self.toggle_git_mode,
+            Action::ToggleGitMode,
+        );
     }
 
     fn build_normal_mode_map(&mut self) {

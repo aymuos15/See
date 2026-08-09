@@ -2,6 +2,7 @@ mod content;
 pub use content::{PreviewContentType, SharedPreviewContent};
 mod directory;
 mod event_handler;
+pub mod git_mode;
 mod help;
 mod image;
 mod mouse;
@@ -100,6 +101,8 @@ pub struct App {
     pub pdf_error: Option<String>,
     /// Continuous-scroll state for the PDF being previewed, if any
     pub pdf_view: Option<pdf::PdfView>,
+    /// History browser state, present only while git mode is open
+    pub git_mode: Option<git_mode::GitMode>,
     // File tree popup state
     /// Line counts shown beside file tree entries, filled in by the worker
     pub tree_line_counts: crate::worker::TreeLineCounts,
@@ -227,6 +230,7 @@ impl App {
             pending_full_quality: None,
             pdf_error: None,
             pdf_view: None,
+            git_mode: None,
             tree_line_counts: crate::worker::TreeLineCounts::default(),
             file_tree_popup_mode: false,
             file_tree_popup_entries: Vec::new(),

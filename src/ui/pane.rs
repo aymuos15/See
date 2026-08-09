@@ -154,4 +154,3 @@ fn render_image_pane(
         frame.render_widget(placeholder, inner_area);
     }
 }
-
