@@ -87,8 +87,11 @@ fn render_text_pane(
     let [line_num_area, content_area] = horizontal.areas(inner_area);
 
     let visible_height = content_area.height as usize;
-    let start = pane.scroll as usize;
-    let end = (start + visible_height).min(lines.len());
+    // Clamp to whichever slice is shorter: the two are indexed by one range and
+    // a highlight can briefly disagree with the raw lines it renders against.
+    let line_count = lines.len().min(raw_lines.len());
+    let start = (pane.scroll as usize).min(line_count);
+    let end = (start + visible_height).min(line_count);
 
     // Line numbers
     let line_numbers: Vec<Line> = (start + 1..=end)
@@ -137,7 +140,7 @@ fn render_text_pane(
         content
     };
     frame.render_widget(content, content_area);
-    crate::ui::preview::render_scrollbar(frame, content_area, theme, lines.len(), start);
+    crate::ui::preview::render_scrollbar(frame, content_area, theme, line_count, start);
 }
 
 fn render_image_pane(

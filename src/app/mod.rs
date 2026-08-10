@@ -85,8 +85,13 @@ pub struct App {
     /// Highlighted lines already computed for a file, so revisiting one is
     /// instant instead of a fresh syntect pass
     highlight_cache: std::collections::HashMap<PathBuf, Rc<Vec<ratatui::text::Line<'static>>>>,
-    /// Files whose highlighting is in flight, to avoid queueing duplicates
-    highlight_pending: HashSet<PathBuf>,
+    /// Files whose highlighting is in flight, to avoid queueing duplicates.
+    /// The value is the request's generation: a result whose generation no
+    /// longer matches describes content we have since replaced, so it is
+    /// dropped rather than applied over newer raw lines.
+    highlight_pending: std::collections::HashMap<PathBuf, u64>,
+    /// Monotonic counter stamped onto each highlight request
+    highlight_generation: u64,
     pub symbol_indexing_progress: Option<(usize, usize)>,
     // Image protocol cache (by canonical path)
     pub image_protocols:
@@ -230,7 +235,8 @@ impl App {
             file_list_visible: true,
             worker,
             highlight_cache: std::collections::HashMap::new(),
-            highlight_pending: HashSet::new(),
+            highlight_pending: std::collections::HashMap::new(),
+            highlight_generation: 0,
             symbol_indexing_progress: None,
             image_protocols: std::collections::HashMap::new(),
             image_picker: None, // Will be initialized after TUI setup

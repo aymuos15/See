@@ -30,6 +30,7 @@ pub enum WorkerRequest {
     HighlightFile {
         path: Box<Path>,
         text: String,
+        generation: u64,
     },
     /// Read a page of commits from a repository
     GitLog {
@@ -70,6 +71,9 @@ pub enum WorkerResponse {
     FileHighlighted {
         path: Box<Path>,
         lines: Vec<ratatui::text::Line<'static>>,
+        /// Echoed back from the request so the app can drop results for
+        /// content that has already been superseded
+        generation: u64,
     },
     /// A page of commits, `skip` commits back from HEAD
     GitLogLoaded {
@@ -138,10 +142,11 @@ impl BackgroundWorker {
         });
     }
 
-    pub fn request_highlight(&self, path: &Path, text: String) {
+    pub fn request_highlight(&self, path: &Path, text: String, generation: u64) {
         let _ = self.request_tx.send(WorkerRequest::HighlightFile {
             path: path.into(),
             text,
+            generation,
         });
     }
 
@@ -203,9 +208,17 @@ fn worker_loop(request_rx: &Receiver<WorkerRequest>, response_tx: &Sender<Worker
                 let counts = count_tree_lines(&root_dir, &config);
                 let _ = response_tx.send(WorkerResponse::TreeLinesCounted(counts));
             }
-            WorkerRequest::HighlightFile { path, text } => {
+            WorkerRequest::HighlightFile {
+                path,
+                text,
+                generation,
+            } => {
                 let lines = highlighter.highlight(&path, &text);
-                let _ = response_tx.send(WorkerResponse::FileHighlighted { path, lines });
+                let _ = response_tx.send(WorkerResponse::FileHighlighted {
+                    path,
+                    lines,
+                    generation,
+                });
             }
             WorkerRequest::GitLog { repo, skip, limit } => {
                 let result = crate::git::log(&repo, skip, limit);

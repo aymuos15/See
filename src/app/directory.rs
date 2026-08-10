@@ -61,8 +61,12 @@ impl App {
             return cached.as_ref().clone();
         }
 
-        if self.highlight_pending.insert(path.to_path_buf()) {
-            self.worker.request_highlight(path, raw_lines.join("\n"));
+        if !self.highlight_pending.contains_key(path) {
+            self.highlight_generation += 1;
+            let generation = self.highlight_generation;
+            self.highlight_pending.insert(path.to_path_buf(), generation);
+            self.worker
+                .request_highlight(path, raw_lines.join("\n"), generation);
         }
 
         raw_lines
@@ -77,7 +81,13 @@ impl App {
         &mut self,
         path: &std::path::Path,
         lines: Vec<ratatui::text::Line<'static>>,
+        generation: u64,
     ) {
+        // A result for content we have already replaced would put a line count
+        // out of step with the raw lines it is rendered against, so drop it.
+        if self.highlight_pending.get(path) != Some(&generation) {
+            return;
+        }
         self.highlight_pending.remove(path);
 
         // Bound the cache so browsing a large tree cannot grow it without limit.

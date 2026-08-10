@@ -71,8 +71,12 @@ impl App {
                 WorkerResponse::TreeLinesCounted(counts) => {
                     self.tree_line_counts = counts;
                 }
-                WorkerResponse::FileHighlighted { path, lines } => {
-                    self.apply_highlighted(&path, lines);
+                WorkerResponse::FileHighlighted {
+                    path,
+                    lines,
+                    generation,
+                } => {
+                    self.apply_highlighted(&path, lines, generation);
                 }
                 WorkerResponse::GitLogLoaded { skip, result } => {
                     self.handle_git_log_loaded(skip, result);

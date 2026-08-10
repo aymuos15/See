@@ -100,7 +100,12 @@ fn render_text_content(
 
     let visible_height = content_area.height as usize;
     let start = app.preview_scroll as usize;
-    let end = (start + visible_height).min(lines.len());
+    // Both slices are indexed by the same range, so never trust one's length
+    // alone: a highlight that briefly disagrees with the raw lines must not
+    // take the render path out of bounds.
+    let line_count = lines.len().min(raw_lines.len());
+    let start = start.min(line_count);
+    let end = (start + visible_height).min(line_count);
 
     // Line numbers
     let line_numbers: Vec<Line> = (start + 1..=end)
@@ -144,7 +149,7 @@ fn render_text_content(
         content
     };
     frame.render_widget(content, content_area);
-    render_scrollbar(frame, content_area, theme, lines.len(), start);
+    render_scrollbar(frame, content_area, theme, line_count, start);
 }
 
 fn render_image_content(
